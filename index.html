@@ -276,14 +276,29 @@
   @keyframes micPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
   /* Synth section */
-  .synth-section { background: var(--bg-2); }
+  .synth-section {
+    background: var(--bg-2);
+    position: relative;
+    overflow: hidden;
+  }
+  .synth-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.55;
+  }
   .synth-inner {
     max-width: 1400px;
     margin: 0 auto;
     padding: 7rem 2rem;
+    position: relative;
+    z-index: 1;
   }
   .rig {
-    background: var(--bg);
+    background: rgba(10,10,11,0.78);
+    backdrop-filter: blur(6px);
     border: 1px solid var(--line);
     padding: 1.75rem;
     margin-bottom: 3rem;
@@ -312,6 +327,55 @@
     border-radius: 50%;
     margin-right: 6px;
     vertical-align: middle;
+  }
+
+  /* Per-knob modulation dropdown */
+  .mod-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: transparent;
+    color: var(--ink-faint);
+    border: 1px solid var(--line);
+    padding: 2px 14px 2px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    background-image: linear-gradient(45deg, transparent 46%, var(--ink-faint) 50%, transparent 54%),
+                      linear-gradient(-45deg, transparent 46%, var(--ink-faint) 50%, transparent 54%);
+    background-position: right 6px top 55%, right 3px top 55%;
+    background-size: 4px 4px, 4px 4px;
+    background-repeat: no-repeat;
+    border-radius: 2px;
+    outline: none;
+  }
+  .mod-select:hover { color: var(--ink-dim); border-color: var(--ink-dim); }
+  .mod-select.on {
+    color: #d6a8ff;
+    border-color: #a06cff;
+    background-color: rgba(160,108,255,0.08);
+    box-shadow: 0 0 8px rgba(160,108,255,0.2);
+    background-image: linear-gradient(45deg, transparent 46%, #d6a8ff 50%, transparent 54%),
+                      linear-gradient(-45deg, transparent 46%, #d6a8ff 50%, transparent 54%);
+  }
+  .mod-select option {
+    background: #111114;
+    color: var(--ink);
+    font-family: inherit;
+  }
+  .knob.sensor-modulated {
+    border-color: rgba(160,108,255,0.7);
+    box-shadow: 0 0 14px rgba(160,108,255,0.25), 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .knob.sensor-modulated .knob-dial::after { background: #d6a8ff; box-shadow: 0 0 5px #a06cff; }
+  .pedal-knobs .mod-select {
+    padding: 1px 12px 1px 4px;
+    font-size: 0.5rem;
+    background-size: 3px 3px, 3px 3px;
+    background-position: right 5px top 55%, right 2px top 55%;
   }
 
   .modules {
@@ -850,6 +914,69 @@
     .track-row .track-tag, .track-row .track-dur { display: none; }
     .mic-toggle { bottom: 1rem; right: 1rem; }
   }
+
+  /* Phones / coarse pointer — bigger touch targets, tighter workbench */
+  @media (max-width: 640px), (pointer: coarse) and (max-width: 820px) {
+    .rig { padding: 1rem 0.75rem 1.25rem; }
+    .rig-head { flex-wrap: wrap; gap: 0.5rem; }
+    .rig-hint { font-size: 0.6rem; }
+
+    .modules { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .module { padding: 0.75rem 0.6rem 1rem; }
+    .mod-head { font-size: 0.6rem; margin-bottom: 0.75rem; padding-bottom: 0.4rem; }
+    .mod-head .type { font-size: 0.55rem; }
+    .mod-knobs { gap: 0.35rem; }
+
+    /* bigger knobs for finger taps */
+    .knob { width: 58px; height: 58px; }
+    .pedal-knobs .knob { width: 36px; height: 36px; }
+    .knob-label { font-size: 0.55rem; }
+    .knob-value { font-size: 0.6rem; }
+
+    /* bigger jack ports for tapping */
+    .jacks { gap: 0.3rem; padding-top: 0.6rem; }
+    .jack { font-size: 0.5rem; padding: 4px 2px; min-height: 44px; justify-content: center; }
+    .jack .port { width: 18px; height: 18px; }
+
+    /* readable mod-select on phones */
+    .mod-select { font-size: 0.65rem; padding: 3px 16px 3px 6px; min-height: 24px; }
+    .pedal-knobs .mod-select { font-size: 0.6rem; padding: 2px 14px 2px 5px; min-height: 22px; }
+
+    .pedals { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+    .pedal { padding: 0.75rem 0.6rem 1rem; }
+    .pedal .name { font-size: 0.6rem; }
+    .pedal-switch { padding: 10px; min-height: 44px; }
+  }
+
+  /* Very narrow phones — single column modules */
+  @media (max-width: 400px) {
+    .modules { grid-template-columns: 1fr; }
+    .knob { width: 64px; height: 64px; }
+  }
+
+  /* iOS sensor-permission prompt */
+  .sensor-prompt {
+    position: fixed; inset: auto 1rem 1rem 1rem;
+    background: #111114; border: 1px solid var(--accent-2);
+    color: var(--ink); padding: 0.9rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem; letter-spacing: 0.05em;
+    z-index: 9999; display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    border-radius: 3px;
+  }
+  .sensor-prompt.show { display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; }
+  .sensor-prompt button {
+    background: var(--accent-2); color: #001b22;
+    border: 0; padding: 0.45rem 0.9rem;
+    font-family: inherit; font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    cursor: pointer; border-radius: 2px;
+  }
+  .sensor-prompt .x {
+    background: transparent; color: var(--ink-faint);
+    padding: 0.2rem 0.5rem; font-size: 0.9rem;
+  }
 </style>
 </head>
 <body>
@@ -946,8 +1073,8 @@
 
     <div class="rig">
       <div class="rig-header">
-        <h3>Workbench</h3>
-        <div class="rig-hint"><span class="dot"></span>CLICK LFO <span style="color:var(--accent-2)">OUT</span> · THEN ANY <span style="color:var(--accent-2)">CV</span> IN</div>
+        <h3>Annoying Noise Emulator</h3>
+        <div class="rig-hint"><span class="dot"></span>CLICK LFO <span style="color:var(--accent-2)">OUT</span> · THEN ANY <span style="color:var(--accent-2)">CV</span> IN · EACH KNOB HAS A <span style="color:#d6a8ff">SENSOR</span> DROPDOWN</div>
       </div>
 
       <div class="modules" id="modules">
@@ -960,11 +1087,13 @@
               <div class="knob" data-param="vco-freq"><div class="knob-ring"></div><div class="knob-dial"></div></div>
               <div class="knob-label">FREQ</div>
               <div class="knob-value">—</div>
+              <select class="mod-select" data-param="vco-freq" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select>
             </div>
             <div class="knob-unit">
               <div class="knob" data-param="vco-pw"><div class="knob-ring"></div><div class="knob-dial"></div></div>
               <div class="knob-label">PW</div>
               <div class="knob-value">—</div>
+              <select class="mod-select" data-param="vco-pw" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select>
             </div>
           </div>
           <div class="jacks">
@@ -980,11 +1109,13 @@
               <div class="knob" data-param="lfo-rate"><div class="knob-ring"></div><div class="knob-dial"></div></div>
               <div class="knob-label">RATE</div>
               <div class="knob-value">—</div>
+              <select class="mod-select" data-param="lfo-rate" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select>
             </div>
             <div class="knob-unit">
               <div class="knob" data-param="lfo-depth"><div class="knob-ring"></div><div class="knob-dial"></div></div>
               <div class="knob-label">DEPTH</div>
               <div class="knob-value">—</div>
+              <select class="mod-select" data-param="lfo-depth" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select>
             </div>
           </div>
           <div class="jacks">
@@ -999,11 +1130,13 @@
               <div class="knob" data-param="lpf-cut"><div class="knob-ring"></div><div class="knob-dial"></div></div>
               <div class="knob-label">CUTOFF</div>
               <div class="knob-value">—</div>
+              <select class="mod-select" data-param="lpf-cut" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select>
             </div>
             <div class="knob-unit">
               <div class="knob" data-param="lpf-res"><div class="knob-ring"></div><div class="knob-dial"></div></div>
               <div class="knob-label">RES</div>
               <div class="knob-value">—</div>
+              <select class="mod-select" data-param="lpf-res" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select>
             </div>
           </div>
           <div class="jacks">
@@ -1024,29 +1157,29 @@
         <div class="pedal" data-fx="fuzz">
           <button class="pedal-switch" type="button"><span class="led"></span><span class="name">Fuzz</span></button>
           <div class="pedal-knobs">
-            <div class="knob-unit"><div class="knob" data-param="fx-fuzz-drive"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Drive</div></div>
-            <div class="knob-unit"><div class="knob" data-param="fx-fuzz-tone"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Tone</div></div>
+            <div class="knob-unit"><div class="knob" data-param="fx-fuzz-drive"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Drive</div><select class="mod-select" data-param="fx-fuzz-drive" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
+            <div class="knob-unit"><div class="knob" data-param="fx-fuzz-tone"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Tone</div><select class="mod-select" data-param="fx-fuzz-tone" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
           </div>
         </div>
         <div class="pedal" data-fx="delay">
           <button class="pedal-switch" type="button"><span class="led"></span><span class="name">Delay</span></button>
           <div class="pedal-knobs">
-            <div class="knob-unit"><div class="knob" data-param="fx-delay-time"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Time</div></div>
-            <div class="knob-unit"><div class="knob" data-param="fx-delay-fb"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">F/B</div></div>
+            <div class="knob-unit"><div class="knob" data-param="fx-delay-time"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Time</div><select class="mod-select" data-param="fx-delay-time" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
+            <div class="knob-unit"><div class="knob" data-param="fx-delay-fb"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">F/B</div><select class="mod-select" data-param="fx-delay-fb" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
           </div>
         </div>
         <div class="pedal" data-fx="reverb">
           <button class="pedal-switch" type="button"><span class="led"></span><span class="name">Reverb</span></button>
           <div class="pedal-knobs">
-            <div class="knob-unit"><div class="knob" data-param="fx-reverb-size"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Size</div></div>
-            <div class="knob-unit"><div class="knob" data-param="fx-reverb-decay"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Decay</div></div>
+            <div class="knob-unit"><div class="knob" data-param="fx-reverb-size"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Size</div><select class="mod-select" data-param="fx-reverb-size" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
+            <div class="knob-unit"><div class="knob" data-param="fx-reverb-decay"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Decay</div><select class="mod-select" data-param="fx-reverb-decay" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
           </div>
         </div>
         <div class="pedal" data-fx="chorus">
           <button class="pedal-switch" type="button"><span class="led"></span><span class="name">Chorus</span></button>
           <div class="pedal-knobs">
-            <div class="knob-unit"><div class="knob" data-param="fx-chorus-rate"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Rate</div></div>
-            <div class="knob-unit"><div class="knob" data-param="fx-chorus-depth"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Depth</div></div>
+            <div class="knob-unit"><div class="knob" data-param="fx-chorus-rate"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Rate</div><select class="mod-select" data-param="fx-chorus-rate" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
+            <div class="knob-unit"><div class="knob" data-param="fx-chorus-depth"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Depth</div><select class="mod-select" data-param="fx-chorus-depth" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
           </div>
         </div>
       </div>
@@ -1292,6 +1425,7 @@ document.getElementById('year').textContent = new Date().getFullYear();
     if (points) points.scale.setScalar(meshCoverScale);
   };
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
   const uniforms = {
     uTime: { value: 0 },
@@ -1554,7 +1688,11 @@ class Knob {
   }
   _fmt() {
     const v = this.value;
-    if (this.unit === 'Hz') return v >= 1000 ? (v/1000).toFixed(2) + 'k' : Math.round(v) + '';
+    if (this.unit === 'Hz') {
+      if (v >= 1000) return (v/1000).toFixed(2) + 'k';
+      if (v < 1) return v.toFixed(2);
+      return Math.round(v) + '';
+    }
     if (this.unit === '%') return Math.round(v * 100) + '';
     if (this.unit === 'Q') return v.toFixed(1);
     return v.toFixed(2);
@@ -1596,14 +1734,17 @@ class Knob {
 /* ================= SYNTH (modular) ================= */
 (function initSynth() {
   const state = {
-    'vco-freq': 220,  'vco-pw': 0.5,
-    'lfo-rate': 2.0,  'lfo-depth': 0.4,
-    'lpf-cut': 1800,  'lpf-res': 4,
-    'fx-fuzz-drive': 5,       'fx-fuzz-tone': 2800,
-    'fx-delay-time': 0.36,    'fx-delay-fb':   0.42,
-    'fx-reverb-size': 0.5,    'fx-reverb-decay': 0.55,
+    'vco-freq': 85,    'vco-pw': 0.36,
+    'lfo-rate': 0.25,  'lfo-depth': 0.40,
+    'lpf-cut': 1800,   'lpf-res': 20,
+    'fx-fuzz-drive': 7,       'fx-fuzz-tone': 2200,
+    'fx-delay-time': 0.42,    'fx-delay-fb':   0.5,
+    'fx-reverb-size': 0.6,    'fx-reverb-decay': 0.55,
     'fx-chorus-rate': 0.8,    'fx-chorus-depth': 0.005,
   };
+  // Default patches + default FX on (matches the "annoying noise" preset)
+  const DEFAULT_PATCHES = ['vco-pw', 'lpf-cut'];
+  const DEFAULT_FX_ON = ['fuzz', 'delay', 'reverb'];
 
   let ac = null, master = null;
   let vco = null, vco2 = null, vcoMix = null;
@@ -1736,6 +1877,9 @@ class Knob {
       lfo.connect(lfoDepthGain);
       lfo.start();
 
+      // Wire default CV patches into the graph (visual state was set on DOM ready)
+      DEFAULT_PATCHES.forEach(t => connectCV(t));
+
       applyFX();
       } catch (err) {
         bootPromise = null; // allow retry
@@ -1805,54 +1949,54 @@ class Knob {
 
   // knob wiring
   const knobConfigs = {
-    'vco-freq': { min: 40, max: 1200, value: 220, log: true, unit: 'Hz',
+    'vco-freq': { min: 40, max: 1200, value: 85, log: true, unit: 'Hz',
       onChange: v => {
         state['vco-freq'] = v;
         if (vco) vco.frequency.setTargetAtTime(v, ac.currentTime, 0.01);
         if (vco2) vco2.frequency.setTargetAtTime(v, ac.currentTime, 0.01);
       } },
-    'vco-pw':   { min: 0.05, max: 0.95, value: 0.5, log: false, unit: '%',
+    'vco-pw':   { min: 0.05, max: 0.95, value: 0.36, log: false, unit: '%',
       onChange: v => {
         state['vco-pw'] = v;
         const cents = (v - 0.5) * 200;
         if (vco) vco.detune.setTargetAtTime(cents, ac.currentTime, 0.01);
         if (vco2) vco2.detune.setTargetAtTime(-cents, ac.currentTime, 0.01);
       } },
-    'lfo-rate': { min: 0.05, max: 20, value: 2.0, log: true, unit: 'Hz',
+    'lfo-rate': { min: 0.05, max: 20, value: 0.25, log: true, unit: 'Hz',
       onChange: v => { state['lfo-rate'] = v; if (lfo) lfo.frequency.setTargetAtTime(v, ac.currentTime, 0.02); } },
-    'lfo-depth':{ min: 0, max: 1, value: 0.4, log: false, unit: '%',
+    'lfo-depth':{ min: 0, max: 1, value: 0.40, log: false, unit: '%',
       onChange: v => { state['lfo-depth'] = v; if (lfoDepthGain) lfoDepthGain.gain.setTargetAtTime(v, ac.currentTime, 0.02); } },
     'lpf-cut':  { min: 80, max: 8000, value: 1800, log: true, unit: 'Hz',
       onChange: v => { state['lpf-cut'] = v; if (lpf) lpf.frequency.setTargetAtTime(v, ac.currentTime, 0.02); } },
-    'lpf-res':  { min: 0.3, max: 20, value: 4, log: true, unit: 'Q',
+    'lpf-res':  { min: 0.3, max: 20, value: 20, log: true, unit: 'Q',
       onChange: v => { state['lpf-res'] = v; if (lpf) lpf.Q.setTargetAtTime(v, ac.currentTime, 0.02); } },
 
     // ---- Fuzz ----
-    'fx-fuzz-drive': { min: 1, max: 12, value: 5, log: true, unit: '',
+    'fx-fuzz-drive': { min: 1, max: 12, value: 7, log: true, unit: '',
       onChange: v => {
         state['fx-fuzz-drive'] = v;
         if (fuzzPreGain) fuzzPreGain.gain.setTargetAtTime(v, ac.currentTime, 0.03);
       } },
-    'fx-fuzz-tone':  { min: 300, max: 8000, value: 2800, log: true, unit: 'Hz',
+    'fx-fuzz-tone':  { min: 300, max: 8000, value: 2200, log: true, unit: 'Hz',
       onChange: v => {
         state['fx-fuzz-tone'] = v;
         if (fuzzToneLpf) fuzzToneLpf.frequency.setTargetAtTime(v, ac.currentTime, 0.03);
       } },
 
     // ---- Delay ----
-    'fx-delay-time': { min: 0.04, max: 1.2, value: 0.36, log: true, unit: '',
+    'fx-delay-time': { min: 0.04, max: 1.2, value: 0.42, log: true, unit: '',
       onChange: v => {
         state['fx-delay-time'] = v;
         if (dly) dly.delayTime.setTargetAtTime(v, ac.currentTime, 0.04);
       } },
-    'fx-delay-fb':   { min: 0, max: 0.85, value: 0.42, log: false, unit: '%',
+    'fx-delay-fb':   { min: 0, max: 0.85, value: 0.5, log: false, unit: '%',
       onChange: v => {
         state['fx-delay-fb'] = v;
         if (dlyFb) dlyFb.gain.setTargetAtTime(v, ac.currentTime, 0.03);
       } },
 
     // ---- Reverb ----
-    'fx-reverb-size':  { min: 0.1, max: 1.0, value: 0.5, log: false, unit: '%',
+    'fx-reverb-size':  { min: 0.1, max: 1.0, value: 0.6, log: false, unit: '%',
       onChange: v => {
         state['fx-reverb-size'] = v;
         if (rev1) rev1.delayTime.setTargetAtTime(0.03 + v * 0.08, ac.currentTime, 0.05);
@@ -1876,10 +2020,11 @@ class Knob {
         if (chAmt) chAmt.gain.setTargetAtTime(v, ac.currentTime, 0.04);
       } },
   };
+  const knobs = {}; // param → Knob instance
   document.querySelectorAll('.rig .knob').forEach(el => {
     const p = el.dataset.param;
     const cfg = knobConfigs[p];
-    if (cfg) new Knob(el, cfg);
+    if (cfg) knobs[p] = new Knob(el, cfg);
   });
 
   // --- Patching ---
@@ -1944,21 +2089,6 @@ class Knob {
     gate.gain.setTargetAtTime(dronePlaying ? 0.55 : 0, now, 0.04);
   });
 
-  // Expose a tiny bus so the 3D mesh can pulse with the drone audio.
-  window.__synthBus = {
-    getDroneLevel() {
-      if (!analyser || !analyserData || !dronePlaying) return 0;
-      analyser.getByteTimeDomainData(analyserData);
-      let sum = 0;
-      for (let i = 0; i < analyserData.length; i++) {
-        const v = (analyserData[i] - 128) / 128;
-        sum += v * v;
-      }
-      return Math.sqrt(sum / analyserData.length);
-    },
-    isDronePlaying() { return dronePlaying; }
-  };
-
   // pedals — only the stomp switch toggles; knob drags don't bubble here
   document.querySelectorAll('.pedal-switch').forEach(sw => {
     sw.addEventListener('click', async (e) => {
@@ -1985,8 +2115,11 @@ class Knob {
     const fr = outEl.getBoundingClientRect();
     const x1 = fr.left + fr.width/2 - host.left;
     const y1 = fr.top + fr.height/2 - host.top;
-    Object.keys(cvConns).forEach(target => {
-      const inEl = document.querySelector(`.jack.cv-in[data-target="${target}"] .port`);
+    // Draw from DOM state — any .connected input jack gets a cable. This lets
+    // defaults show cables before audio boots, and keeps visual/logical decoupled.
+    document.querySelectorAll('.jack.cv-in.connected').forEach(inJack => {
+      const target = inJack.dataset.target;
+      const inEl = inJack.querySelector('.port');
       if (!inEl) return;
       const tr = inEl.getBoundingClientRect();
       const x2 = tr.left + tr.width/2 - host.left;
@@ -2011,6 +2144,241 @@ class Knob {
   }
   window.addEventListener('resize', drawCables);
   window.addEventListener('scroll', drawCables, { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(drawCables, 200));
+
+  // --- Seed visual default state on load (no sound yet) ---
+  // Default pedals lit (audio wires in bootAudio/applyFX)
+  DEFAULT_FX_ON.forEach(id => {
+    fxOn[id] = true;
+    const pedal = document.querySelector(`.pedal[data-fx="${id}"]`);
+    if (pedal) pedal.classList.add('on');
+  });
+  // Default CV patches: mark jacks connected + knob modulated (audio wires when
+  // bootAudio resolves; drawCables draws from DOM state, so cables show up immediately)
+  DEFAULT_PATCHES.forEach(target => {
+    document.querySelector(`.jack.cv-in[data-target="${target}"]`)?.classList.add('connected');
+    document.querySelector(`.knob[data-param="${target}"]`)?.classList.add('modulated');
+  });
+  // draw cables once layout settles
+  requestAnimationFrame(() => setTimeout(drawCables, 60));
+
+  // --- Expose synth bus for 3D mesh + synth BG visualisation ---
+  const timeDomain = new Uint8Array(256);
+  window.__synthBus = {
+    getDroneLevel() {
+      if (!analyser || !analyserData || !dronePlaying) return 0;
+      analyser.getByteTimeDomainData(analyserData);
+      let sum = 0;
+      for (let i = 0; i < analyserData.length; i++) {
+        const v = (analyserData[i] - 128) / 128;
+        sum += v * v;
+      }
+      return Math.sqrt(sum / analyserData.length);
+    },
+    getWaveform() {
+      if (!analyser || !dronePlaying) return null;
+      analyser.getByteTimeDomainData(timeDomain);
+      return timeDomain;
+    },
+    isDronePlaying() { return dronePlaying; }
+  };
+
+  // ======================= SENSOR MODULATION =======================
+  // Per-knob sensor map: { [param]: 'light'|'tiltX'|'tiltY'|'pointerX'|'pointerY'|'pointerDist' }
+  // Sensors run lazily — first knob that picks tilt triggers iOS permission,
+  // first knob that picks light starts AmbientLightSensor or camera luma fallback.
+  const knobSource = {};
+  const sensors = {
+    light: 0.5,
+    tiltX: 0.5,     // gamma: left/right tilt
+    tiltY: 0.5,     // beta:  front/back tilt
+    pointerX: 0.5,
+    pointerY: 0.5,
+  };
+  let pointerClientX = window.innerWidth / 2;
+  let pointerClientY = window.innerHeight / 2;
+
+  // pointer — always on
+  window.addEventListener('pointermove', (e) => {
+    pointerClientX = e.clientX;
+    pointerClientY = e.clientY;
+    sensors.pointerX = Math.min(1, Math.max(0, e.clientX / Math.max(1, window.innerWidth)));
+    sensors.pointerY = 1 - Math.min(1, Math.max(0, e.clientY / Math.max(1, window.innerHeight)));
+  });
+
+  // pointerDist is per-knob (distance from knob center, inverted + normalized)
+  function pointerDistForKnob(knobEl) {
+    const r = knobEl.getBoundingClientRect();
+    const kx = r.left + r.width / 2;
+    const ky = r.top + r.height / 2;
+    const dx = pointerClientX - kx;
+    const dy = pointerClientY - ky;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    // near the knob → 1, ~60% of viewport width away → 0
+    return Math.max(0, 1 - d / (window.innerWidth * 0.6));
+  }
+
+  // tilt (lazy)
+  let tiltAttached = false;
+  function onTilt(e) {
+    if (e.gamma != null) sensors.tiltX = Math.min(1, Math.max(0, (e.gamma + 45) / 90));
+    if (e.beta  != null) sensors.tiltY = Math.min(1, Math.max(0, e.beta / 90));
+  }
+  async function attachTilt() {
+    if (tiltAttached) return;
+    const needsPerm = typeof DeviceOrientationEvent !== 'undefined' &&
+                      typeof DeviceOrientationEvent.requestPermission === 'function';
+    if (needsPerm) {
+      try {
+        const r = await DeviceOrientationEvent.requestPermission();
+        if (r !== 'granted') { showSensorPrompt('motion'); return; }
+      } catch (e) { showSensorPrompt('motion'); return; }
+    }
+    tiltAttached = true;
+    window.addEventListener('deviceorientation', onTilt);
+  }
+
+  // Fallback iOS permission prompt — shown when the select-change gesture
+  // doesn't satisfy Safari. The button click is a fresh user gesture.
+  function showSensorPrompt(kind) {
+    let el = document.getElementById('sensorPrompt');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'sensorPrompt';
+      el.className = 'sensor-prompt';
+      el.innerHTML = `<span class="msg"></span>
+        <button class="go">Enable</button>
+        <button class="x" title="dismiss">×</button>`;
+      document.body.appendChild(el);
+      el.querySelector('.x').addEventListener('click', () => el.classList.remove('show'));
+      el.querySelector('.go').addEventListener('click', async () => {
+        const k = el.dataset.kind;
+        el.classList.remove('show');
+        if (k === 'motion') {
+          try {
+            const r = await DeviceOrientationEvent.requestPermission();
+            if (r === 'granted') {
+              tiltAttached = true;
+              window.addEventListener('deviceorientation', onTilt);
+            }
+          } catch (e) {}
+        } else if (k === 'light') {
+          lightStarted = false;
+          startLight();
+        }
+      });
+    }
+    el.dataset.kind = kind;
+    el.querySelector('.msg').textContent = kind === 'motion'
+      ? 'Allow motion access to use tilt'
+      : 'Allow camera to read ambient light';
+    el.classList.add('show');
+  }
+
+  // light (lazy) — AmbientLightSensor → camera luma fallback
+  let lightStarted = false;
+  let lightVideo = null, lightCtx = null, lightStream = null;
+  async function startLight() {
+    if (lightStarted) return;
+    lightStarted = true;
+    if ('AmbientLightSensor' in window) {
+      try {
+        const s = new AmbientLightSensor({ frequency: 5 });
+        s.onreading = () => {
+          const lux = s.illuminance || 0;
+          sensors.light = Math.min(1, Math.max(0, Math.log10(lux + 1) / 4));
+        };
+        s.onerror = () => startCameraLight();
+        s.start();
+        return;
+      } catch (e) { /* fall through */ }
+    }
+    startCameraLight();
+  }
+  async function startCameraLight() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }, audio: false
+      });
+      lightStream = stream;
+      const v = document.createElement('video');
+      v.srcObject = stream; v.muted = true; v.playsInline = true;
+      await v.play();
+      lightVideo = v;
+      const c = document.createElement('canvas');
+      c.width = 24; c.height = 24;
+      lightCtx = c.getContext('2d');
+    } catch (err) {
+      console.warn('camera light unavailable', err);
+      lightStarted = false;
+      if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
+        showSensorPrompt('light');
+      }
+    }
+  }
+  function sampleCameraLight() {
+    if (!lightCtx || !lightVideo) return;
+    try {
+      lightCtx.drawImage(lightVideo, 0, 0, 24, 24);
+      const d = lightCtx.getImageData(0, 0, 24, 24).data;
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4)
+        sum += 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+      const avg = sum / (d.length / 4);
+      sensors.light += (Math.min(1, Math.max(0, avg / 180)) - sensors.light) * 0.15;
+    } catch (e) {}
+  }
+
+  // Dropdown change — pick/clear sensor for a knob, lazy-init sensor on first use
+  document.querySelectorAll('.mod-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const p = sel.dataset.param;
+      const src = sel.value;
+      if (!src) {
+        delete knobSource[p];
+        sel.classList.remove('on');
+        knobs[p]?.el.classList.remove('sensor-modulated');
+      } else {
+        knobSource[p] = src;
+        sel.classList.add('on');
+        knobs[p]?.el.classList.add('sensor-modulated');
+        if (src === 'tiltX' || src === 'tiltY') await attachTilt();
+        else if (src === 'light') await startLight();
+      }
+    });
+    // don't let select clicks bubble into knob drag
+    sel.addEventListener('pointerdown', (e) => e.stopPropagation());
+  });
+
+  // Direct drag on a modulated knob clears its source
+  document.querySelectorAll('.rig .knob').forEach(el => {
+    el.addEventListener('pointerdown', () => {
+      const p = el.dataset.param;
+      if (knobSource[p]) {
+        delete knobSource[p];
+        el.classList.remove('sensor-modulated');
+        const sel = document.querySelector(`.mod-select[data-param="${p}"]`);
+        if (sel) { sel.value = ''; sel.classList.remove('on'); }
+      }
+    }, true);
+  });
+
+  // Apply sensors → knobs each frame
+  function modLoop() {
+    sampleCameraLight(); // no-op if no stream running
+    for (const p in knobSource) {
+      const src = knobSource[p];
+      const k = knobs[p]; if (!k) continue;
+      let v;
+      if (src === 'pointerDist') v = pointerDistForKnob(k.el);
+      else v = sensors[src];
+      if (v == null) continue;
+      v = Math.min(1, Math.max(0, v));
+      k.setValue(k._denorm(v), true);
+    }
+    requestAnimationFrame(modLoop);
+  }
+  modLoop();
 
   // viz
   const vizEl = document.getElementById('synthViz');
@@ -2041,6 +2409,124 @@ class Knob {
     requestAnimationFrame(vizLoop);
   }
   vizLoop();
+})();
+
+/* =============== SYNTH SECTION BG (oscilloscope-style) =============== */
+(function initSynthBG() {
+  const section = document.getElementById('synths');
+  if (!section) return;
+  const canvas = document.createElement('canvas');
+  canvas.className = 'synth-bg';
+  section.insertBefore(canvas, section.firstChild);
+  const ctx = canvas.getContext('2d');
+  let w = 0, h = 0;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize() {
+    const r = section.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return;
+    w = r.width; h = r.height;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+  // resize as content grows (pedals mount etc)
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(section);
+
+  // pointer in viewport coords — works even outside the canvas
+  let mx = 0.5, my = 0.5;
+  let pmx = 0.5, pmy = 0.5;
+  window.addEventListener('pointermove', (e) => {
+    const r = section.getBoundingClientRect();
+    mx = Math.min(1, Math.max(0, (e.clientX - r.left) / Math.max(1, r.width)));
+    my = Math.min(1, Math.max(0, 1 - (e.clientY - r.top) / Math.max(1, r.height)));
+  });
+
+  let t = 0;
+  let audioPhase = 0;
+
+  function draw() {
+    if (!w || !h) resize();
+    if (!w) return requestAnimationFrame(draw);
+    t += 0.014;
+    pmx += (mx - pmx) * 0.06;
+    pmy += (my - pmy) * 0.06;
+
+    // dim the canvas progressively (trailing/afterglow)
+    ctx.fillStyle = 'rgba(10,10,14,0.22)';
+    ctx.fillRect(0, 0, w, h);
+
+    // graticule grid — faint
+    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+    ctx.lineWidth = 1;
+    const gx = 60, gy = 60;
+    ctx.beginPath();
+    for (let x = (t * 20) % gx; x < w; x += gx) {
+      ctx.moveTo(x, 0); ctx.lineTo(x, h);
+    }
+    for (let y = 0; y < h; y += gy) {
+      ctx.moveTo(0, y); ctx.lineTo(w, y);
+    }
+    ctx.stroke();
+
+    // audio waveform (real) overlay — if drone is playing
+    const bus = window.__synthBus;
+    const wave = bus && bus.getWaveform ? bus.getWaveform() : null;
+    if (wave) {
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(255,87,34,0.55)';
+      ctx.lineWidth = 1.4;
+      for (let i = 0; i < wave.length; i++) {
+        const x = (i / (wave.length - 1)) * w;
+        const v = (wave[i] - 128) / 128;
+        const y = h / 2 + v * h * 0.42;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      audioPhase += 0.03;
+    }
+
+    // three layered procedural sine waves — react to pointer
+    const layers = [
+      { color: 'rgba(255,87,34,0.55)',  freq: 1.5 + pmx * 3.0, amp: 0.12 + pmy * 0.22, speed: 0.9,  phase: 0,     lw: 1.4 },
+      { color: 'rgba(0,229,255,0.45)',  freq: 3.0 + pmx * 6.0, amp: 0.08 + pmy * 0.18, speed: 1.4,  phase: 1.3,   lw: 1.2 },
+      { color: 'rgba(160,108,255,0.38)',freq: 5.0 + pmx * 9.0, amp: 0.05 + pmy * 0.14, speed: -1.1, phase: 2.6,   lw: 1.0 },
+    ];
+    for (const L of layers) {
+      ctx.beginPath();
+      ctx.strokeStyle = L.color;
+      ctx.lineWidth = L.lw;
+      for (let x = 0; x <= w; x += 3) {
+        const xn = x / w;
+        const y = h / 2
+          + Math.sin(xn * L.freq * Math.PI * 2 + t * L.speed + L.phase) * h * L.amp
+          + Math.sin(xn * L.freq * Math.PI * 4 + t * L.speed * 0.6 + L.phase) * h * L.amp * 0.25;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // scrolling "carrier dots" for a CRT-ish feel
+    const dotCount = 40;
+    ctx.fillStyle = 'rgba(255,87,34,0.7)';
+    for (let i = 0; i < dotCount; i++) {
+      const phase = (i / dotCount) * Math.PI * 2;
+      const x = ((t * 80 + i * (w / dotCount)) % (w + 20)) - 10;
+      const y = h / 2 + Math.sin(t * 1.8 + phase) * h * 0.08;
+      ctx.fillRect(x, y, 2, 2);
+    }
+
+    requestAnimationFrame(draw);
+  }
+  resize();
+  setTimeout(resize, 120);
+  draw();
 })();
 
 /* ================= MUSIC ================= */
