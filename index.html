@@ -538,38 +538,69 @@
   }
 
   /* drone */
-  .drone-row {
+  /* OUT module: drone + master vol, side by side like other modules */
+  .out-row { justify-content: space-around; align-items: flex-start; }
+  .drone-unit {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.6rem;
-    justify-content: center;
+    gap: 0.35rem;
     flex: 1;
+    min-width: 0;
   }
   .drone-btn {
-    width: 74px; height: 74px;
+    width: 52px; height: 52px;
     border-radius: 50%;
-    border: 1px solid var(--line);
-    background: #050506;
-    color: var(--ink-dim);
+    border: 1px solid #27272a;
+    background: radial-gradient(circle at 30% 30%, #2a2a2f 0%, #18181b 60%, #0a0a0b 100%);
+    color: var(--ink-faint);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
     transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
+    padding: 0;
   }
-  .drone-btn:hover { border-color: var(--ink-dim); color: var(--ink); }
+  .drone-btn:hover { border-color: rgba(255,87,34,0.4); color: var(--ink); }
+  .drone-btn .drone-ico { line-height: 1; display: inline-block; }
   .drone-btn.on {
-    background: rgba(255,87,34,0.1);
+    background: radial-gradient(circle at 30% 30%, #3a1a10 0%, #1e0a06 60%, #0a0302 100%);
     border-color: var(--accent);
     color: var(--accent);
-    box-shadow: 0 0 24px rgba(255,87,34,0.3), inset 0 0 18px rgba(255,87,34,0.1);
+    box-shadow: 0 0 18px rgba(255,87,34,0.3), inset 0 0 12px rgba(255,87,34,0.2);
   }
-  .drone-label {
+  .drone-btn.on .drone-ico { }
+
+  /* Status strip inside OUT — visual counterpart to .jacks in other modules */
+  .out-status {
+    justify-content: space-between !important;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .status-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     color: var(--ink-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.15em;
+  }
+  .status-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .status-bar-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-2) 0%, var(--accent) 70%, #ff8b3c 100%);
+    transition: width 0.08s ease;
+    box-shadow: 0 0 6px rgba(255,87,34,0.4);
   }
 
   /* pedals */
@@ -1145,10 +1176,22 @@
         </div>
 
         <div class="module" id="mod-out">
-          <div class="mod-head"><span>OUT</span><span class="type">GATE</span></div>
-          <div class="drone-row">
-            <button class="drone-btn" id="droneBtn">DRONE</button>
-            <div class="drone-label">click to play</div>
+          <div class="mod-head"><span>OUT</span><span class="type">MASTER</span></div>
+          <div class="mod-knobs out-row">
+            <div class="drone-unit">
+              <button class="drone-btn" id="droneBtn"><span class="drone-ico">▶</span></button>
+              <div class="knob-label">DRONE</div>
+            </div>
+            <div class="knob-unit">
+              <div class="knob" data-param="out-vol"><div class="knob-ring"></div><div class="knob-dial"></div></div>
+              <div class="knob-label">VOL</div>
+              <div class="knob-value">—</div>
+              <select class="mod-select" data-param="out-vol" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select>
+            </div>
+          </div>
+          <div class="jacks out-status">
+            <span class="status-label">MIX</span>
+            <span class="status-bar"><span class="status-bar-fill" id="outLevel"></span></span>
           </div>
         </div>
       </div>
@@ -1737,6 +1780,7 @@ class Knob {
     'vco-freq': 85,    'vco-pw': 0.36,
     'lfo-rate': 0.25,  'lfo-depth': 0.40,
     'lpf-cut': 1800,   'lpf-res': 20,
+    'out-vol': 0.55,
     'fx-fuzz-drive': 7,       'fx-fuzz-tone': 2200,
     'fx-delay-time': 0.42,    'fx-delay-fb':   0.5,
     'fx-reverb-size': 0.6,    'fx-reverb-decay': 0.55,
@@ -1801,7 +1845,7 @@ class Knob {
       gate.gain.value = 0;
 
       master = ac.createGain();
-      master.gain.value = 0.55;
+      master.gain.value = state['out-vol'];
 
       // ---------- FUZZ: preGain (drive) → shaper → toneLpf → wet ----------
       fuzzDry = ac.createGain(); fuzzDry.gain.value = 1;
@@ -1971,6 +2015,13 @@ class Knob {
     'lpf-res':  { min: 0.3, max: 20, value: 20, log: true, unit: 'Q',
       onChange: v => { state['lpf-res'] = v; if (lpf) lpf.Q.setTargetAtTime(v, ac.currentTime, 0.02); } },
 
+    // ---- Output master volume ----
+    'out-vol':  { min: 0, max: 1, value: 0.55, log: false, unit: '%',
+      onChange: v => {
+        state['out-vol'] = v;
+        if (master) master.gain.setTargetAtTime(v, ac.currentTime, 0.03);
+      } },
+
     // ---- Fuzz ----
     'fx-fuzz-drive': { min: 1, max: 12, value: 7, log: true, unit: '',
       onChange: v => {
@@ -2078,12 +2129,14 @@ class Knob {
 
   // drone
   const droneBtn = document.getElementById('droneBtn');
+  const droneIco = droneBtn.querySelector('.drone-ico');
   droneBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     await bootAudio();
     if (ac.state === 'suspended') await ac.resume();
     dronePlaying = !dronePlaying;
     droneBtn.classList.toggle('on', dronePlaying);
+    if (droneIco) droneIco.textContent = dronePlaying ? '■' : '▶';
     const now = ac.currentTime;
     gate.gain.cancelScheduledValues(now);
     gate.gain.setTargetAtTime(dronePlaying ? 0.55 : 0, now, 0.04);
@@ -2389,15 +2442,22 @@ class Knob {
     vizEl.appendChild(d);
     vizBars.push(d);
   }
+  const outLevelEl = document.getElementById('outLevel');
   function vizLoop() {
     if (analyser) {
       analyser.getByteFrequencyData(analyserData);
+      let sum = 0;
       for (let i = 0; i < VIZ_BARS; i++) {
         const idx = Math.floor(i * analyserData.length / VIZ_BARS);
         const v = analyserData[idx] / 255;
+        sum += v;
         vizBars[i].style.height = `${Math.max(4, v * 100)}%`;
         vizBars[i].style.background = v > 0.6 ? '#00e5ff' : '#ff5722';
         vizBars[i].style.opacity = 0.25 + v * 0.75;
+      }
+      if (outLevelEl) {
+        const avg = sum / VIZ_BARS;
+        outLevelEl.style.width = Math.min(100, avg * 180) + '%';
       }
     } else {
       for (let i = 0; i < VIZ_BARS; i++) {
@@ -2405,6 +2465,7 @@ class Knob {
         const v = (Math.sin(i * 0.3 + t) + 1) * 0.5 * 0.12;
         vizBars[i].style.height = `${4 + v * 100}%`;
       }
+      if (outLevelEl) outLevelEl.style.width = '0%';
     }
     requestAnimationFrame(vizLoop);
   }
