@@ -306,6 +306,8 @@
     padding: 1.75rem;
     margin-bottom: 3rem;
     position: relative;
+    overflow: hidden;
+    min-width: 0;
   }
   .rig-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -386,6 +388,7 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 0.75rem;
+    min-width: 0;
   }
   .cables-svg {
     position: absolute;
@@ -404,8 +407,7 @@
     min-width: 0;
     overflow: hidden;
   }
-  .mod-knobs { min-width: 0; }
-  .mod-select { max-width: 100%; }
+  .mod-select { max-width: 100%; min-width: 0; }
   .mod-head { gap: 0.5rem; min-width: 0; }
   .mod-head span:first-child { overflow: hidden; text-overflow: ellipsis; }
   .mod-head {
@@ -420,18 +422,19 @@
     text-transform: uppercase;
   }
   .mod-head .type { color: var(--ink-faint); font-size: 0.65rem; }
+  /* grid (not flex) so native <select> can't push columns wider than 1fr */
   .mod-knobs {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
-    justify-content: space-around;
     flex: 1;
+    min-width: 0;
   }
   .knob-unit {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.35rem;
-    flex: 1;
     min-width: 0;
   }
   .knob {
@@ -547,14 +550,13 @@
   }
 
   /* drone */
-  /* OUT module: drone + master vol, side by side like other modules */
-  .out-row { justify-content: space-around; align-items: flex-start; }
+  /* OUT module: drone + master vol, side by side like other modules (inherits .mod-knobs grid) */
+  .out-row { align-items: start; }
   .drone-unit {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.35rem;
-    flex: 1;
     min-width: 0;
   }
   .drone-btn {
@@ -968,31 +970,34 @@
     .rig-hint { font-size: 0.6rem; }
 
     .modules { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-    .module { padding: 0.75rem 0.6rem 1rem; }
+    .module { padding: 0.75rem 0.6rem 1rem; min-width: 0; overflow: hidden; }
     .mod-head { font-size: 0.6rem; margin-bottom: 0.75rem; padding-bottom: 0.4rem; }
     .mod-head .type { font-size: 0.55rem; }
-    .mod-knobs { gap: 0.35rem; }
+    .mod-knobs { gap: 0.4rem; grid-template-columns: 1fr 1fr; }
 
-    /* bigger knobs for finger taps */
-    .knob { width: 58px; height: 58px; }
+    /* 2-col tier only fires at ≥481px (below that, single-column takes over) */
+    .knob { width: 52px; height: 52px; }
+    .knob-ring { inset: -4px; }
     .pedal-knobs .knob { width: 36px; height: 36px; }
     .knob-label { font-size: 0.55rem; }
     .knob-value { font-size: 0.6rem; }
 
-    /* bigger jack ports for tapping */
-    .jacks { gap: 0.3rem; padding-top: 0.6rem; }
-    .jack { font-size: 0.5rem; padding: 4px 2px; min-height: 44px; justify-content: center; }
-    .jack .port { width: 18px; height: 18px; }
+    /* jacks shrink with the column instead of pushing it wider */
+    .jacks { gap: 0.25rem; padding-top: 0.6rem; }
+    .jack { font-size: 0.5rem; padding: 4px 2px; min-height: 44px; min-width: 0; justify-content: center; flex: 1; }
+    .jack span:last-child { word-break: break-word; text-align: center; line-height: 1.15; }
+    .jack .port { width: 16px; height: 16px; }
 
-    /* readable mod-select on phones — constrained to its knob-unit */
-    .mod-select { font-size: 0.65rem; padding: 3px 16px 3px 6px; min-height: 24px; width: 100%; box-sizing: border-box; }
-    .pedal-knobs .mod-select { font-size: 0.6rem; padding: 2px 14px 2px 5px; min-height: 22px; width: 100%; box-sizing: border-box; }
+    /* native <select> shrinks fully — content can ellipsize via overflow on parent */
+    .mod-select { font-size: 0.62rem; padding: 3px 14px 3px 5px; min-height: 24px; width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pedal-knobs .mod-select { font-size: 0.6rem; padding: 2px 14px 2px 5px; min-height: 22px; width: 100%; min-width: 0; box-sizing: border-box; }
 
-    /* OUT module: shrink drone button, tighten status row */
-    .drone-btn { width: 46px; height: 46px; font-size: 0.85rem; }
-    .out-row { gap: 0.25rem; }
+    /* OUT module: shrink drone button to match knob size, tighten status row */
+    .drone-btn { width: 42px; height: 42px; font-size: 0.8rem; }
+    .out-row { gap: 0.3rem; }
     .out-status { gap: 0.35rem; padding-top: 0.6rem; }
     .status-label { font-size: 0.5rem; letter-spacing: 0.1em; }
+    .status-bar { min-width: 0; }
 
     .pedals { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
     .pedal { padding: 0.75rem 0.6rem 1rem; }
@@ -1000,10 +1005,15 @@
     .pedal-switch { padding: 10px; min-height: 44px; }
   }
 
-  /* Very narrow phones — single column modules */
-  @media (max-width: 400px) {
+  /* Galaxy-class phones (≤480px covers 360/390/412) — single column modules */
+  @media (max-width: 480px) {
     .modules { grid-template-columns: 1fr; }
+    .module { padding: 0.85rem 0.85rem 1.1rem; }
     .knob { width: 64px; height: 64px; }
+    .knob-ring { inset: -4px; }
+    .drone-btn { width: 56px; height: 56px; font-size: 0.95rem; }
+    .jack .port { width: 18px; height: 18px; }
+    .jack { font-size: 0.55rem; }
   }
 
   /* iOS sensor-permission prompt */
