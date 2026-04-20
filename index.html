@@ -123,7 +123,10 @@
     margin-bottom: 3rem;
     padding-bottom: 1.25rem;
     border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
   }
+  .section-head h2 { min-width: 0; flex: 1 1 auto; }
   .section-head .num {
     font-family: 'JetBrains Mono', monospace;
     color: var(--accent);
@@ -398,7 +401,13 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
   }
+  .mod-knobs { min-width: 0; }
+  .mod-select { max-width: 100%; }
+  .mod-head { gap: 0.5rem; min-width: 0; }
+  .mod-head span:first-child { overflow: hidden; text-overflow: ellipsis; }
   .mod-head {
     display: flex; justify-content: space-between; align-items: center;
     font-family: 'JetBrains Mono', monospace;
@@ -948,6 +957,12 @@
 
   /* Phones / coarse pointer — bigger touch targets, tighter workbench */
   @media (max-width: 640px), (pointer: coarse) and (max-width: 820px) {
+    /* section headers don't clip at narrow widths — put num + tag on top row, h2 below */
+    .section-head { gap: 0.6rem; margin-bottom: 2rem; row-gap: 0.3rem; }
+    .section-head .num { order: 1; }
+    .section-head .tag { order: 2; margin-left: auto; }
+    .section-head h2 { order: 3; flex: 1 1 100%; font-size: clamp(1.4rem, 7.5vw, 2.2rem); }
+
     .rig { padding: 1rem 0.75rem 1.25rem; }
     .rig-head { flex-wrap: wrap; gap: 0.5rem; }
     .rig-hint { font-size: 0.6rem; }
@@ -969,9 +984,15 @@
     .jack { font-size: 0.5rem; padding: 4px 2px; min-height: 44px; justify-content: center; }
     .jack .port { width: 18px; height: 18px; }
 
-    /* readable mod-select on phones */
-    .mod-select { font-size: 0.65rem; padding: 3px 16px 3px 6px; min-height: 24px; }
-    .pedal-knobs .mod-select { font-size: 0.6rem; padding: 2px 14px 2px 5px; min-height: 22px; }
+    /* readable mod-select on phones — constrained to its knob-unit */
+    .mod-select { font-size: 0.65rem; padding: 3px 16px 3px 6px; min-height: 24px; width: 100%; box-sizing: border-box; }
+    .pedal-knobs .mod-select { font-size: 0.6rem; padding: 2px 14px 2px 5px; min-height: 22px; width: 100%; box-sizing: border-box; }
+
+    /* OUT module: shrink drone button, tighten status row */
+    .drone-btn { width: 46px; height: 46px; font-size: 0.85rem; }
+    .out-row { gap: 0.25rem; }
+    .out-status { gap: 0.35rem; padding-top: 0.6rem; }
+    .status-label { font-size: 0.5rem; letter-spacing: 0.1em; }
 
     .pedals { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
     .pedal { padding: 0.75rem 0.6rem 1rem; }
