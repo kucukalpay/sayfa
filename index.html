@@ -3286,4 +3286,96 @@ class Knob {
       probe.onerror = () => {
         const miss = document.createElement('div');
         miss.className = 'missing';
-        miss.textContent = `[ ${s}-${idx}.gif — coming so
+        miss.textContent = `[ ${s}-${idx}.gif — coming soon ]`;
+        slide.appendChild(miss);
+      };
+      probe.src = url;
+      stage.appendChild(slide);
+
+      const dot = document.createElement('button');
+      dot.className = 'lightbox-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('aria-label', `Slide ${i + 1}`);
+      dot.addEventListener('click', () => goTo(i));
+      dotsEl.appendChild(dot);
+    }
+    current = 0;
+    updateNav();
+    capEl.textContent = `01 / ${String(n).padStart(2, '0')}`;
+  }
+
+  function goTo(i) {
+    if (i < 0 || i >= count) return;
+    stage.querySelectorAll('.lightbox-slide').forEach(s => s.classList.toggle('active', +s.dataset.idx === i));
+    dotsEl.querySelectorAll('.lightbox-dot').forEach((d, idx) => d.classList.toggle('active', idx === i));
+    current = i;
+    updateNav();
+    capEl.textContent = `${String(i + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`;
+  }
+  function updateNav() {
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === count - 1;
+  }
+
+  function open(tile) {
+    slug  = tile.dataset.slug;
+    count = parseInt(tile.dataset.gifs || '3', 10);
+    titleEl.textContent = tile.dataset.title || '';
+    typeEl.textContent  = tile.dataset.type  || '';
+    renderSlides(slug, count);
+    lb.classList.add('open');
+    lb.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('lightbox-open');
+    closeBtn.focus();
+  }
+  function close() {
+    lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('lightbox-open');
+    // Clear stage on close to drop GIF decode memory
+    setTimeout(() => { if (!lb.classList.contains('open')) stage.innerHTML = ''; }, 300);
+  }
+
+  // Wiring on each tile: desktop = click opens. Touch = first tap peek, second opens.
+  const isCoarse = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  tiles.forEach(t => {
+    t.addEventListener('click', (e) => {
+      if (isCoarse && !t.classList.contains('tapped')) {
+        // First tap: reveal real image, don't open lightbox yet.
+        tiles.forEach(o => o.classList.remove('tapped'));
+        t.classList.add('tapped');
+        return;
+      }
+      e.preventDefault();
+      open(t);
+    });
+  });
+
+  // Global controls
+  closeBtn.addEventListener('click', close);
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+  lb.addEventListener('click', (e) => { if (e.target === lb) close(); });
+  document.addEventListener('keydown', (e) => {
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft') goTo(current - 1);
+    else if (e.key === 'ArrowRight') goTo(current + 1);
+  });
+
+  // Swipe support on stage (touch)
+  let tsx = 0, tsy = 0;
+  stage.addEventListener('touchstart', (e) => {
+    const t = e.changedTouches[0]; tsx = t.clientX; tsy = t.clientY;
+  }, { passive: true });
+  stage.addEventListener('touchend', (e) => {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - tsx, dy = t.clientY - tsy;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) goTo(current + 1); else goTo(current - 1);
+    }
+  }, { passive: true });
+})();
+</script>
+
+</body>
+</html>
