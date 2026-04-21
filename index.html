@@ -1019,6 +1019,53 @@
     .jack { font-size: 0.55rem; }
   }
 
+  /* Render containment — isolates repaints/layout to each tile/module so hover or
+     style changes don't cascade into parent re-layouts. Skip any element that has
+     children escaping its box. */
+  .tile, .service, .pedal, .module, .build-card, .photo-tile, .track-row {
+    contain: paint layout;
+  }
+
+  /* Respect reduced-motion: kill non-essential animations + compositing.
+     The hero mesh is replaced with a static CSS gradient (see #proc-canvas rule). */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .mic-toggle.on .led { animation: none; }
+    .jack.cv-in.pending .port,
+    .jack.cv-out.armed .port { animation: none; }
+    .tile:hover .tile-media { transform: none; }
+    .build-card:hover { transform: none; }
+    .photo-tile:hover { transform: none; }
+    .socials a:hover { transform: none; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    body::before { display: none; } /* drop full-viewport mix-blend noise */
+    .synth-bg { display: none; }    /* drop oscilloscope bg canvas */
+    /* Static gradient stand-in for the procedural mesh */
+    #proc-canvas {
+      background:
+        radial-gradient(ellipse at 65% 45%, rgba(0,229,255,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse at 30% 70%, rgba(255,87,34,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 50%, rgba(160,108,255,0.04) 0%, transparent 70%);
+    }
+  }
+
+  /* Mobile: backdrop-filter is very expensive on mobile GPUs. Drop it everywhere
+     and fall back to a slightly-more-opaque solid. Also drops the mix-blend noise. */
+  @media (max-width: 768px) {
+    nav { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10,10,11,0.92); }
+    .tile { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(17,17,20,0.95); }
+    .services { backdrop-filter: none; -webkit-backdrop-filter: none; background-color: rgba(17,17,20,0.95); }
+    .rig { backdrop-filter: none; -webkit-backdrop-filter: none;
+           background:
+             linear-gradient(rgba(10,10,11,0.94), rgba(10,10,11,0.94)),
+             url('assets/images/mkv-pcb.png') center/cover no-repeat,
+             rgba(10,10,11,0.94); }
+    .mic-toggle { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10,10,11,0.92); }
+  }
+  @media (max-width: 640px) {
+    body::before { opacity: 0.02; mix-blend-mode: normal; }
+  }
+
   /* iOS sensor-permission prompt */
   .sensor-prompt {
     position: fixed; inset: auto 1rem 1rem 1rem;
@@ -1268,10 +1315,10 @@
       <div class="build-card">
         <div class="build-media">
           <model-viewer src="models/vco-diy.glb" alt="VCO DIY build"
-            auto-rotate camera-controls interaction-prompt="none"
+            auto-rotate interaction-prompt="none" reveal="interaction"
             exposure="1" shadow-intensity="0.35" environment-image="neutral"
             camera-orbit="25deg 75deg auto" rotation-per-second="18deg"
-            disable-zoom>
+            loading="lazy" disable-zoom>
             <div slot="poster" class="model-poster">
               <span class="tag">3D · drop /models/vco-diy.glb</span>
               <span>[ VCO · DIY ]</span>
@@ -1287,10 +1334,10 @@
       <div class="build-card">
         <div class="build-media">
           <model-viewer src="models/fuzz.glb" alt="Fuzz pedal build"
-            auto-rotate camera-controls interaction-prompt="none"
+            auto-rotate interaction-prompt="none" reveal="interaction"
             exposure="1" shadow-intensity="0.35" environment-image="neutral"
             camera-orbit="25deg 75deg auto" rotation-per-second="18deg"
-            disable-zoom>
+            loading="lazy" disable-zoom>
             <div slot="poster" class="model-poster">
               <span class="tag">3D · drop /models/fuzz.glb</span>
               <span>[ Fuzz / OD · 9V ]</span>
@@ -1306,10 +1353,10 @@
       <div class="build-card">
         <div class="build-media">
           <model-viewer src="models/lfo.glb" alt="LFO build"
-            auto-rotate camera-controls interaction-prompt="none"
+            auto-rotate interaction-prompt="none" reveal="interaction"
             exposure="1" shadow-intensity="0.35" environment-image="neutral"
             camera-orbit="25deg 75deg auto" rotation-per-second="18deg"
-            disable-zoom>
+            loading="lazy" disable-zoom>
             <div slot="poster" class="model-poster">
               <span class="tag">3D · drop /models/lfo.glb</span>
               <span>[ LFO ]</span>
@@ -1325,10 +1372,10 @@
       <div class="build-card">
         <div class="build-media">
           <model-viewer src="models/delay.glb" alt="Delay pedal build"
-            auto-rotate camera-controls interaction-prompt="none"
+            auto-rotate interaction-prompt="none" reveal="interaction"
             exposure="1" shadow-intensity="0.35" environment-image="neutral"
             camera-orbit="25deg 75deg auto" rotation-per-second="18deg"
-            disable-zoom>
+            loading="lazy" disable-zoom>
             <div slot="poster" class="model-poster">
               <span class="tag">3D · drop /models/delay.glb</span>
               <span>[ Delay · lo-fi ]</span>
@@ -1464,7 +1511,11 @@
   <div>Dark mode forever</div>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* Three.js is lazy-loaded by the hero bootstrapper below — moved out of the
+   critical path so first paint isn't blocked by a ~600KB library request.
+   Reduced-motion users never load it at all. */
+</script>
 
 <script>
 /* reveal + year */
@@ -1474,12 +1525,100 @@ const io = new IntersectionObserver((es) => {
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 document.getElementById('year').textContent = new Date().getFullYear();
 
-/* ================= HERO MESH (bg of section 01) ================= */
-(function initProc() {
+/* Pause model-viewer auto-rotate when cards scroll off-screen. Each model-viewer
+   runs its own three.js renderer + rAF loop; toggling auto-rotate lets the
+   component idle instead of re-rendering every frame. Also toggle camera-controls
+   only while the pointer is over the card — when off-hover, model-viewer has no
+   reason to keep an input loop / hit-test pipeline alive. `reveal="interaction"`
+   on the element also means we don't spin up a WebGL context at all until the
+   user clicks the poster. */
+const mvIO = new IntersectionObserver((es) => {
+  es.forEach(e => {
+    if (e.isIntersecting) e.target.setAttribute('auto-rotate', '');
+    else e.target.removeAttribute('auto-rotate');
+  });
+}, { threshold: 0, rootMargin: '120px' });
+document.querySelectorAll('model-viewer').forEach(mv => {
+  mvIO.observe(mv);
+  // pointerenter/leave covers both mouse and touch (touch "hover" = brief tap)
+  const on = () => mv.setAttribute('camera-controls', '');
+  const off = () => mv.removeAttribute('camera-controls');
+  mv.addEventListener('pointerenter', on);
+  mv.addEventListener('pointerleave', off);
+  // Touch devices: give them controls after the reveal-click so pinch/drag work
+  mv.addEventListener('click', on, { once: true });
+});
+
+/* Debounced runner — coalesces rapid resize/orientation events into a trailing
+   call once the user stops dragging/rotating. Exposed on window so every IIFE
+   can share it. */
+window.__debounce = function(fn, ms) {
+  let t;
+  return function() {
+    clearTimeout(t);
+    t = setTimeout(fn, ms || 150);
+  };
+};
+
+/* ================= HERO MESH (bg of section 01) =================
+   Three.js is now lazy-loaded. initProc() only runs after the library is
+   present AND the hero section is near the viewport. Reduced-motion users
+   get a static CSS gradient (see the @media rule in <style>) and three.js
+   never loads. */
+let __threeLoading = null;
+function ensureThree() {
+  if (typeof THREE !== 'undefined') return Promise.resolve();
+  if (__threeLoading) return __threeLoading;
+  __threeLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  return __threeLoading;
+}
+
+(function bootstrapHero() {
+  const section = document.getElementById('three-d');
+  if (!section) return;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // NUCLEAR OPTION: reduced-motion users skip the mesh entirely. CSS paints a
+  // static radial gradient into #proc-canvas via @media. three.js never loads.
+  if (reducedMotion) return;
+
+  let started = false;
+  const kick = () => {
+    if (started) return;
+    started = true;
+    // requestIdleCallback pushes load off the initial interaction, falling back
+    // to a small timeout for Safari.
+    const loadFn = () => ensureThree().then(initProc).catch(err => {
+      console.warn('three.js load failed', err);
+      started = false;
+    });
+    if ('requestIdleCallback' in window) requestIdleCallback(loadFn, { timeout: 800 });
+    else setTimeout(loadFn, 0);
+  };
+
+  // Hero is at top of page, so it's almost always in view on load — but we
+  // still gate via IO + rootMargin so a deep-link to #contact doesn't load
+  // three.js at all until the user scrolls back up.
+  const bootIO = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) { kick(); bootIO.disconnect(); }
+  }, { rootMargin: '300px' });
+  bootIO.observe(section);
+})();
+
+function initProc() {
   const canvas = document.getElementById('proc-canvas');
   const section = document.getElementById('three-d');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isMobile = window.matchMedia('(max-width: 640px), (pointer: coarse) and (max-width: 820px)').matches;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true, powerPreference: 'low-power' });
+  // 1.5 cap instead of 2 — big GPU fill-rate savings on retina displays
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.setClearColor(0x000000, 0);
 
   const scene = new THREE.Scene();
@@ -1488,9 +1627,14 @@ document.getElementById('year').textContent = new Date().getFullYear();
 
   let lines = null, points = null;
   let meshCoverScale = 1;
+  // Cached canvas rect — avoids getBoundingClientRect() in the mousemove hot path.
+  // Updated on scroll/resize (both cheap, passive) instead.
+  let _cachedCanvasRect = null;
+  const refreshCanvasRect = () => { _cachedCanvasRect = canvas.getBoundingClientRect(); };
   const resize = () => {
-    const r = canvas.getBoundingClientRect();
-    if (r.width === 0 || r.height === 0) return;
+    refreshCanvasRect();
+    const r = _cachedCanvasRect;
+    if (!r || r.width === 0 || r.height === 0) return;
     renderer.setSize(r.width, r.height, false);
     camera.aspect = r.width / r.height;
     camera.updateProjectionMatrix();
@@ -1501,8 +1645,11 @@ document.getElementById('year').textContent = new Date().getFullYear();
     if (lines) lines.scale.setScalar(meshCoverScale);
     if (points) points.scale.setScalar(meshCoverScale);
   };
-  window.addEventListener('resize', resize);
-  window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+  const debouncedResize = window.__debounce(resize, 150);
+  window.addEventListener('resize', debouncedResize);
+  window.addEventListener('orientationchange', debouncedResize);
+  // Scroll only needs to refresh the cached rect (cheap), not full renderer resize.
+  window.addEventListener('scroll', refreshCanvasRect, { passive: true });
 
   const uniforms = {
     uTime: { value: 0 },
@@ -1622,7 +1769,10 @@ document.getElementById('year').textContent = new Date().getFullYear();
     }
   `;
 
-  const baseGeo = new THREE.IcosahedronGeometry(2.2, 4);
+  // Subdivision 3 gives ~642 vertices / 1920 wireframe segments vs sub-4's 2562 / 7680.
+  // Drops GPU + vertex shader cost ~4x; visually near-identical at typical viewport sizes.
+  // TRADEOFF: mesh looks slightly less dense — raise back to 4 if you want the fine detail.
+  const baseGeo = new THREE.IcosahedronGeometry(2.2, isMobile ? 2 : 3);
   const wireGeo = new THREE.WireframeGeometry(baseGeo);
 
   const lineMat = new THREE.ShaderMaterial({
@@ -1646,22 +1796,28 @@ document.getElementById('year').textContent = new Date().getFullYear();
   let targetStrength = 0;
   let currStrength = 0;
 
+  // Reuse these across events — avoids per-move GC pressure
+  const _ndc = new THREE.Vector2();
+  const _hit = new THREE.Vector3();
   window.addEventListener('mousemove', (e) => {
-    const r = canvas.getBoundingClientRect();
+    // Skip hero raycaster entirely when the hero section isn't on-screen
+    if (!heroVisible) { targetStrength = 0; return; }
+    // Use CACHED rect — no per-mousemove layout thrash.
+    const r = _cachedCanvasRect;
+    if (!r) { targetStrength = 0; return; }
     if (e.clientY < r.top || e.clientY > r.bottom ||
         e.clientX < r.left || e.clientX > r.right) {
       targetStrength = 0;
       return;
     }
     targetStrength = 0.6;
-    const ndc = new THREE.Vector2(
+    _ndc.set(
       ((e.clientX - r.left) / r.width) * 2 - 1,
       -((e.clientY - r.top) / r.height) * 2 + 1
     );
-    raycaster.setFromCamera(ndc, camera);
-    const hit = new THREE.Vector3();
-    if (raycaster.ray.intersectPlane(plane, hit)) targetMouse.copy(hit);
-  });
+    raycaster.setFromCamera(_ndc, camera);
+    if (raycaster.ray.intersectPlane(plane, _hit)) targetMouse.copy(_hit);
+  }, { passive: true });
 
   // Mic toggle
   const micToggle = document.getElementById('micToggle');
@@ -1692,7 +1848,13 @@ document.getElementById('year').textContent = new Date().getFullYear();
 
   const clock = new THREE.Clock();
   let droneLevel = 0;
+  // Visibility gating — skip hero rAF when section isn't on-screen (massive savings while
+  // the user reads the rest of the page). Synth-bus drone level isn't needed when the mesh
+  // isn't visible.
+  let heroVisible = true;
+  let heroRunning = false;
   function animate() {
+    if (!heroVisible) { heroRunning = false; return; }
     const dt = clock.getDelta();
     uniforms.uTime.value += dt;
     currMouse.lerp(targetMouse, 0.08);
@@ -1731,8 +1893,19 @@ document.getElementById('year').textContent = new Date().getFullYear();
   resize();
   // extra resize on image/font load
   setTimeout(resize, 100);
-  animate();
-})();
+
+  // Only run the mesh when #three-d is on-screen. Start OFF, let IO flip us on.
+  heroVisible = false;
+  const heroIO = new IntersectionObserver((entries) => {
+    heroVisible = entries[0].isIntersecting;
+    if (heroVisible && !heroRunning) {
+      heroRunning = true;
+      clock.getDelta(); // reset clock so the mesh doesn't jump on re-entry
+      animate();
+    }
+  }, { threshold: 0, rootMargin: '100px' });
+  heroIO.observe(section);
+}
 
 /* ================= KNOB ================= */
 class Knob {
@@ -2136,6 +2309,7 @@ class Knob {
       // boot audio in background so context is ready when they click the input
       bootAudio().then(() => {
         if (ac && ac.state === 'suspended') ac.resume().catch(()=>{});
+        kickVizLoop();
       }).catch(err => console.warn('audio boot failed', err));
     });
   });
@@ -2158,6 +2332,7 @@ class Knob {
         // toggle disconnect when nothing pending
         disconnectCV(target);
       }
+      kickVizLoop();
     });
   });
 
@@ -2174,6 +2349,7 @@ class Knob {
     const now = ac.currentTime;
     gate.gain.cancelScheduledValues(now);
     gate.gain.setTargetAtTime(dronePlaying ? 0.55 : 0, now, 0.04);
+    kickVizLoop();
   });
 
   // pedals — only the stomp switch toggles; knob drags don't bubble here
@@ -2188,6 +2364,7 @@ class Knob {
       fxOn[id] = !fxOn[id];
       pedal.classList.toggle('on', fxOn[id]);
       applyFX();
+      kickVizLoop();
     });
   });
 
@@ -2229,9 +2406,24 @@ class Knob {
       });
     });
   }
-  window.addEventListener('resize', drawCables);
-  window.addEventListener('scroll', drawCables, { passive: true });
-  window.addEventListener('orientationchange', () => setTimeout(drawCables, 200));
+  // rAF-throttle: scroll fires 60+ times/sec. Coalescing with rAF means SVG layout
+  // happens at most once per frame, and we can also skip entirely when the section
+  // isn't on-screen (cables can't be seen anyway).
+  let _cablesPending = false;
+  function scheduleDrawCables() {
+    if (_cablesPending) return;
+    _cablesPending = true;
+    requestAnimationFrame(() => {
+      _cablesPending = false;
+      if (synthsVisible) drawCables();
+    });
+  }
+  // Debounced resize — drawCables is cheap but the SVG innerHTML thrash is unnecessary
+  // during a continuous resize drag. Trailing 150ms, then rAF-coalesced.
+  const debouncedCables = window.__debounce(scheduleDrawCables, 150);
+  window.addEventListener('resize', debouncedCables);
+  window.addEventListener('scroll', scheduleDrawCables, { passive: true });
+  window.addEventListener('orientationchange', debouncedCables);
 
   // --- Seed visual default state on load (no sound yet) ---
   // Default pedals lit (audio wires in bootAudio/applyFX)
@@ -2450,8 +2642,24 @@ class Knob {
     }, true);
   });
 
-  // Apply sensors → knobs each frame
+  // Visibility gating for this section's rAF loops. Shared between modLoop and vizLoop
+  // so we don't pay DOM-thrash costs while the synth section is off-screen.
+  const synthsSection = document.getElementById('synths');
+  let synthsVisible = false;
+  let modLoopRunning = false;
+  let vizLoopRunning = false;
+  const synthsIO = new IntersectionObserver((entries) => {
+    synthsVisible = entries[0].isIntersecting;
+    if (synthsVisible) {
+      if (!modLoopRunning) { modLoopRunning = true; modLoop(); }
+      if (!vizLoopRunning) { vizLoopRunning = true; requestAnimationFrame(vizLoop); }
+    }
+  }, { threshold: 0, rootMargin: '100px' });
+  if (synthsSection) synthsIO.observe(synthsSection);
+
+  // Apply sensors → knobs each frame (only when synth section is visible)
   function modLoop() {
+    if (!synthsVisible) { modLoopRunning = false; return; }
     sampleCameraLight(); // no-op if no stream running
     for (const p in knobSource) {
       const src = knobSource[p];
@@ -2465,7 +2673,6 @@ class Knob {
     }
     requestAnimationFrame(modLoop);
   }
-  modLoop();
 
   // viz
   const vizEl = document.getElementById('synthViz');
@@ -2477,45 +2684,84 @@ class Knob {
     vizBars.push(d);
   }
   const outLevelEl = document.getElementById('outLevel');
-  function vizLoop() {
-    if (analyser) {
-      analyser.getByteFrequencyData(analyserData);
-      let sum = 0;
-      for (let i = 0; i < VIZ_BARS; i++) {
-        const idx = Math.floor(i * analyserData.length / VIZ_BARS);
-        const v = analyserData[idx] / 255;
-        sum += v;
-        vizBars[i].style.height = `${Math.max(4, v * 100)}%`;
-        vizBars[i].style.background = v > 0.6 ? '#00e5ff' : '#ff5722';
-        vizBars[i].style.opacity = 0.25 + v * 0.75;
-      }
-      if (outLevelEl) {
-        const avg = sum / VIZ_BARS;
-        outLevelEl.style.width = Math.min(100, avg * 180) + '%';
-      }
-    } else {
-      for (let i = 0; i < VIZ_BARS; i++) {
-        const t = performance.now() * 0.001;
-        const v = (Math.sin(i * 0.3 + t) + 1) * 0.5 * 0.12;
-        vizBars[i].style.height = `${4 + v * 100}%`;
-      }
-      if (outLevelEl) outLevelEl.style.width = '0%';
+  // 64 DOM-bar style writes per frame is a lot. Throttle to ~30fps and pause when
+  // the section is off-screen. Also track previous colour to skip redundant writes.
+  const VIZ_FRAME_MS = 33;
+  let vizLastDraw = 0;
+  const _prevBarColor = new Array(VIZ_BARS).fill('');
+  let idleFrozen = false;
+  function paintIdleFrame() {
+    // Paint once at rest — flat row of short bars. No animation, no rAF.
+    for (let i = 0; i < VIZ_BARS; i++) {
+      vizBars[i].style.height = '10%';
+    }
+    if (outLevelEl) outLevelEl.style.width = '0%';
+    idleFrozen = true;
+  }
+  function vizLoop(now) {
+    if (!synthsVisible) { vizLoopRunning = false; return; }
+    // FREEZE idle: when nothing is playing (no analyser booted OR drone off),
+    // paint one static idle frame and STOP rAFing. kickVizLoop() restarts us
+    // when the user boots audio / plays a pedal / presses drone.
+    if (!analyser) {
+      if (!idleFrozen) paintIdleFrame();
+      vizLoopRunning = false;
+      return;
+    }
+    if (now && (now - vizLastDraw) < VIZ_FRAME_MS) {
+      return requestAnimationFrame(vizLoop);
+    }
+    vizLastDraw = now || 0;
+    idleFrozen = false;
+    analyser.getByteFrequencyData(analyserData);
+    let sum = 0;
+    for (let i = 0; i < VIZ_BARS; i++) {
+      const idx = Math.floor(i * analyserData.length / VIZ_BARS);
+      const v = analyserData[idx] / 255;
+      sum += v;
+      const bar = vizBars[i];
+      bar.style.height = `${Math.max(4, v * 100)}%`;
+      const color = v > 0.6 ? '#00e5ff' : '#ff5722';
+      if (_prevBarColor[i] !== color) { bar.style.background = color; _prevBarColor[i] = color; }
+      bar.style.opacity = 0.25 + v * 0.75;
+    }
+    if (outLevelEl) {
+      const avg = sum / VIZ_BARS;
+      outLevelEl.style.width = Math.min(100, avg * 180) + '%';
     }
     requestAnimationFrame(vizLoop);
   }
-  vizLoop();
+  // Exposed so bootAudio / pedal / drone handlers can restart the loop
+  // once audio graph exists. Belt-and-suspenders with the IO observer.
+  function kickVizLoop() {
+    if (!vizLoopRunning && synthsVisible && analyser) {
+      vizLoopRunning = true;
+      requestAnimationFrame(vizLoop);
+    }
+  }
+  // Stash on synth bus so the drone/pedal/jack click handlers (defined earlier
+  // in this IIFE but using `analyser` from this closure) can kick us.
+  window.__synthBus = window.__synthBus || {};
+  window.__synthBus.kickViz = kickVizLoop;
+  // Paint once at rest — gives the bars a stable appearance on load.
+  paintIdleFrame();
 })();
 
 /* =============== SYNTH SECTION BG (oscilloscope-style) =============== */
 (function initSynthBG() {
   const section = document.getElementById('synths');
   if (!section) return;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Skip this whole background entirely for reduced-motion users — it's pure eye-candy.
+  if (reducedMotion) return;
+  const isMobile = window.matchMedia('(max-width: 640px), (pointer: coarse) and (max-width: 820px)').matches;
   const canvas = document.createElement('canvas');
   canvas.className = 'synth-bg';
   section.insertBefore(canvas, section.firstChild);
   const ctx = canvas.getContext('2d');
   let w = 0, h = 0;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // 1.5 cap instead of 2 — halves fill cost on Retina. Mobile drops further to 1.
+  const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.5);
 
   function resize() {
     const r = section.getBoundingClientRect();
@@ -2527,10 +2773,11 @@ class Knob {
     canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  window.addEventListener('resize', resize);
-  window.addEventListener('orientationchange', () => setTimeout(resize, 200));
-  // resize as content grows (pedals mount etc)
-  if (window.ResizeObserver) new ResizeObserver(resize).observe(section);
+  const debouncedResize = window.__debounce(resize, 150);
+  window.addEventListener('resize', debouncedResize);
+  window.addEventListener('orientationchange', debouncedResize);
+  // resize as content grows (pedals mount etc) — debounced too
+  if (window.ResizeObserver) new ResizeObserver(debouncedResize).observe(section);
 
   // pointer in viewport coords — works even outside the canvas
   let mx = 0.5, my = 0.5;
@@ -2543,13 +2790,33 @@ class Knob {
 
   let t = 0;
   let audioPhase = 0;
+  // ~30 fps (33 ms) — half the CPU of 60 fps, still smooth for a procedural bg.
+  const FRAME_MS = 33;
+  let lastDraw = 0;
+  // Pause entirely when the synth section isn't on-screen.
+  let synthBgVisible = false;
+  let synthBgRunning = false;
+  const bgIO = new IntersectionObserver((entries) => {
+    synthBgVisible = entries[0].isIntersecting;
+    if (synthBgVisible && !synthBgRunning) {
+      synthBgRunning = true;
+      lastDraw = 0;
+      requestAnimationFrame(draw);
+    }
+  }, { threshold: 0, rootMargin: '100px' });
+  bgIO.observe(section);
 
-  function draw() {
+  function draw(now) {
+    if (!synthBgVisible) { synthBgRunning = false; return; }
+    if (now && (now - lastDraw) < FRAME_MS) {
+      return requestAnimationFrame(draw);
+    }
+    lastDraw = now || 0;
     if (!w || !h) resize();
     if (!w) return requestAnimationFrame(draw);
-    t += 0.014;
-    pmx += (mx - pmx) * 0.06;
-    pmy += (my - pmy) * 0.06;
+    t += 0.028; // compensate for halved frame rate
+    pmx += (mx - pmx) * 0.12;
+    pmy += (my - pmy) * 0.12;
 
     // dim the canvas progressively (trailing/afterglow)
     ctx.fillStyle = 'rgba(10,10,14,0.22)';
@@ -2592,11 +2859,14 @@ class Knob {
       { color: 'rgba(0,229,255,0.45)',  freq: 3.0 + pmx * 6.0, amp: 0.08 + pmy * 0.18, speed: 1.4,  phase: 1.3,   lw: 1.2 },
       { color: 'rgba(160,108,255,0.38)',freq: 5.0 + pmx * 9.0, amp: 0.05 + pmy * 0.14, speed: -1.1, phase: 2.6,   lw: 1.0 },
     ];
+    // step 6 instead of 3 — half as many line segments, still smooth at typical widths.
+    // TRADEOFF: curves look very slightly more polygonal on very wide monitors.
+    const step = isMobile ? 10 : 6;
     for (const L of layers) {
       ctx.beginPath();
       ctx.strokeStyle = L.color;
       ctx.lineWidth = L.lw;
-      for (let x = 0; x <= w; x += 3) {
+      for (let x = 0; x <= w; x += step) {
         const xn = x / w;
         const y = h / 2
           + Math.sin(xn * L.freq * Math.PI * 2 + t * L.speed + L.phase) * h * L.amp
@@ -2607,8 +2877,9 @@ class Knob {
       ctx.stroke();
     }
 
-    // scrolling "carrier dots" for a CRT-ish feel
-    const dotCount = 40;
+    // scrolling "carrier dots" for a CRT-ish feel — 20 dots (was 40).
+    // TRADEOFF: slightly sparser dot field.
+    const dotCount = 20;
     ctx.fillStyle = 'rgba(255,87,34,0.7)';
     for (let i = 0; i < dotCount; i++) {
       const phase = (i / dotCount) * Math.PI * 2;
@@ -2621,7 +2892,6 @@ class Knob {
   }
   resize();
   setTimeout(resize, 120);
-  draw();
 })();
 
 /* ================= MUSIC ================= */
@@ -2753,31 +3023,63 @@ class Knob {
     }
   });
 
-  function draw() {
+  // Cache one gradient — the old code created 96 gradients per frame.
+  let _barGrad = null;
+  let _barGradH = 0;
+  function getBarGradient(h) {
+    if (_barGrad && _barGradH === h) return _barGrad;
+    const g = ctx2d.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#ff5722');
+    g.addColorStop(1, '#00e5ff');
+    _barGrad = g; _barGradH = h;
+    return g;
+  }
+
+  // IO-gate — only draw when #music is on-screen.
+  const musicSection = document.getElementById('music');
+  let musicVizVisible = false;
+  let musicVizRunning = false;
+  const MUSIC_FRAME_MS = 33; // ~30 fps
+  let musicVizLastDraw = 0;
+  const musicIO = new IntersectionObserver((entries) => {
+    musicVizVisible = entries[0].isIntersecting;
+    if (musicVizVisible && !musicVizRunning) {
+      musicVizRunning = true;
+      musicVizLastDraw = 0;
+      requestAnimationFrame(draw);
+    }
+  }, { threshold: 0, rootMargin: '100px' });
+  if (musicSection) musicIO.observe(musicSection);
+
+  function draw(now) {
+    if (!musicVizVisible) { musicVizRunning = false; return; }
+    if (now && (now - musicVizLastDraw) < MUSIC_FRAME_MS) {
+      return requestAnimationFrame(draw);
+    }
+    musicVizLastDraw = now || 0;
     const w = canvas.clientWidth, h = canvas.clientHeight;
     ctx2d.clearRect(0, 0, w, h);
     if (analyser) {
       analyser.getByteFrequencyData(data);
-      const bars = 96;
+      // 64 bars instead of 96 — a third fewer fill ops.
+      // TRADEOFF: slightly chunkier bars.
+      const bars = 64;
       const step = Math.floor(data.length / bars);
+      const bw = w / bars;
+      const grad = getBarGradient(h);
+      ctx2d.fillStyle = grad;
       for (let i = 0; i < bars; i++) {
         const v = data[i * step] / 255;
-        const bw = w / bars;
         const bh = Math.max(2, v * h * 0.95);
-        const x = i * bw;
         const y = h / 2 - bh / 2;
-        const grad = ctx2d.createLinearGradient(0, y, 0, y + bh);
-        grad.addColorStop(0, '#ff5722');
-        grad.addColorStop(1, '#00e5ff');
-        ctx2d.fillStyle = grad;
-        ctx2d.fillRect(x + 1, y, bw - 2, bh);
+        ctx2d.fillRect(i * bw + 1, y, bw - 2, bh);
       }
     } else {
       const t = performance.now() * 0.001;
       ctx2d.strokeStyle = 'rgba(82,82,91,0.6)';
       ctx2d.lineWidth = 1;
       ctx2d.beginPath();
-      for (let x = 0; x < w; x += 2) {
+      for (let x = 0; x < w; x += 4) {
         const y = h / 2 + Math.sin(x * 0.02 + t) * 3;
         if (x === 0) ctx2d.moveTo(x, y);
         else ctx2d.lineTo(x, y);
@@ -2786,7 +3088,6 @@ class Knob {
     }
     requestAnimationFrame(draw);
   }
-  draw();
 })();
 </script>
 
