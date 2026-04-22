@@ -72,40 +72,17 @@
   .nav-links a:hover::after { width: 100%; }
   .nav-links .num { color: var(--accent); margin-right: 0.4rem; }
 
-  /* Section 01 : 3D & Procedural — mesh sticks behind whole section as interactive BG */
+  /* Section 01 : 3D & Procedural */
   .section-3d {
     position: relative;
     padding: 0;
-  }
-  .proc-wrap {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    width: 100%;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  #proc-canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .proc-wrap::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(180deg, rgba(10,10,11,0.45) 0%, rgba(10,10,11,0.1) 25%, rgba(10,10,11,0.1) 70%, rgba(10,10,11,0.9) 100%);
-    pointer-events: none;
   }
   .section-3d-content {
     position: relative;
     z-index: 2;
     max-width: 1400px;
-    margin: -100vh auto 0;
-    padding: 7rem 2rem 6rem;
+    margin: 0 auto;
+    padding: 8rem 2rem 6rem;
   }
 
   /* Generic section */
@@ -277,51 +254,11 @@
   }
   .service p { color: var(--ink-dim); font-size: 0.85rem; line-height: 1.5; }
 
-  /* Mic toggle */
-  .mic-toggle {
-    position: absolute;
-    bottom: 1.5rem; right: 1.5rem;
-    z-index: 3;
-    pointer-events: auto;
-    padding: 0.55rem 0.9rem;
-    border: 1px solid var(--line);
-    background: rgba(10,10,11,0.7);
-    backdrop-filter: blur(8px);
-    color: var(--ink-dim);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    display: flex; align-items: center; gap: 0.5rem;
-    transition: all 0.3s;
-  }
-  .mic-toggle:hover { color: var(--ink); border-color: var(--ink-dim); }
-  .mic-toggle .led {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: #333;
-    transition: all 0.3s;
-  }
-  .mic-toggle.on { color: var(--accent); border-color: var(--accent); }
-  .mic-toggle.on .led {
-    background: var(--accent);
-    box-shadow: 0 0 10px var(--accent);
-    animation: micPulse 1.6s ease infinite;
-  }
-  @keyframes micPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
-
   /* Synth section */
   .synth-section {
     background: var(--bg-2);
     position: relative;
     overflow: hidden;
-  }
-  .synth-bg {
-    position: absolute;
-    inset: 0;
-    width: 100%; height: 100%;
-    z-index: 0;
-    pointer-events: none;
-    opacity: 0.55;
   }
   .synth-inner {
     max-width: 1400px;
@@ -988,7 +925,6 @@
     .lib-head span:nth-child(3), .lib-head span:nth-child(4) { display: none; }
     .track-row { grid-template-columns: 28px 1fr 80px; gap: 0.6rem; }
     .track-row .track-tag, .track-row .track-dur { display: none; }
-    .mic-toggle { bottom: 1rem; right: 1rem; }
   }
 
   /* Phones / coarse pointer — bigger touch targets, tighter workbench */
@@ -1057,11 +993,9 @@
     contain: paint layout;
   }
 
-  /* Respect reduced-motion: kill non-essential animations + compositing.
-     The hero mesh is replaced with a static CSS gradient (see #proc-canvas rule). */
+  /* Respect reduced-motion: kill non-essential animations + compositing. */
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .mic-toggle.on .led { animation: none; }
     .jack.cv-in.pending .port,
     .jack.cv-out.armed .port { animation: none; }
     .tile:hover .tile-media { transform: none; }
@@ -1070,14 +1004,6 @@
     .socials a:hover { transform: none; }
     .reveal { opacity: 1; transform: none; transition: none; }
     body::before { display: none; } /* drop full-viewport mix-blend noise */
-    .synth-bg { display: none; }    /* drop oscilloscope bg canvas */
-    /* Static gradient stand-in for the procedural mesh */
-    #proc-canvas {
-      background:
-        radial-gradient(ellipse at 65% 45%, rgba(0,229,255,0.10) 0%, transparent 55%),
-        radial-gradient(ellipse at 30% 70%, rgba(255,87,34,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse at 50% 50%, rgba(160,108,255,0.04) 0%, transparent 70%);
-    }
   }
 
   /* Mobile: backdrop-filter is very expensive on mobile GPUs. Drop it everywhere
@@ -1091,7 +1017,6 @@
              radial-gradient(ellipse at center, rgba(10,10,11,0.25) 0%, rgba(10,10,11,0.65) 100%),
              url('assets/images/mkv-pcb.png') center/cover no-repeat,
              #0a0a0b; }
-    .mic-toggle { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10,10,11,0.92); }
   }
   @media (max-width: 640px) {
     body::before { opacity: 0.02; mix-blend-mode: normal; }
@@ -1226,7 +1151,7 @@
     background-image: url('assets/images/bg-blueprint.png');
     background-repeat: no-repeat;
     background-position: top center;
-    background-size: 100% 100%;           /* stretch to fill the covered area (intentional) */
+    background-size: auto 100%;           /* fit to height, keep width proportional */
     opacity: 0.65;
   }
 
@@ -1247,16 +1172,6 @@
      Cards/tiles/pedals keep their own opaque/semi-opaque fills. */
   .synth-section { background: rgba(17, 17, 20, 0.55); }
   .music-player  { background: rgba(17, 17, 20, 0.55); }
-
-  /* Hide the Three.js procedural mesh ("fancy moving graphics") behind the
-     hero. We keep only the page bg + blueprint drawing. The original layout
-     used .proc-wrap (sticky, 100vh) as a visual backdrop with .section-3d-content
-     pulled up 100vh to overlap it; with proc-wrap gone we reset the negative
-     margin so the hero content lands naturally under the nav. The mic-toggle
-     button lives inside .proc-wrap and is hidden with it. JS bootstrappers are
-     left untouched — they'll observe a hidden (0-size) canvas and be no-ops. */
-  .proc-wrap { display: none !important; }
-  .section-3d-content { margin-top: 0; padding-top: 8rem; }
 </style>
 </head>
 <body>
@@ -1277,12 +1192,6 @@
 
 <!-- 01 · 3D & PROCEDURAL -->
 <section class="section-3d" id="three-d">
-  <div class="proc-wrap">
-    <canvas id="proc-canvas"></canvas>
-    <button class="mic-toggle" id="micToggle">
-      <span class="led"></span><span>MIC REACTIVE</span>
-    </button>
-  </div>
   <div class="section-3d-content">
     <div class="section-head">
       <span class="num">01 /</span>
@@ -1744,353 +1653,6 @@ window.__debounce = function(fn, ms) {
     t = setTimeout(fn, ms || 150);
   };
 };
-
-/* ================= HERO MESH (bg of section 01) =================
-   Three.js is now lazy-loaded. initProc() only runs after the library is
-   present AND the hero section is near the viewport. Reduced-motion users
-   get a static CSS gradient (see the @media rule in <style>) and three.js
-   never loads. */
-let __threeLoading = null;
-function ensureThree() {
-  if (typeof THREE !== 'undefined') return Promise.resolve();
-  if (__threeLoading) return __threeLoading;
-  __threeLoading = new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-  return __threeLoading;
-}
-
-(function bootstrapHero() {
-  const section = document.getElementById('three-d');
-  if (!section) return;
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // NUCLEAR OPTION: reduced-motion users skip the mesh entirely. CSS paints a
-  // static radial gradient into #proc-canvas via @media. three.js never loads.
-  if (reducedMotion) return;
-
-  let started = false;
-  const kick = () => {
-    if (started) return;
-    started = true;
-    // requestIdleCallback pushes load off the initial interaction, falling back
-    // to a small timeout for Safari.
-    const loadFn = () => ensureThree().then(initProc).catch(err => {
-      console.warn('three.js load failed', err);
-      started = false;
-    });
-    if ('requestIdleCallback' in window) requestIdleCallback(loadFn, { timeout: 800 });
-    else setTimeout(loadFn, 0);
-  };
-
-  // Hero is at top of page, so it's almost always in view on load — but we
-  // still gate via IO + rootMargin so a deep-link to #contact doesn't load
-  // three.js at all until the user scrolls back up.
-  const bootIO = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) { kick(); bootIO.disconnect(); }
-  }, { rootMargin: '300px' });
-  bootIO.observe(section);
-})();
-
-function initProc() {
-  const canvas = document.getElementById('proc-canvas');
-  const section = document.getElementById('three-d');
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const isMobile = window.matchMedia('(max-width: 640px), (pointer: coarse) and (max-width: 820px)').matches;
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true, powerPreference: 'low-power' });
-  // 1.5 cap instead of 2 — big GPU fill-rate savings on retina displays
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-  renderer.setClearColor(0x000000, 0);
-
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-  camera.position.z = 7;
-
-  let lines = null, points = null;
-  let meshCoverScale = 1;
-  // Cached canvas rect — avoids getBoundingClientRect() in the mousemove hot path.
-  // Updated on scroll/resize (both cheap, passive) instead.
-  let _cachedCanvasRect = null;
-  const refreshCanvasRect = () => { _cachedCanvasRect = canvas.getBoundingClientRect(); };
-  const resize = () => {
-    refreshCanvasRect();
-    const r = _cachedCanvasRect;
-    if (!r || r.width === 0 || r.height === 0) return;
-    renderer.setSize(r.width, r.height, false);
-    camera.aspect = r.width / r.height;
-    camera.updateProjectionMatrix();
-    // scale mesh so its diameter covers the larger viewport dimension
-    const vH = 2 * camera.position.z * Math.tan(camera.fov * Math.PI / 360);
-    const vW = vH * camera.aspect;
-    meshCoverScale = Math.max(vH, vW) / 4.4 * 1.05;
-    if (lines) lines.scale.setScalar(meshCoverScale);
-    if (points) points.scale.setScalar(meshCoverScale);
-  };
-  const debouncedResize = window.__debounce(resize, 150);
-  window.addEventListener('resize', debouncedResize);
-  window.addEventListener('orientationchange', debouncedResize);
-  // Scroll only needs to refresh the cached rect (cheap), not full renderer resize.
-  window.addEventListener('scroll', refreshCanvasRect, { passive: true });
-
-  const uniforms = {
-    uTime: { value: 0 },
-    uMouse: { value: new THREE.Vector3(999, 999, 0) },
-    uMouseStrength: { value: 0 },
-    uMic: { value: 0 },
-    uDrone: { value: 0 },
-    uAmp: { value: 0.12 },
-  };
-
-  const noise = `
-    vec3 mod289(vec3 x){return x - floor(x * (1.0/289.0)) * 289.0;}
-    vec4 mod289(vec4 x){return x - floor(x * (1.0/289.0)) * 289.0;}
-    vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
-    vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
-    float snoise(vec3 v){
-      const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-      const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-      vec3 i  = floor(v + dot(v, C.yyy));
-      vec3 x0 = v - i + dot(i, C.xxx);
-      vec3 g = step(x0.yzx, x0.xyz);
-      vec3 l = 1.0 - g;
-      vec3 i1 = min(g.xyz, l.zxy);
-      vec3 i2 = max(g.xyz, l.zxy);
-      vec3 x1 = x0 - i1 + C.xxx;
-      vec3 x2 = x0 - i2 + C.yyy;
-      vec3 x3 = x0 - D.yyy;
-      i = mod289(i);
-      vec4 p = permute(permute(permute(
-                 i.z + vec4(0.0, i1.z, i2.z, 1.0))
-               + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-               + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-      float n_ = 0.142857142857;
-      vec3 ns = n_ * D.wyz - D.xzx;
-      vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-      vec4 x_ = floor(j * ns.z);
-      vec4 y_ = floor(j - 7.0 * x_);
-      vec4 x = x_ * ns.x + ns.yyyy;
-      vec4 y = y_ * ns.x + ns.yyyy;
-      vec4 h = 1.0 - abs(x) - abs(y);
-      vec4 b0 = vec4(x.xy, y.xy);
-      vec4 b1 = vec4(x.zw, y.zw);
-      vec4 s0 = floor(b0)*2.0 + 1.0;
-      vec4 s1 = floor(b1)*2.0 + 1.0;
-      vec4 sh = -step(h, vec4(0.0));
-      vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-      vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-      vec3 p0 = vec3(a0.xy, h.x);
-      vec3 p1 = vec3(a0.zw, h.y);
-      vec3 p2 = vec3(a1.xy, h.z);
-      vec3 p3 = vec3(a1.zw, h.w);
-      vec4 norm = taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
-      p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-      vec4 m = max(0.6 - vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)), 0.0);
-      m = m * m;
-      return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
-    }
-  `;
-
-  const vert = `
-    uniform float uTime;
-    uniform vec3  uMouse;
-    uniform float uMouseStrength;
-    uniform float uMic;
-    uniform float uDrone;
-    uniform float uAmp;
-    varying float vDisp;
-    ${noise}
-    void main(){
-      vec3 p = position;
-      vec3 outward = normalize(p);
-
-      float t = uTime * 0.22;
-      float n = snoise(p * 0.6 + vec3(t, t*0.7, -t*0.5));
-
-      // drone wobble — a slow sine that rides on top of the drone's actual RMS,
-      // so the mesh "breathes" in time with the drone even when the signal is quiet
-      float droneWobble = uDrone * (1.0 + 0.6 * sin(uTime * 1.8));
-      float droneShimmer = uDrone * sin(p.y * 4.0 + uTime * 3.2) * 0.35;
-
-      float ambient = n * uAmp * (1.0 + uMic * 2.5 + droneWobble * 4.5) + droneShimmer;
-
-      vec3 toMouse = uMouse - p;
-      float d = length(toMouse);
-      float pull = (1.0 / (1.0 + d * d * 1.2)) * uMouseStrength;
-      vec3 pullDir = normalize(toMouse);
-
-      p += outward * ambient + pullDir * pull;
-      vDisp = ambient + pull;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-      gl_PointSize = 2.0 + uMic * 3.0 + uDrone * 4.0;
-    }
-  `;
-  const lineFrag = `
-    varying float vDisp;
-    void main(){
-      vec3 base = vec3(0.75, 0.78, 0.85);
-      vec3 hot  = vec3(1.0, 0.345, 0.133);
-      vec3 cool = vec3(0.0, 0.898, 1.0);
-      vec3 col = mix(base, hot, smoothstep(0.0, 0.35, vDisp));
-      col = mix(col, cool, smoothstep(-0.05, -0.3, vDisp));
-      gl_FragColor = vec4(col, 0.3);
-    }
-  `;
-  const pointFrag = `
-    varying float vDisp;
-    void main(){
-      vec2 uv = gl_PointCoord - 0.5;
-      float d = length(uv);
-      if (d > 0.5) discard;
-      float a = (1.0 - d * 2.0);
-      a = pow(a, 2.0);
-      vec3 hot = vec3(1.0, 0.345, 0.133);
-      vec3 cool = vec3(0.0, 0.898, 1.0);
-      vec3 col = mix(cool, hot, smoothstep(0.0, 0.4, vDisp));
-      gl_FragColor = vec4(col, a * 0.85);
-    }
-  `;
-
-  // Subdivision 3 gives ~642 vertices / 1920 wireframe segments vs sub-4's 2562 / 7680.
-  // Drops GPU + vertex shader cost ~4x; visually near-identical at typical viewport sizes.
-  // TRADEOFF: mesh looks slightly less dense — raise back to 4 if you want the fine detail.
-  const baseGeo = new THREE.IcosahedronGeometry(2.2, isMobile ? 2 : 3);
-  const wireGeo = new THREE.WireframeGeometry(baseGeo);
-
-  const lineMat = new THREE.ShaderMaterial({
-    uniforms, vertexShader: vert, fragmentShader: lineFrag,
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-  });
-  lines = new THREE.LineSegments(wireGeo, lineMat);
-  scene.add(lines);
-
-  const pointMat = new THREE.ShaderMaterial({
-    uniforms, vertexShader: vert, fragmentShader: pointFrag,
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-  });
-  points = new THREE.Points(baseGeo, pointMat);
-  scene.add(points);
-
-  const raycaster = new THREE.Raycaster();
-  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-  const targetMouse = new THREE.Vector3(999, 999, 0);
-  const currMouse = new THREE.Vector3(999, 999, 0);
-  let targetStrength = 0;
-  let currStrength = 0;
-
-  // Reuse these across events — avoids per-move GC pressure
-  const _ndc = new THREE.Vector2();
-  const _hit = new THREE.Vector3();
-  window.addEventListener('mousemove', (e) => {
-    // Skip hero raycaster entirely when the hero section isn't on-screen
-    if (!heroVisible) { targetStrength = 0; return; }
-    // Use CACHED rect — no per-mousemove layout thrash.
-    const r = _cachedCanvasRect;
-    if (!r) { targetStrength = 0; return; }
-    if (e.clientY < r.top || e.clientY > r.bottom ||
-        e.clientX < r.left || e.clientX > r.right) {
-      targetStrength = 0;
-      return;
-    }
-    targetStrength = 0.6;
-    _ndc.set(
-      ((e.clientX - r.left) / r.width) * 2 - 1,
-      -((e.clientY - r.top) / r.height) * 2 + 1
-    );
-    raycaster.setFromCamera(_ndc, camera);
-    if (raycaster.ray.intersectPlane(plane, _hit)) targetMouse.copy(_hit);
-  }, { passive: true });
-
-  // Mic toggle
-  const micToggle = document.getElementById('micToggle');
-  let micAnalyser = null, micData = null, micStream = null, micLevel = 0;
-  micToggle.addEventListener('click', async () => {
-    if (micAnalyser) {
-      micStream.getTracks().forEach(t => t.stop());
-      micAnalyser = null; micStream = null;
-      micToggle.classList.remove('on');
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const src = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
-      src.connect(analyser);
-      micData = new Uint8Array(analyser.fftSize);
-      micAnalyser = analyser;
-      micStream = stream;
-      micToggle.classList.add('on');
-    } catch (err) {
-      console.warn('Mic denied', err);
-      micToggle.querySelector('span:last-child').textContent = 'MIC BLOCKED';
-    }
-  });
-
-  const clock = new THREE.Clock();
-  let droneLevel = 0;
-  // Visibility gating — skip hero rAF when section isn't on-screen (massive savings while
-  // the user reads the rest of the page). Synth-bus drone level isn't needed when the mesh
-  // isn't visible.
-  let heroVisible = true;
-  let heroRunning = false;
-  function animate() {
-    if (!heroVisible) { heroRunning = false; return; }
-    const dt = clock.getDelta();
-    uniforms.uTime.value += dt;
-    currMouse.lerp(targetMouse, 0.08);
-    currStrength += (targetStrength - currStrength) * 0.06;
-    uniforms.uMouse.value.copy(currMouse);
-    uniforms.uMouseStrength.value = currStrength;
-
-    if (micAnalyser) {
-      micAnalyser.getByteTimeDomainData(micData);
-      let sum = 0;
-      for (let i = 0; i < micData.length; i++) {
-        const v = (micData[i] - 128) / 128;
-        sum += v * v;
-      }
-      const rms = Math.sqrt(sum / micData.length);
-      micLevel += (rms - micLevel) * 0.25;
-    } else {
-      micLevel += (0 - micLevel) * 0.1;
-    }
-    uniforms.uMic.value = micLevel;
-
-    // Drone reactivity — mesh dances with the sine of the drone oscillator.
-    const droneRMS = (window.__synthBus && window.__synthBus.getDroneLevel)
-      ? window.__synthBus.getDroneLevel() : 0;
-    droneLevel += (droneRMS - droneLevel) * 0.22;
-    uniforms.uDrone.value = droneLevel;
-
-    const droneBoost = 1 + droneLevel * 2.5;
-    lines.rotation.y += 0.0015 * droneBoost;
-    lines.rotation.x += 0.0006 * droneBoost;
-    points.rotation.copy(lines.rotation);
-
-    renderer.render(scene, camera);
-    requestAnimationFrame(animate);
-  }
-  resize();
-  // extra resize on image/font load
-  setTimeout(resize, 100);
-
-  // Only run the mesh when #three-d is on-screen. Start OFF, let IO flip us on.
-  heroVisible = false;
-  const heroIO = new IntersectionObserver((entries) => {
-    heroVisible = entries[0].isIntersecting;
-    if (heroVisible && !heroRunning) {
-      heroRunning = true;
-      clock.getDelta(); // reset clock so the mesh doesn't jump on re-entry
-      animate();
-    }
-  }, { threshold: 0, rootMargin: '100px' });
-  heroIO.observe(section);
-}
 
 /* ================= KNOB ================= */
 class Knob {
@@ -2930,153 +2492,6 @@ class Knob {
   window.__synthBus.kickViz = kickVizLoop;
   // Paint once at rest — gives the bars a stable appearance on load.
   paintIdleFrame();
-})();
-
-/* =============== SYNTH SECTION BG (oscilloscope-style) =============== */
-(function initSynthBG() {
-  const section = document.getElementById('synths');
-  if (!section) return;
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Skip this whole background entirely for reduced-motion users — it's pure eye-candy.
-  if (reducedMotion) return;
-  const isMobile = window.matchMedia('(max-width: 640px), (pointer: coarse) and (max-width: 820px)').matches;
-  const canvas = document.createElement('canvas');
-  canvas.className = 'synth-bg';
-  section.insertBefore(canvas, section.firstChild);
-  const ctx = canvas.getContext('2d');
-  let w = 0, h = 0;
-  // 1.5 cap instead of 2 — halves fill cost on Retina. Mobile drops further to 1.
-  const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.5);
-
-  function resize() {
-    const r = section.getBoundingClientRect();
-    if (r.width === 0 || r.height === 0) return;
-    w = r.width; h = r.height;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  const debouncedResize = window.__debounce(resize, 150);
-  window.addEventListener('resize', debouncedResize);
-  window.addEventListener('orientationchange', debouncedResize);
-  // resize as content grows (pedals mount etc) — debounced too
-  if (window.ResizeObserver) new ResizeObserver(debouncedResize).observe(section);
-
-  // pointer in viewport coords — works even outside the canvas
-  let mx = 0.5, my = 0.5;
-  let pmx = 0.5, pmy = 0.5;
-  window.addEventListener('pointermove', (e) => {
-    const r = section.getBoundingClientRect();
-    mx = Math.min(1, Math.max(0, (e.clientX - r.left) / Math.max(1, r.width)));
-    my = Math.min(1, Math.max(0, 1 - (e.clientY - r.top) / Math.max(1, r.height)));
-  });
-
-  let t = 0;
-  let audioPhase = 0;
-  // ~30 fps (33 ms) — half the CPU of 60 fps, still smooth for a procedural bg.
-  const FRAME_MS = 33;
-  let lastDraw = 0;
-  // Pause entirely when the synth section isn't on-screen.
-  let synthBgVisible = false;
-  let synthBgRunning = false;
-  const bgIO = new IntersectionObserver((entries) => {
-    synthBgVisible = entries[0].isIntersecting;
-    if (synthBgVisible && !synthBgRunning) {
-      synthBgRunning = true;
-      lastDraw = 0;
-      requestAnimationFrame(draw);
-    }
-  }, { threshold: 0, rootMargin: '100px' });
-  bgIO.observe(section);
-
-  function draw(now) {
-    if (!synthBgVisible) { synthBgRunning = false; return; }
-    if (now && (now - lastDraw) < FRAME_MS) {
-      return requestAnimationFrame(draw);
-    }
-    lastDraw = now || 0;
-    if (!w || !h) resize();
-    if (!w) return requestAnimationFrame(draw);
-    t += 0.028; // compensate for halved frame rate
-    pmx += (mx - pmx) * 0.12;
-    pmy += (my - pmy) * 0.12;
-
-    // dim the canvas progressively (trailing/afterglow)
-    ctx.fillStyle = 'rgba(10,10,14,0.22)';
-    ctx.fillRect(0, 0, w, h);
-
-    // graticule grid — faint
-    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
-    ctx.lineWidth = 1;
-    const gx = 60, gy = 60;
-    ctx.beginPath();
-    for (let x = (t * 20) % gx; x < w; x += gx) {
-      ctx.moveTo(x, 0); ctx.lineTo(x, h);
-    }
-    for (let y = 0; y < h; y += gy) {
-      ctx.moveTo(0, y); ctx.lineTo(w, y);
-    }
-    ctx.stroke();
-
-    // audio waveform (real) overlay — if drone is playing
-    const bus = window.__synthBus;
-    const wave = bus && bus.getWaveform ? bus.getWaveform() : null;
-    if (wave) {
-      ctx.beginPath();
-      ctx.strokeStyle = 'rgba(255,87,34,0.55)';
-      ctx.lineWidth = 1.4;
-      for (let i = 0; i < wave.length; i++) {
-        const x = (i / (wave.length - 1)) * w;
-        const v = (wave[i] - 128) / 128;
-        const y = h / 2 + v * h * 0.42;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-      audioPhase += 0.03;
-    }
-
-    // three layered procedural sine waves — react to pointer
-    const layers = [
-      { color: 'rgba(255,87,34,0.55)',  freq: 1.5 + pmx * 3.0, amp: 0.12 + pmy * 0.22, speed: 0.9,  phase: 0,     lw: 1.4 },
-      { color: 'rgba(0,229,255,0.45)',  freq: 3.0 + pmx * 6.0, amp: 0.08 + pmy * 0.18, speed: 1.4,  phase: 1.3,   lw: 1.2 },
-      { color: 'rgba(160,108,255,0.38)',freq: 5.0 + pmx * 9.0, amp: 0.05 + pmy * 0.14, speed: -1.1, phase: 2.6,   lw: 1.0 },
-    ];
-    // step 6 instead of 3 — half as many line segments, still smooth at typical widths.
-    // TRADEOFF: curves look very slightly more polygonal on very wide monitors.
-    const step = isMobile ? 10 : 6;
-    for (const L of layers) {
-      ctx.beginPath();
-      ctx.strokeStyle = L.color;
-      ctx.lineWidth = L.lw;
-      for (let x = 0; x <= w; x += step) {
-        const xn = x / w;
-        const y = h / 2
-          + Math.sin(xn * L.freq * Math.PI * 2 + t * L.speed + L.phase) * h * L.amp
-          + Math.sin(xn * L.freq * Math.PI * 4 + t * L.speed * 0.6 + L.phase) * h * L.amp * 0.25;
-        if (x === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-
-    // scrolling "carrier dots" for a CRT-ish feel — 20 dots (was 40).
-    // TRADEOFF: slightly sparser dot field.
-    const dotCount = 20;
-    ctx.fillStyle = 'rgba(255,87,34,0.7)';
-    for (let i = 0; i < dotCount; i++) {
-      const phase = (i / dotCount) * Math.PI * 2;
-      const x = ((t * 80 + i * (w / dotCount)) % (w + 20)) - 10;
-      const y = h / 2 + Math.sin(t * 1.8 + phase) * h * 0.08;
-      ctx.fillRect(x, y, 2, 2);
-    }
-
-    requestAnimationFrame(draw);
-  }
-  resize();
-  setTimeout(resize, 120);
 })();
 
 /* ================= MUSIC ================= */
