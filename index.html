@@ -1207,39 +1207,27 @@
     padding: 0.2rem 0.5rem; font-size: 0.9rem;
   }
 
-  /* ================= FULL-SITE PARALLAX BLUEPRINT BG =================
-     Vertical 1960s blueprint that maps 4 quarters → section order.
-     Fixed behind all content; JS translates it at ~0.4x scroll rate. */
+  /* ================= BLUEPRINT BG (hero → photography) =================
+     Vertical 1960s blueprint stretched as ONE piece from the top of the page
+     down to the top of the contact section. The contact + footer block gets
+     its own image treatment later. Height is set by JS (a few lines near
+     the bottom of <body>) against #contact.offsetTop, kept in sync on resize
+     and image-load-induced reflows. */
+  body { position: relative; }           /* anchor for the absolute-positioned bg layer */
   .bg-blueprint {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: 400vh;                       /* tall enough to translate far without gapping */
+    /* height: set by JS to #contact.offsetTop — fallback below so SSR/no-JS is sane */
+    height: 100%;
     z-index: 0;
     pointer-events: none;
     background-image: url('assets/images/bg-blueprint.png');
     background-repeat: no-repeat;
     background-position: top center;
-    background-size: 100% auto;           /* image fills width, height auto → preserves 1:2 aspect */
-    opacity: 0.55;                        /* ink-over-charcoal; sections still dominate */
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
-    contain: paint;
-  }
-  @media (max-width: 768px) {
-    /* Mobile: no rAF parallax. Normal scroll, cover, no will-change. */
-    .bg-blueprint {
-      height: 100vh;
-      background-size: cover;
-      background-attachment: scroll;
-      will-change: auto;
-      transform: none;
-      opacity: 0.45;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .bg-blueprint { transform: none !important; will-change: auto; }
+    background-size: 100% 100%;           /* stretch to fill the covered area (intentional) */
+    opacity: 0.65;
   }
 
   /* Lift all primary content above the fixed z-index:0 parallax layer.
@@ -1259,6 +1247,16 @@
      Cards/tiles/pedals keep their own opaque/semi-opaque fills. */
   .synth-section { background: rgba(17, 17, 20, 0.55); }
   .music-player  { background: rgba(17, 17, 20, 0.55); }
+
+  /* Hide the Three.js procedural mesh ("fancy moving graphics") behind the
+     hero. We keep only the page bg + blueprint drawing. The original layout
+     used .proc-wrap (sticky, 100vh) as a visual backdrop with .section-3d-content
+     pulled up 100vh to overlap it; with proc-wrap gone we reset the negative
+     margin so the hero content lands naturally under the nav. The mic-toggle
+     button lives inside .proc-wrap and is hidden with it. JS bootstrappers are
+     left untouched — they'll observe a hidden (0-size) canvas and be no-ops. */
+  .proc-wrap { display: none !important; }
+  .section-3d-content { margin-top: 0; padding-top: 8rem; }
 </style>
 </head>
 <body>
@@ -3434,35 +3432,27 @@ class Knob {
 </script>
 
 <script>
-/* ================= FULL-SITE PARALLAX BLUEPRINT =================
-   Translates .bg-blueprint at ~0.4x the page scroll rate. Self-contained,
-   rAF-coalesced, passive scroll listener. Mobile and prefers-reduced-motion
-   opt out (CSS handles the mobile fallback). */
-(function parallaxBlueprint() {
-  var el = document.querySelector('.bg-blueprint');
-  if (!el) return;
-  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var isMobile = window.matchMedia('(max-width: 768px)').matches;
-  if (reduced || isMobile) return;
-
-  var SPEED = 0.4;
-  var latestY = window.scrollY || window.pageYOffset || 0;
-  var ticking = false;
-
-  function update() {
-    ticking = false;
-    el.style.transform = 'translate3d(0,' + (-latestY * SPEED) + 'px,0)';
+/* ================= BLUEPRINT BG SIZER =================
+   Clamp .bg-blueprint's height to end at the top of #contact, so the
+   blueprint only covers the header → photography span. Re-measure on
+   resize, on window.load (images), and on any body resize (reveal
+   animations, async thumbs). Small, self-contained, uses the shared
+   __debounce helper added by the main inline script. */
+(function sizeBlueprint() {
+  var bg = document.querySelector('.bg-blueprint');
+  var end = document.getElementById('contact');
+  if (!bg || !end) return;
+  var update = function() {
+    var h = end.offsetTop;
+    if (h > 0) bg.style.height = h + 'px';
+  };
+  update();
+  var debounced = (typeof window.__debounce === 'function') ? window.__debounce(update, 150) : update;
+  window.addEventListener('resize', debounced);
+  window.addEventListener('load', update);
+  if ('ResizeObserver' in window) {
+    try { new ResizeObserver(debounced).observe(document.body); } catch (e) { /* noop */ }
   }
-  function onScroll() {
-    latestY = window.scrollY || window.pageYOffset || 0;
-    if (!ticking) {
-      requestAnimationFrame(update);
-      ticking = true;
-    }
-  }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  // One initial paint so the transform attribute is set before first scroll.
-  requestAnimationFrame(update);
 })();
 </script>
 
