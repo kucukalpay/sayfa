@@ -2867,7 +2867,9 @@ class Knob {
   var img = document.querySelector('.bg-blueprint');
   if (!img) return;
   var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var SPEED = 0.8;
+  var SPEED = 0.8;          // BG scroll rate relative to FG
+  var SIZE_MULT = 0.8;      // extra height multiplier — lower = shorter image
+  var RATE = SPEED * SIZE_MULT; // effective rate for both sizing AND translation (coupled to keep bottom aligned at max scroll)
   var scrollMax = 0;
   var vpH = window.innerHeight;
   function sizeImg() {
@@ -2875,7 +2877,7 @@ class Knob {
     scrollMax = Math.max(0, document.documentElement.scrollHeight - vpH);
     if (!img.naturalWidth || !img.naturalHeight) return;
     var aspect = img.naturalWidth / img.naturalHeight;
-    var imgH = SPEED * scrollMax + vpH;
+    var imgH = RATE * scrollMax + vpH;
     if (scrollMax < 1) imgH = vpH;
     img.style.height = imgH + 'px';
     img.style.width = (imgH * aspect) + 'px';
@@ -2883,7 +2885,7 @@ class Knob {
   var latestY = 0, ticking = false;
   function tick() {
     ticking = false;
-    var y = reducedMotion ? 0 : -SPEED * latestY;
+    var y = reducedMotion ? 0 : -RATE * latestY;
     img.style.transform = 'translate3d(-50%, ' + y + 'px, 0)';
   }
   function onScroll() {
