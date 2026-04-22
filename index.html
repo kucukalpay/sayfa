@@ -1139,20 +1139,28 @@
      the bottom of <body>) against #contact.offsetTop, kept in sync on resize
      and image-load-induced reflows. */
   body { position: relative; }           /* anchor for the absolute-positioned bg layer */
+  .bg-blueprint-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
   .bg-blueprint {
     position: absolute;
     top: 0;
-    left: 0;
-    width: 100%;
-    /* height: set by JS to #contact.offsetTop — fallback below so SSR/no-JS is sane */
-    height: 100%;
-    z-index: 0;
-    pointer-events: none;
-    background-image: url('assets/images/bg-blueprint.png');
-    background-repeat: no-repeat;
-    background-position: top center;
-    background-size: auto 100%;           /* fit to height, keep width proportional */
+    left: 50%;
+    transform: translate3d(-50%, 0, 0);
+    height: auto;
+    max-width: none;
     opacity: 0.65;
+    will-change: transform;
+  }
+  @media (max-width: 768px) {
+    .bg-blueprint { will-change: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bg-blueprint { transform: translate3d(-50%, 0, 0) !important; }
   }
 
   /* Lift all primary content above the fixed z-index:0 parallax layer.
@@ -1177,7 +1185,9 @@
 <body>
 
 <!-- Full-site parallax blueprint background. Painted behind all content. -->
-<div class="bg-blueprint" aria-hidden="true"></div>
+<div class="bg-blueprint-wrap" aria-hidden="true">
+  <img class="bg-blueprint" src="assets/images/bg-blueprint.png" alt="" />
+</div>
 
 <nav>
   <div class="logo">AL<span>/</span>BAY</div>
@@ -2853,21 +2863,43 @@ class Knob {
    resize, on window.load (images), and on any body resize (reveal
    animations, async thumbs). Small, self-contained, uses the shared
    __debounce helper added by the main inline script. */
-(function sizeBlueprint() {
-  var bg = document.querySelector('.bg-blueprint');
-  var end = document.getElementById('contact');
-  if (!bg || !end) return;
-  var update = function() {
-    var h = end.offsetTop;
-    if (h > 0) bg.style.height = h + 'px';
-  };
-  update();
-  var debounced = (typeof window.__debounce === 'function') ? window.__debounce(update, 150) : update;
-  window.addEventListener('resize', debounced);
-  window.addEventListener('load', update);
-  if ('ResizeObserver' in window) {
-    try { new ResizeObserver(debounced).observe(document.body); } catch (e) { /* noop */ }
+(function parallaxBlueprint() {
+  var img = document.querySelector('.bg-blueprint');
+  if (!img) return;
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SPEED = 0.4;
+  var scrollMax = 0;
+  var vpH = window.innerHeight;
+  function sizeImg() {
+    vpH = window.innerHeight;
+    scrollMax = Math.max(0, document.documentElement.scrollHeight - vpH);
+    if (!img.naturalWidth || !img.naturalHeight) return;
+    var aspect = img.naturalWidth / img.naturalHeight;
+    var imgH = SPEED * scrollMax + vpH;
+    if (scrollMax < 1) imgH = vpH;
+    img.style.height = imgH + 'px';
+    img.style.width = (imgH * aspect) + 'px';
   }
+  var latestY = 0, ticking = false;
+  function tick() {
+    ticking = false;
+    var y = reducedMotion ? 0 : -SPEED * latestY;
+    img.style.transform = 'translate3d(-50%, ' + y + 'px, 0)';
+  }
+  function onScroll() {
+    latestY = window.scrollY || window.pageYOffset;
+    if (!ticking) { requestAnimationFrame(tick); ticking = true; }
+  }
+  var resizeTimer = null;
+  function onResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { sizeImg(); tick(); }, 120);
+  }
+  if (img.complete && img.naturalWidth) { sizeImg(); tick(); }
+  else { img.addEventListener('load', function () { sizeImg(); tick(); }, { once: true }); }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onResize, { passive: true });
+  window.addEventListener('orientationchange', onResize, { passive: true });
 })();
 </script>
 
