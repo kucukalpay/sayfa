@@ -1206,9 +1206,65 @@
     background: transparent; color: var(--ink-faint);
     padding: 0.2rem 0.5rem; font-size: 0.9rem;
   }
+
+  /* ================= FULL-SITE PARALLAX BLUEPRINT BG =================
+     Vertical 1960s blueprint that maps 4 quarters → section order.
+     Fixed behind all content; JS translates it at ~0.4x scroll rate. */
+  .bg-blueprint {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 400vh;                       /* tall enough to translate far without gapping */
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('assets/images/bg-blueprint.png');
+    background-repeat: no-repeat;
+    background-position: top center;
+    background-size: 100% auto;           /* image fills width, height auto → preserves 1:2 aspect */
+    opacity: 0.55;                        /* ink-over-charcoal; sections still dominate */
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+    contain: paint;
+  }
+  @media (max-width: 768px) {
+    /* Mobile: no rAF parallax. Normal scroll, cover, no will-change. */
+    .bg-blueprint {
+      height: 100vh;
+      background-size: cover;
+      background-attachment: scroll;
+      will-change: auto;
+      transform: none;
+      opacity: 0.45;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bg-blueprint { transform: none !important; will-change: auto; }
+  }
+
+  /* Lift all primary content above the fixed z-index:0 parallax layer.
+     nav (z-100), .section-3d-content (z-2), .synth-inner (z-1) are already lifted;
+     these rules cover the remaining wrapper elements whose default static/relative
+     would otherwise paint under a positioned z-0 fixed layer. */
+  .section-3d,
+  section.block,
+  .synth-section,
+  .contact,
+  footer {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Make section fills translucent so the blueprint shows through.
+     Cards/tiles/pedals keep their own opaque/semi-opaque fills. */
+  .synth-section { background: rgba(17, 17, 20, 0.55); }
+  .music-player  { background: rgba(17, 17, 20, 0.55); }
 </style>
 </head>
 <body>
+
+<!-- Full-site parallax blueprint background. Painted behind all content. -->
+<div class="bg-blueprint" aria-hidden="true"></div>
 
 <nav>
   <div class="logo">AL<span>/</span>BAY</div>
@@ -3374,6 +3430,39 @@ class Knob {
       if (dx < 0) goTo(current + 1); else goTo(current - 1);
     }
   }, { passive: true });
+})();
+</script>
+
+<script>
+/* ================= FULL-SITE PARALLAX BLUEPRINT =================
+   Translates .bg-blueprint at ~0.4x the page scroll rate. Self-contained,
+   rAF-coalesced, passive scroll listener. Mobile and prefers-reduced-motion
+   opt out (CSS handles the mobile fallback). */
+(function parallaxBlueprint() {
+  var el = document.querySelector('.bg-blueprint');
+  if (!el) return;
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var isMobile = window.matchMedia('(max-width: 768px)').matches;
+  if (reduced || isMobile) return;
+
+  var SPEED = 0.4;
+  var latestY = window.scrollY || window.pageYOffset || 0;
+  var ticking = false;
+
+  function update() {
+    ticking = false;
+    el.style.transform = 'translate3d(0,' + (-latestY * SPEED) + 'px,0)';
+  }
+  function onScroll() {
+    latestY = window.scrollY || window.pageYOffset || 0;
+    if (!ticking) {
+      requestAnimationFrame(update);
+      ticking = true;
+    }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  // One initial paint so the transform attribute is set before first scroll.
+  requestAnimationFrame(update);
 })();
 </script>
 
