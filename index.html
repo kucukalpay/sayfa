@@ -2534,6 +2534,7 @@ class Knob {
       : { 'vco-freq': 'pointerDist', 'vco-pw': 'pointerDist',
           'lfo-rate': 'pointerDist', 'lfo-depth': 'pointerDist',
           'lpf-cut': 'pointerDist' };
+    let needsTilt = false;
     Object.entries(defaults).forEach(([param, src]) => {
       const sel = document.querySelector(`.mod-select[data-param="${param}"]`);
       if (!sel) return;
@@ -2541,7 +2542,28 @@ class Knob {
       sel.classList.add('on');
       knobSource[param] = src;
       knobs[param]?.el.classList.add('sensor-modulated');
+      if (src === 'tiltX' || src === 'tiltY') needsTilt = true;
     });
+    // The deviceorientation listener must actually be attached for sensors.tiltX/Y
+    // to update — otherwise knobs stay frozen at the 0.5 baseline until the user
+    // manually changes a dropdown. On Android we attach directly; on iOS the
+    // permission request must come from a user gesture, so we install one-shot
+    // gesture listeners to call attachTilt() on first touch/click.
+    if (needsTilt) {
+      const needsPerm = typeof DeviceOrientationEvent !== 'undefined' &&
+                        typeof DeviceOrientationEvent.requestPermission === 'function';
+      if (!needsPerm) {
+        attachTilt();
+      } else {
+        const oneShot = () => {
+          document.removeEventListener('touchstart', oneShot, true);
+          document.removeEventListener('pointerdown', oneShot, true);
+          attachTilt();
+        };
+        document.addEventListener('touchstart', oneShot, { capture: true, once: true });
+        document.addEventListener('pointerdown', oneShot, { capture: true, once: true });
+      }
+    }
   })();
 
   // Visibility gating for this section's rAF loops. Shared between modLoop and vizLoop
