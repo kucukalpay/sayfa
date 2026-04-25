@@ -1239,6 +1239,31 @@
   .modal-close:hover { background: rgba(0, 0, 0, 0.85); }
   body.modal-open { overflow: hidden; }
 
+  .works-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+  }
+  .work-tile {
+    margin: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .work-tile img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    display: block;
+  }
+  .work-tile figcaption {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    opacity: 0.7;
+  }
+
   @media (max-width: 768px) {
     .section-shell { padding: 60px 16px; }
     .section-card { padding: 20px; }
@@ -1268,103 +1293,41 @@
   <div class="section-card" data-modal-target="modal-three-d">
     <img class="card-hero" src="assets/images/durex.png" alt="DUR3 — stylized still" loading="lazy">
     <div class="card-text">
-      <h2 class="card-title">3D &amp; Procedural</h2>
-      <p class="card-desc">Stills and short films. Procedural setups, FX rigs, and asset systems built to survive iteration.</p>
+      <h2 class="card-title">3D</h2>
+      <p class="card-desc">Showreel and selected works.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
 </section>
 
 <!-- MODAL · 3D -->
-<div class="modal" id="modal-three-d" role="dialog" aria-modal="true" aria-hidden="true" aria-label="3D and Procedural">
+<div class="modal" id="modal-three-d" role="dialog" aria-modal="true" aria-hidden="true" aria-label="3D">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
-  <div class="section-3d">
-    <div class="section-3d-content">
-    <div class="section-head">
-      <span class="num">01 /</span>
-      <h2>3D &amp; Procedural</h2>
-      <span class="tag">Work</span>
-    </div>
-    <div class="work-grid">
-      <div class="tile w8" data-slug="dur3" data-title="DUR3" data-type="Short · CGI" data-gifs="3">
-        <div class="tile-media is-stylized" style="background-image:url('assets/images/durex.png')"></div>
-        <div class="tile-media is-real" style="background-image:url('assets/images/dur3.png')"></div>
-        <div class="tile-expand-hint">[ expand ]</div>
-        <div class="tile-caption"><div class="tile-title">DUR3</div><div class="tile-type">Short · CGI</div></div>
-      </div>
-      <div class="tile w4 tall" data-slug="forest" data-title="Forest" data-type="Music Video · Char" data-gifs="3">
-        <div class="tile-media is-stylized" style="background-image:url('assets/images/forest.png')"></div>
-        <div class="tile-media is-real" style="background-image:url('assets/images/forest-01.png')"></div>
-        <div class="tile-expand-hint">[ expand ]</div>
-        <div class="tile-caption"><div class="tile-title">Forest</div><div class="tile-type">Music Video · Char</div></div>
-      </div>
-      <div class="tile w4" data-slug="flyover" data-title="Flyover" data-type="Commercial · B&amp;W" data-gifs="3">
-        <div class="tile-media is-stylized" style="background-image:url('assets/images/flyover.png')"></div>
-        <div class="tile-media is-real" style="background-image:url('assets/images/car-bridge.png')"></div>
-        <div class="tile-expand-hint">[ expand ]</div>
-        <div class="tile-caption"><div class="tile-title">Flyover</div><div class="tile-type">Commercial · B&amp;W</div></div>
-      </div>
-      <div class="tile w4" data-slug="forestii" data-title="Forest II" data-type="Music Video · Look-Dev" data-gifs="3">
-        <div class="tile-media is-stylized" style="background-image:url('assets/images/forestii.png')"></div>
-        <div class="tile-media is-real" style="background-image:url('assets/images/forest-02.png')"></div>
-        <div class="tile-expand-hint">[ expand ]</div>
-        <div class="tile-caption"><div class="tile-title">Forest II</div><div class="tile-type">Music Video · Look-Dev</div></div>
-      </div>
-      <div class="tile w4" data-slug="shoreline" data-title="Shoreline" data-type="Procedural · Key Visual" data-gifs="3">
-        <div class="tile-media is-stylized" style="background-image:url('assets/images/shorline.png')"></div>
-        <div class="tile-media is-real" style="background-image:url('assets/images/beach-figure.png')"></div>
-        <div class="tile-expand-hint">[ expand ]</div>
-        <div class="tile-caption"><div class="tile-title">Shoreline</div><div class="tile-type">Procedural · Key Visual</div></div>
-      </div>
-      <div class="tile w6" data-slug="expanse" data-title="Expanse" data-type="Commercial · Landscape" data-gifs="3">
-        <div class="tile-media is-stylized" style="background-image:url('assets/images/expanse.png')"></div>
-        <div class="tile-media is-real" style="background-image:url('assets/images/car-road.png')"></div>
-        <div class="tile-expand-hint">[ expand ]</div>
-        <div class="tile-caption"><div class="tile-title">Expanse</div><div class="tile-type">Commercial · Landscape</div></div>
-      </div>
-      <div class="tile w6" data-slug="shoreline-geo" data-title="Shoreline · Geo" data-type="Procedural · Scatter" data-gifs="3">
-        <div class="tile-media is-stylized" style="background-image:url('assets/images/shoreline_geo.png')"></div>
-        <div class="tile-media is-real" style="background-image:url('assets/images/beach-wires.png')"></div>
-        <div class="tile-expand-hint">[ expand ]</div>
-        <div class="tile-caption"><div class="tile-title">Shoreline · Geo</div><div class="tile-type">Procedural · Scatter</div></div>
-      </div>
+    <h2 style="margin-top: 0;">3D</h2>
+    <p style="opacity: 0.75;">Showreel and selected works.</p>
+
+    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 24px 0;">
+      <iframe src="https://player.vimeo.com/video/49562505" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="3D showreel"></iframe>
     </div>
 
-    <div class="services">
-      <div class="service">
-        <div class="ico">// assets</div>
-        <h4>Parametric asset systems</h4>
-        <p>Libraries built once, reused. Buildings, props, vegetation.</p>
-      </div>
-      <div class="service">
-        <div class="ico">// fx</div>
-        <h4>FX &amp; sim rigs</h4>
-        <p>Houdini HDAs that keep iteration quick.</p>
-      </div>
-      <div class="service">
-        <div class="ico">// geo nodes</div>
-        <h4>Blender geometry nodes</h4>
-        <p>Scatters and procedural setups that survive revisions.</p>
-      </div>
-      <div class="service">
-        <div class="ico">// shaders</div>
-        <h4>Shader networks</h4>
-        <p>Node materials tuned to hold up across tweaks.</p>
-      </div>
+    <div class="works-grid">
+      <figure class="work-tile"><img src="assets/images/dur3.png" alt="DUR3" loading="lazy"><figcaption>DUR3</figcaption></figure>
+      <figure class="work-tile"><img src="assets/images/car-road.png" alt="Car · road" loading="lazy"><figcaption>Car · road</figcaption></figure>
+      <figure class="work-tile"><img src="assets/images/forest-01.png" alt="Forest 01" loading="lazy"><figcaption>Forest 01</figcaption></figure>
+      <figure class="work-tile"><img src="assets/images/forest-02.png" alt="Forest 02" loading="lazy"><figcaption>Forest 02</figcaption></figure>
+      <figure class="work-tile"><img src="assets/images/forest-03.png" alt="Forest 03" loading="lazy"><figcaption>Forest 03</figcaption></figure>
     </div>
-  </div>
-  </div><!-- /.section-3d -->
   </div><!-- /.modal-content -->
 </div><!-- /#modal-three-d -->
 
 <!-- 01b · PROCEDURAL (card) -->
 <section id="procedural" class="section-shell">
   <div class="section-card" data-modal-target="modal-procedural">
-    <img class="card-hero" src="assets/images/flyover.png" alt="Flyover — procedural still" loading="lazy">
+    <img class="card-hero" src="assets/images/shoreline_geo.png" alt="Shoreline · Geo — procedural still" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Procedural</h2>
-      <p class="card-desc">Procedural setups, simulations, and motion studies. More coming.</p>
+      <p class="card-desc">Generative scenes, FX rigs, and asset systems.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -1374,15 +1337,18 @@
 <div class="modal" id="modal-procedural" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Procedural">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
-    <div class="section-head">
-      <span class="num">01b /</span>
-      <h2>Procedural</h2>
-      <span class="tag">Stills · Sims</span>
+    <h2 style="margin-top: 0;">Procedural</h2>
+    <p style="opacity: 0.75;">Generative scenes, FX rigs, and asset systems.</p>
+
+    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 24px 0;">
+      <iframe src="https://player.vimeo.com/video/49562505" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Procedural showreel"></iframe>
     </div>
-    <img src="assets/images/flyover.png" alt="Flyover — procedural still" style="width:100%;height:auto;display:block;border-radius:8px;margin:1rem 0 1.5rem;" loading="lazy">
-    <p style="max-width:60ch;line-height:1.6;opacity:0.85;">
-      Placeholder — a longer write-up about procedural workflow, tools, and a few selected pieces will live here. Drop captions and additional stills underneath.
-    </p>
+
+    <div class="works-grid">
+      <figure class="work-tile"><img src="assets/images/dur3.png" alt="DUR3" loading="lazy"><figcaption>DUR3</figcaption></figure>
+      <figure class="work-tile"><img src="assets/images/car-bridge.png" alt="Car · bridge" loading="lazy"><figcaption>Car · bridge</figcaption></figure>
+      <figure class="work-tile"><img src="assets/images/beach-wires.png" alt="Beach · wires" loading="lazy"><figcaption>Beach · wires</figcaption></figure>
+    </div>
   </div>
 </div><!-- /#modal-procedural -->
 
