@@ -369,7 +369,7 @@
     overflow: visible;
   }
   .module {
-    background: #050506;
+    background: rgba(5, 5, 6, 0.5);
     border: 1px solid var(--line);
     padding: 1rem 0.85rem 1.25rem;
     position: relative;
@@ -1353,9 +1353,9 @@
     </div>
 
     <div class="works-grid">
-      <figure class="work-tile"><img src="assets/images/dur3.png" alt="DUR3" loading="lazy"><figcaption><strong>DUR3</strong>Feather styling and simulation, lookdev, and scene lighting.</figcaption></figure>
-      <figure class="work-tile"><img src="assets/images/car-bridge.png" alt="Car · bridge" loading="lazy"><figcaption>Car · bridge</figcaption></figure>
-      <figure class="work-tile"><img src="assets/images/beach-wires.png" alt="Beach · wires" loading="lazy"><figcaption>Beach · wires</figcaption></figure>
+      <figure class="work-tile"><img src="assets/images/dur3.png" alt="DUR3" loading="lazy"><figcaption><strong>DUR3</strong>Feather tool built on top of Houdini's hair system — an approach that anticipated today's native feather infrastructure in Houdini.</figcaption></figure>
+      <figure class="work-tile"><img src="assets/images/car-bridge.png" alt="Car · bridge" loading="lazy"><figcaption><strong>Car · bridge</strong>Procedural car simulation idea that evolved into a setup later mirrored conceptually in Houdini's RBD car simulation rig.</figcaption></figure>
+      <figure class="work-tile"><img src="assets/images/beach-wires.png" alt="Beach · wires" loading="lazy"><figcaption><strong>Beach · wires</strong>Art-directed wooden plank structure imported and turned into source curves; geometric constraints rebuilt, then relaxed and collided under bending and twisting rules — for a Jennifer Lopez video.</figcaption></figure>
     </div>
   </div>
 </div><!-- /#modal-procedural -->
@@ -1392,6 +1392,26 @@
 
       <div class="modules" id="modules">
         <svg class="cables-svg" id="cables"></svg>
+
+        <div class="module" id="mod-out">
+          <div class="mod-head"><span>OUT</span><span class="type">MASTER</span></div>
+          <div class="mod-knobs out-row">
+            <div class="drone-unit">
+              <button class="drone-btn" id="droneBtn"><span class="drone-ico">▶</span></button>
+              <div class="knob-label">DRONE</div>
+            </div>
+            <div class="knob-unit">
+              <div class="knob" data-param="out-vol"><div class="knob-ring"></div><div class="knob-dial"></div></div>
+              <div class="knob-label">VOL</div>
+              <div class="knob-value">—</div>
+              <select class="mod-select" data-param="out-vol" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select>
+            </div>
+          </div>
+          <div class="jacks out-status">
+            <span class="status-label">MIX</span>
+            <span class="status-bar"><span class="status-bar-fill" id="outLevel"></span></span>
+          </div>
+        </div>
 
         <div class="module" id="mod-vco">
           <div class="mod-head"><span>VCO</span><span class="type">PWM</span></div>
@@ -1457,25 +1477,6 @@
           </div>
         </div>
 
-        <div class="module" id="mod-out">
-          <div class="mod-head"><span>OUT</span><span class="type">MASTER</span></div>
-          <div class="mod-knobs out-row">
-            <div class="drone-unit">
-              <button class="drone-btn" id="droneBtn"><span class="drone-ico">▶</span></button>
-              <div class="knob-label">DRONE</div>
-            </div>
-            <div class="knob-unit">
-              <div class="knob" data-param="out-vol"><div class="knob-ring"></div><div class="knob-dial"></div></div>
-              <div class="knob-label">VOL</div>
-              <div class="knob-value">—</div>
-              <select class="mod-select" data-param="out-vol" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select>
-            </div>
-          </div>
-          <div class="jacks out-status">
-            <span class="status-label">MIX</span>
-            <span class="status-bar"><span class="status-bar-fill" id="outLevel"></span></span>
-          </div>
-        </div>
       </div>
 
       <div class="pedals">
@@ -2517,6 +2518,32 @@ class Knob {
       }
     }, true);
   });
+
+  // Device-aware default sensor assignments.
+  // PC (fine pointer): everything except VOL and RES → pointerDist.
+  // Phone/tablet (coarse pointer): 1st knob of each module → tiltX, 2nd → tiltY.
+  // Tilt is set declaratively here without calling attachTilt(), so iOS motion
+  // permission is still requested only on the first real user gesture
+  // (knob drag, dropdown change) — see attachTilt() above.
+  (function applyDefaultSensors() {
+    const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+    const defaults = isCoarse
+      ? { 'vco-freq': 'tiltX', 'vco-pw': 'tiltY',
+          'lfo-rate': 'tiltX', 'lfo-depth': 'tiltY',
+          'lpf-cut': 'tiltX',  'lpf-res': 'tiltY',
+          'out-vol': 'tiltX' }
+      : { 'vco-freq': 'pointerDist', 'vco-pw': 'pointerDist',
+          'lfo-rate': 'pointerDist', 'lfo-depth': 'pointerDist',
+          'lpf-cut': 'pointerDist' };
+    Object.entries(defaults).forEach(([param, src]) => {
+      const sel = document.querySelector(`.mod-select[data-param="${param}"]`);
+      if (!sel) return;
+      sel.value = src;
+      sel.classList.add('on');
+      knobSource[param] = src;
+      knobs[param]?.el.classList.add('sensor-modulated');
+    });
+  })();
 
   // Visibility gating for this section's rAF loops. Shared between modLoop and vizLoop
   // so we don't pay DOM-thrash costs while the synth section is off-screen.
