@@ -1132,36 +1132,20 @@
     padding: 0.2rem 0.5rem; font-size: 0.9rem;
   }
 
-  /* ================= BLUEPRINT BG (hero → photography) =================
-     Vertical 1960s blueprint stretched as ONE piece from the top of the page
-     down to the top of the contact section. The contact + footer block gets
-     its own image treatment later. Height is set by JS (a few lines near
-     the bottom of <body>) against #contact.offsetTop, kept in sync on resize
-     and image-load-induced reflows. */
-  body { position: relative; }           /* anchor for the absolute-positioned bg layer */
-  .bg-blueprint-wrap {
+  /* ================= EVOLVING NETWORK BG =================
+     Code-generated canvas painted behind all content. JS engine lives in a
+     self-contained IIFE near the bottom of <body>. */
+  body { position: relative; }           /* anchor for the canvas layer */
+  #bg-canvas {
     position: fixed;
     inset: 0;
+    width: 100%;
+    height: 100%;
     z-index: 0;
     pointer-events: none;
-    overflow: hidden;
+    opacity: 0.55;
   }
-  .bg-blueprint {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translate3d(-50%, 0, 0);
-    height: auto;
-    max-width: none;
-    opacity: 0.65;
-    will-change: transform;
-  }
-  @media (max-width: 768px) {
-    .bg-blueprint { will-change: auto; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .bg-blueprint { transform: translate3d(-50%, 0, 0) !important; }
-  }
+  @media (prefers-reduced-motion: reduce) { #bg-canvas { opacity: 0.35; } }
 
   /* Lift all primary content above the fixed z-index:0 parallax layer.
      nav (z-100), .section-3d-content (z-2), .synth-inner (z-1) are already lifted;
@@ -1184,10 +1168,8 @@
 </head>
 <body>
 
-<!-- Full-site parallax blueprint background. Painted behind all content. -->
-<div class="bg-blueprint-wrap" aria-hidden="true">
-  <img class="bg-blueprint" src="assets/images/bg-blueprint.png" alt="" />
-</div>
+<!-- Code-generated evolving network background. Painted behind all content. -->
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
 
 <nav>
   <div class="logo">AL<span>/</span>BAY</div>
@@ -1383,17 +1365,10 @@
 
       <div class="pedals">
         <div class="pedal" data-fx="fuzz">
-          <button class="pedal-switch" type="button"><span class="led"></span><span class="name">Fuzz</span></button>
+          <button class="pedal-switch" type="button"><span class="led"></span><span class="name">Overdrive</span></button>
           <div class="pedal-knobs">
             <div class="knob-unit"><div class="knob" data-param="fx-fuzz-drive"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Drive</div><select class="mod-select" data-param="fx-fuzz-drive" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
             <div class="knob-unit"><div class="knob" data-param="fx-fuzz-tone"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Tone</div><select class="mod-select" data-param="fx-fuzz-tone" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
-          </div>
-        </div>
-        <div class="pedal" data-fx="delay">
-          <button class="pedal-switch" type="button"><span class="led"></span><span class="name">Delay</span></button>
-          <div class="pedal-knobs">
-            <div class="knob-unit"><div class="knob" data-param="fx-delay-time"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Time</div><select class="mod-select" data-param="fx-delay-time" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
-            <div class="knob-unit"><div class="knob" data-param="fx-delay-fb"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">F/B</div><select class="mod-select" data-param="fx-delay-fb" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
           </div>
         </div>
         <div class="pedal" data-fx="reverb">
@@ -1401,13 +1376,6 @@
           <div class="pedal-knobs">
             <div class="knob-unit"><div class="knob" data-param="fx-reverb-size"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Size</div><select class="mod-select" data-param="fx-reverb-size" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
             <div class="knob-unit"><div class="knob" data-param="fx-reverb-decay"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Decay</div><select class="mod-select" data-param="fx-reverb-decay" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
-          </div>
-        </div>
-        <div class="pedal" data-fx="chorus">
-          <button class="pedal-switch" type="button"><span class="led"></span><span class="name">Chorus</span></button>
-          <div class="pedal-knobs">
-            <div class="knob-unit"><div class="knob" data-param="fx-chorus-rate"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Rate</div><select class="mod-select" data-param="fx-chorus-rate" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
-            <div class="knob-unit"><div class="knob" data-param="fx-chorus-depth"><div class="knob-ring"></div><div class="knob-dial"></div></div><div class="knob-label">Depth</div><select class="mod-select" data-param="fx-chorus-depth" title="Modulation source"><option value="">off</option><option value="light">light</option><option value="tiltX">tiltX</option><option value="tiltY">tiltY</option><option value="pointerX">pointerX</option><option value="pointerY">pointerY</option><option value="pointerDist">pointerDist</option></select></div>
           </div>
         </div>
       </div>
@@ -1752,7 +1720,7 @@ class Knob {
   };
   // Default patches + default FX on (matches the "annoying noise" preset)
   const DEFAULT_PATCHES = ['vco-pw', 'lpf-cut'];
-  const DEFAULT_FX_ON = ['fuzz', 'delay', 'reverb'];
+  const DEFAULT_FX_ON = ['fuzz', 'reverb'];
 
   let ac = null, master = null;
   let vco = null, vco2 = null, vcoMix = null;
@@ -2857,51 +2825,284 @@ class Knob {
 </script>
 
 <script>
-/* ================= BLUEPRINT BG SIZER =================
-   Clamp .bg-blueprint's height to end at the top of #contact, so the
-   blueprint only covers the header → photography span. Re-measure on
-   resize, on window.load (images), and on any body resize (reveal
-   animations, async thumbs). Small, self-contained, uses the shared
-   __debounce helper added by the main inline script. */
-(function parallaxBlueprint() {
-  var img = document.querySelector('.bg-blueprint');
-  if (!img) return;
-  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var SPEED = 0.8;          // BG scroll rate relative to FG
-  var SIZE_MULT = 0.8;      // extra height multiplier — lower = shorter image
-  var RATE = SPEED * SIZE_MULT; // effective rate for both sizing AND translation (coupled to keep bottom aligned at max scroll)
-  var scrollMax = 0;
-  var vpH = window.innerHeight;
-  function sizeImg() {
-    vpH = window.innerHeight;
-    scrollMax = Math.max(0, document.documentElement.scrollHeight - vpH);
-    if (!img.naturalWidth || !img.naturalHeight) return;
-    var aspect = img.naturalWidth / img.naturalHeight;
-    var imgH = RATE * scrollMax + vpH;
-    if (scrollMax < 1) imgH = vpH;
-    img.style.height = imgH + 'px';
-    img.style.width = (imgH * aspect) + 'px';
+/* ================= EVOLVING NETWORK BG =================
+   Code-generated canvas background. A graph of nodes whose linkage style
+   evolves with scroll progress (dots → straight lines → orthogonal traces
+   → flowing curves → branching crosses). Hover repels nearby nodes,
+   click/tap emits a ripple, deviceorientation gives a subtle drift.
+   Pauses on tab blur; respects prefers-reduced-motion. */
+(function bgCanvasEngine() {
+  var canvas = document.getElementById('bg-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var isMobile = window.innerWidth <= 768;
+  var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5);
+  var W = 0, H = 0;
+  var nodes = [];
+  var ripples = [];
+  var pointer = { x: -9999, y: -9999, active: false };
+  var tilt = { x: 0, y: 0 };
+  var progress = 0;
+  var rafId = 0;
+  var lastT = 0;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sprinkle();
   }
-  var latestY = 0, ticking = false;
-  function tick() {
-    ticking = false;
-    var y = reducedMotion ? 0 : -RATE * latestY;
-    img.style.transform = 'translate3d(-50%, ' + y + 'px, 0)';
+
+  function sprinkle() {
+    var density = isMobile ? 0.000025 : 0.00005;
+    var n = clamp(Math.round(W * H * density), isMobile ? 25 : 40, isMobile ? 80 : 120);
+    nodes = new Array(n);
+    for (var i = 0; i < n; i++) {
+      var bx = Math.random() * W, by = Math.random() * H;
+      nodes[i] = { bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0 };
+    }
   }
-  function onScroll() {
-    latestY = window.scrollY || window.pageYOffset;
-    if (!ticking) { requestAnimationFrame(tick); ticking = true; }
+
+  function updateProgress() {
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    progress = max > 0 ? clamp((window.scrollY || window.pageYOffset) / max, 0, 1) : 0;
   }
+
+  // deterministic per-pair hash used to gate which links draw
+  function hash(i, j) {
+    var h = (i * 9973 + j * 257) | 0;
+    h = (h ^ (h >>> 13)) * 1274126177;
+    return ((h >>> 0) % 1000) / 1000;
+  }
+
+  function styleAlphaForBand(prog, lo, hi) {
+    var fade = 0.05;
+    if (prog < lo - fade || prog > hi + fade) return 0;
+    if (prog < lo) return (prog - (lo - fade)) / fade;
+    if (prog > hi) return 1 - (prog - hi) / fade;
+    return 1;
+  }
+
+  function drawLink(a, b, prog, alpha) {
+    if (alpha <= 0) return;
+    ctx.globalAlpha = 0.5 * alpha;
+    ctx.strokeStyle = 'rgba(220, 226, 232, 1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (prog < 0.4) {
+      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    } else if (prog < 0.6) {
+      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, a.y); ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    } else if (prog < 0.8) {
+      var mx = (a.x + b.x) * 0.5, my = (a.y + b.y) * 0.5;
+      var nx = -(b.y - a.y), ny = (b.x - a.x);
+      var nl = Math.hypot(nx, ny) || 1;
+      var off = 18;
+      ctx.moveTo(a.x, a.y);
+      ctx.quadraticCurveTo(mx + (nx / nl) * off, my + (ny / nl) * off, b.x, b.y);
+      ctx.stroke();
+    } else {
+      var mx2 = (a.x + b.x) * 0.5, my2 = (a.y + b.y) * 0.5;
+      ctx.moveTo(a.x, a.y); ctx.lineTo(mx2, my2); ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawElbowMarker(a, b) {
+    ctx.fillStyle = 'rgba(220, 226, 232, 0.5)';
+    ctx.fillRect(b.x - 1.5, a.y - 1.5, 3, 3);
+  }
+
+  function drawCross(n, alpha) {
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = 'rgba(220, 226, 232, 1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(n.x - 2.5, n.y); ctx.lineTo(n.x + 2.5, n.y);
+    ctx.moveTo(n.x, n.y - 2.5); ctx.lineTo(n.x, n.y + 2.5);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function step(dt) {
+    var stiff = 0.04, damp = 0.85;
+    var hoverR = 140, hoverR2 = hoverR * hoverR;
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      n.vx += (n.bx - n.x) * stiff;
+      n.vy += (n.by - n.y) * stiff;
+      if (pointer.active) {
+        var dx = n.x - pointer.x, dy = n.y - pointer.y;
+        var d2 = dx * dx + dy * dy;
+        if (d2 < hoverR2 && d2 > 0.5) {
+          var d = Math.sqrt(d2);
+          var f = (1 - d / hoverR) * 0.6;
+          n.vx += (dx / d) * f;
+          n.vy += (dy / d) * f;
+        }
+      }
+      n.vx += tilt.x * 0.05;
+      n.vy += tilt.y * 0.05;
+      n.vx *= damp; n.vy *= damp;
+      n.x += n.vx; n.y += n.vy;
+    }
+    // ripples
+    for (var r = ripples.length - 1; r >= 0; r--) {
+      var R = ripples[r];
+      var age = (performance.now() - R.t0) / 1000;
+      if (age > 1.2) { ripples.splice(r, 1); continue; }
+      var radius = age * 500;
+      for (var k = 0; k < nodes.length; k++) {
+        var nn = nodes[k];
+        var rdx = nn.x - R.x, rdy = nn.y - R.y;
+        var rd = Math.hypot(rdx, rdy) || 1;
+        var bandDist = Math.abs(rd - radius);
+        if (bandDist < 30) {
+          var kick = (1 - bandDist / 30) * (1 - age / 1.2) * 1.4;
+          nn.vx += (rdx / rd) * kick;
+          nn.vy += (rdy / rd) * kick;
+        }
+      }
+    }
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    var prog = progress;
+    var distMin = 90 + (170 - 90) * prog;
+    var distMin2 = distMin * distMin;
+    var drawProb = 0.25 + 0.75 * prog;
+    var aStraight = styleAlphaForBand(prog, 0.00, 0.40);
+    var aOrtho    = styleAlphaForBand(prog, 0.40, 0.60);
+    var aCurve    = styleAlphaForBand(prog, 0.60, 0.80);
+    var aBranch   = styleAlphaForBand(prog, 0.80, 1.00);
+
+    for (var i = 0; i < nodes.length; i++) {
+      for (var j = i + 1; j < nodes.length; j++) {
+        var a = nodes[i], b = nodes[j];
+        var dx = a.x - b.x, dy = a.y - b.y;
+        var d2 = dx * dx + dy * dy;
+        if (d2 > distMin2) continue;
+        if (hash(i, j) > drawProb) continue;
+        var fade = 1 - Math.sqrt(d2) / distMin;
+        if (aStraight > 0) drawLink(a, b, 0.2, aStraight * fade);
+        if (aOrtho > 0) {
+          drawLink(a, b, 0.5, aOrtho * fade);
+          if (((i + j) % 3) === 0) drawElbowMarker(a, b);
+        }
+        if (aCurve > 0) drawLink(a, b, 0.7, aCurve * fade);
+        if (aBranch > 0) drawLink(a, b, 0.9, aBranch * fade);
+      }
+    }
+
+    // dots
+    var dotR = 1.5 + prog * 1.0;
+    if (aBranch > 0.5) {
+      for (var p = 0; p < nodes.length; p++) drawCross(nodes[p], 0.7);
+    } else {
+      ctx.fillStyle = 'rgba(220, 226, 232, 0.7)';
+      for (var q = 0; q < nodes.length; q++) {
+        ctx.beginPath();
+        ctx.arc(nodes[q].x, nodes[q].y, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ripple rings
+    for (var rr = 0; rr < ripples.length; rr++) {
+      var R = ripples[rr];
+      var age = (performance.now() - R.t0) / 1000;
+      var radius = age * 500;
+      var alpha = (1 - age / 1.2) * 0.25;
+      if (alpha <= 0) continue;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = 'rgba(220, 226, 232, 1)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(R.x, R.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function loop(t) {
+    if (document.visibilityState !== 'visible') { rafId = 0; return; }
+    var dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
+    lastT = t;
+    step(dt);
+    render();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function start() {
+    if (reduced) { render(); return; }
+    if (rafId) return;
+    lastT = performance.now();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  // listeners
   var resizeTimer = null;
-  function onResize() {
+  window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () { sizeImg(); tick(); }, 120);
+    resizeTimer = setTimeout(function () {
+      isMobile = window.innerWidth <= 768;
+      resize();
+      render();
+    }, 150);
+  }, { passive: true });
+
+  window.addEventListener('scroll', function () {
+    updateProgress();
+    if (reduced) render();
+  }, { passive: true });
+
+  if (!reduced) {
+    window.addEventListener('mousemove', function (e) {
+      pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true;
+    }, { passive: true });
+    window.addEventListener('mouseout', function () { pointer.active = false; }, { passive: true });
+    window.addEventListener('touchmove', function (e) {
+      if (e.touches && e.touches[0]) {
+        pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY; pointer.active = true;
+      }
+    }, { passive: true });
+
+    function pushRipple(x, y) {
+      ripples.push({ x: x, y: y, t0: performance.now() });
+      if (ripples.length > 6) ripples.shift();
+    }
+    window.addEventListener('click', function (e) { pushRipple(e.clientX, e.clientY); }, { passive: true });
+    window.addEventListener('touchstart', function (e) {
+      if (e.touches && e.touches[0]) pushRipple(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', function (ev) {
+        if (ev.gamma == null || ev.beta == null) return;
+        tilt.x = clamp(ev.gamma / 45, -1, 1);
+        tilt.y = clamp(ev.beta / 45, -1, 1);
+      }, { passive: true });
+    }
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') start();
+    });
   }
-  if (img.complete && img.naturalWidth) { sizeImg(); tick(); }
-  else { img.addEventListener('load', function () { sizeImg(); tick(); }, { once: true }); }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onResize, { passive: true });
-  window.addEventListener('orientationchange', onResize, { passive: true });
+
+  resize();
+  updateProgress();
+  start();
 })();
 </script>
 
