@@ -268,17 +268,89 @@
     z-index: 1;
   }
   .rig {
-    background:
-      radial-gradient(ellipse at center, rgba(10,10,11,0.15) 0%, rgba(10,10,11,0.55) 100%),
-      url('assets/images/mkv-pcb.png') center/cover no-repeat,
-      #0a0a0b;
-    backdrop-filter: blur(6px);
-    border: 1px solid var(--line);
-    padding: 1.75rem;
-    margin-bottom: 3rem;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-bottom: 0;
     position: relative;
     overflow: hidden;
     min-width: 0;
+  }
+
+  /* ----- Synth modal subcards (ANE / ANG) — native <details> cards ----- */
+  .synth-subcard {
+    background: rgba(17, 17, 20, 0.55);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+  .synth-subcard:last-child { margin-bottom: 0; }
+  /* PCB circuit image lives one level above .rig now (the ANE subcard). */
+  .synth-subcard.has-pcb {
+    background:
+      radial-gradient(ellipse at center, rgba(10,10,11,0.35) 0%, rgba(10,10,11,0.85) 100%),
+      url('assets/images/mkv-pcb.png') center/cover no-repeat,
+      rgba(17, 17, 20, 0.55);
+  }
+  .synth-subcard-head {
+    cursor: pointer;
+    list-style: none;
+    position: relative;
+    padding-right: 2.5rem;
+    user-select: none;
+  }
+  .synth-subcard-head::-webkit-details-marker { display: none; }
+  .synth-subcard-head::after {
+    content: '+';
+    position: absolute;
+    right: 0;
+    top: -2px;
+    width: 1.6rem;
+    height: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .synth-subcard[open] > .synth-subcard-head::after { content: '−'; }
+  .synth-subcard-head:hover::after {
+    background-color: var(--accent);
+    color: #0a0a0b;
+  }
+  .synth-subcard-title {
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin: 0 0 0.4rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+  .synth-subcard-title .abbr {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+  }
+  .synth-subcard-desc {
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 70ch;
+  }
+  .synth-subcard-body {
+    margin-top: 1.5rem;
   }
   .rig-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -448,7 +520,7 @@
   .knob-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.6rem;
-    color: var(--ink-faint);
+    color: var(--accent);
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
@@ -852,8 +924,17 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.65rem;
     transition: all 0.4s;
+    overflow: hidden;
+    position: relative;
+  }
+  .photo-tile img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s ease;
   }
   .photo-tile:hover { border-color: var(--ink-dim); transform: translateY(-3px); }
+  .photo-tile:hover img { transform: scale(1.04); }
   .photo-tile.wide { aspect-ratio: 3/2; grid-column: span 2; }
 
   /* contact */
@@ -1292,7 +1373,7 @@
     <a href="#synths"><span class="num">02</span>Synths</a>
     <a href="#music"><span class="num">03</span>Music</a>
     <a href="#photography"><span class="num">04</span>Photo</a>
-    <a href="#contact">Say hi</a>
+    <a href="#contact">Find me</a>
   </div>
 </nav>
 
@@ -1384,6 +1465,12 @@
       <span class="tag">Amateur</span>
     </div>
 
+    <details class="synth-subcard has-pcb" open>
+      <summary class="synth-subcard-head">
+        <h3 class="synth-subcard-title"><span class="abbr">ANE</span> Annoying Noise Emulator</h3>
+        <p class="synth-subcard-desc">A web-playable synth & pedal rig — the patchable noise box that lives on this page. Drag knobs, route the LFO, map any control to a sensor.</p>
+      </summary>
+      <div class="synth-subcard-body">
     <div class="rig">
       <div class="rig-header">
         <h3>Annoying Noise Emulator</h3>
@@ -1498,7 +1585,15 @@
 
       <div class="synth-viz" id="synthViz"></div>
     </div>
+      </div><!-- /.synth-subcard-body -->
+    </details><!-- /.synth-subcard ANE -->
 
+    <details class="synth-subcard">
+      <summary class="synth-subcard-head">
+        <h3 class="synth-subcard-title"><span class="abbr">ANG</span> Annoying Noise Generator</h3>
+        <p class="synth-subcard-desc">The hardware version — DIY synth modules and effect pedals built on perfboard, in enclosures, with real knobs you can twist.</p>
+      </summary>
+      <div class="synth-subcard-body">
     <div class="synth-grid">
       <div class="build-card">
         <div class="build-media">
@@ -1577,6 +1672,8 @@
         </div>
       </div>
     </div>
+      </div><!-- /.synth-subcard-body -->
+    </details><!-- /.synth-subcard ANG -->
   </div>
   </div><!-- /.synth-section -->
   </div><!-- /.modal-content -->
@@ -1705,14 +1802,14 @@
     <span class="tag">Older</span>
   </div>
   <div class="photo-grid">
-    <div class="photo-tile wide"><span>[ 01 ]</span></div>
-    <div class="photo-tile"><span>[ 02 ]</span></div>
-    <div class="photo-tile"><span>[ 03 ]</span></div>
-    <div class="photo-tile"><span>[ 04 ]</span></div>
-    <div class="photo-tile"><span>[ 05 ]</span></div>
-    <div class="photo-tile wide"><span>[ 06 ]</span></div>
-    <div class="photo-tile"><span>[ 07 ]</span></div>
-    <div class="photo-tile"><span>[ 08 ]</span></div>
+    <div class="photo-tile wide"><img src="assets/images/pht/pornoma_dokunma.jpg" alt="Pornoma dokunma" loading="lazy"></div>
+    <div class="photo-tile"><img src="assets/images/pht/aylin.JPG" alt="Aylin" loading="lazy"></div>
+    <div class="photo-tile"><img src="assets/images/pht/nadia.JPG" alt="Nadia" loading="lazy"></div>
+    <div class="photo-tile"><img src="assets/images/pht/anil1.jpg" alt="Anıl" loading="lazy"></div>
+    <div class="photo-tile"><img src="assets/images/pht/guyfawkes.jpg" alt="Guy Fawkes" loading="lazy"></div>
+    <div class="photo-tile wide"><img src="assets/images/pht/isyan_hatirasi.JPG" alt="İsyan hatırası" loading="lazy"></div>
+    <div class="photo-tile"><img src="assets/images/pht/DSC_1561.JPG" alt="DSC_1561" loading="lazy"></div>
+    <div class="photo-tile"><img src="assets/images/pht/soguk_.gif" alt="Soğuk" loading="lazy"></div>
   </div>
   </div><!-- /.block -->
   </div><!-- /.modal-content -->
@@ -1720,7 +1817,7 @@
 
 <!-- CONTACT -->
 <section class="contact reveal" id="contact">
-  <h2>Say hi.</h2>
+  <h2>Find me.</h2>
   <a class="contact-email" href="mailto:kucukalpay@gmail.com">kucukalpay@gmail.com</a>
   <div class="socials">
     <a href="#">Instagram</a>
@@ -1864,7 +1961,7 @@ class Knob {
     'vco-freq': 85,    'vco-pw': 0.36,
     'lfo-rate': 0.25,  'lfo-depth': 0.40,
     'lpf-cut': 1800,   'lpf-res': 20,
-    'out-vol': 0.55,
+    'out-vol': 0.15,
     'fx-fuzz-drive': 7,       'fx-fuzz-tone': 2200,
     'fx-delay-time': 0.42,    'fx-delay-fb':   0.5,
     'fx-reverb-size': 0.6,    'fx-reverb-decay': 0.55,
@@ -2077,7 +2174,7 @@ class Knob {
 
   // knob wiring
   const knobConfigs = {
-    'vco-freq': { min: 40, max: 1200, value: 85, log: true, unit: 'Hz',
+    'vco-freq': { min: 20, max: 1200, value: 85, log: true, unit: 'Hz',
       onChange: v => {
         state['vco-freq'] = v;
         if (vco) vco.frequency.setTargetAtTime(v, ac.currentTime, 0.01);
@@ -2100,7 +2197,7 @@ class Knob {
       onChange: v => { state['lpf-res'] = v; if (lpf) lpf.Q.setTargetAtTime(v, ac.currentTime, 0.02); } },
 
     // ---- Output master volume ----
-    'out-vol':  { min: 0, max: 1, value: 0.55, log: false, unit: '%',
+    'out-vol':  { min: 0, max: 1, value: 0.15, log: false, unit: '%',
       onChange: v => {
         state['out-vol'] = v;
         if (master) master.gain.setTargetAtTime(v, ac.currentTime, 0.03);
