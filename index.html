@@ -3457,8 +3457,15 @@ class Knob {
           n.vy += (dy / d) * f;
         }
       }
-      n.vx += tilt.x * 0.05 * tiltStrengthX;
-      n.vy += tilt.y * 0.05 * tiltStrengthY;
+      // Tilt drift, scaled by distance to the nearest screen edge so nodes near
+      // the center swing freely while edge nodes barely move — gives the page a
+      // depth/parallax feel when the phone tilts. Per-axis edge distance is
+      // normalized to [0..1] (0 at the edge, 1 at the centerline). The 0.5
+      // baseline replaces the old 0.05 — that was too subtle to notice.
+      var edgeFx = W > 0 ? Math.min(n.x, W - n.x) / (W * 0.5) : 0;
+      var edgeFy = H > 0 ? Math.min(n.y, H - n.y) / (H * 0.5) : 0;
+      n.vx += tilt.x * 0.5 * tiltStrengthX * edgeFx;
+      n.vy += tilt.y * 0.5 * tiltStrengthY * edgeFy;
       n.vx *= damp; n.vy *= damp;
       n.x += n.vx; n.y += n.vy;
     }
@@ -3603,8 +3610,10 @@ class Knob {
     var bgTiltAttached = false;
     function onBgTilt(ev) {
       if (ev.gamma == null || ev.beta == null) return;
-      tilt.x = clamp(ev.gamma / 45, -1, 1);
-      tilt.y = clamp(ev.beta / 45, -1, 1);
+      // Tighter saturation (30° instead of 45°) so a small wrist flick already
+      // pushes |tilt| toward 1 — the bg now responds at typical handheld angles.
+      tilt.x = clamp(ev.gamma / 30, -1, 1);
+      tilt.y = clamp(ev.beta / 30, -1, 1);
     }
     function attachBgTilt() {
       if (bgTiltAttached || !window.DeviceOrientationEvent) return;
