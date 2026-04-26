@@ -1274,6 +1274,11 @@
     letter-spacing: 0.12em;
   }
   .bg-controls-panel label:last-child { margin-bottom: 0; }
+  /* Tilt rows hidden on devices without an orientation sensor (desktop). */
+  .bg-controls-panel .mobile-only { display: none; }
+  @media (pointer: coarse) {
+    .bg-controls-panel .mobile-only { display: flex; }
+  }
   .bg-controls-panel .row {
     display: flex; justify-content: space-between; align-items: baseline;
   }
@@ -1466,6 +1471,14 @@
     <label>
       <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">1.00</span></span>
       <input type="range" id="bgInteraction" min="0" max="2" step="0.05" value="1">
+    </label>
+    <label class="mobile-only">
+      <span class="row"><span>TILT X</span><span class="val" id="bgTiltXVal">1.00</span></span>
+      <input type="range" id="bgTiltX" min="0" max="4" step="0.05" value="1">
+    </label>
+    <label class="mobile-only">
+      <span class="row"><span>TILT Y</span><span class="val" id="bgTiltYVal">1.00</span></span>
+      <input type="range" id="bgTiltY" min="0" max="4" step="0.05" value="1">
     </label>
   </div>
 </div>
@@ -3320,6 +3333,10 @@ class Knob {
   // background (springs only), 1 = current feel, 2 = exaggerated.
   var nodeCount = 90;
   var interaction = 1;
+  // Per-axis tilt drift strength (mobile only — desktop has no orientation
+  // sensor so the sliders for these are hidden via CSS).
+  var tiltStrengthX = 1;
+  var tiltStrengthY = 1;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -3440,8 +3457,8 @@ class Knob {
           n.vy += (dy / d) * f;
         }
       }
-      n.vx += tilt.x * 0.05;
-      n.vy += tilt.y * 0.05;
+      n.vx += tilt.x * 0.05 * tiltStrengthX;
+      n.vy += tilt.y * 0.05 * tiltStrengthY;
       n.vx *= damp; n.vy *= damp;
       n.x += n.vx; n.y += n.vy;
     }
@@ -3579,12 +3596,44 @@ class Knob {
       if (e.touches && e.touches[0]) pushRipple(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
 
+    // Tilt: iOS Safari requires DeviceOrientationEvent.requestPermission() to be
+    // called from inside a user gesture, otherwise the listener never fires.
+    // We attach immediately on Android; on iOS we defer until the first
+    // touch/click and ask for permission then.
+    var bgTiltAttached = false;
+    function onBgTilt(ev) {
+      if (ev.gamma == null || ev.beta == null) return;
+      tilt.x = clamp(ev.gamma / 45, -1, 1);
+      tilt.y = clamp(ev.beta / 45, -1, 1);
+    }
+    function attachBgTilt() {
+      if (bgTiltAttached || !window.DeviceOrientationEvent) return;
+      var needsPerm = typeof DeviceOrientationEvent.requestPermission === 'function';
+      if (!needsPerm) {
+        bgTiltAttached = true;
+        window.addEventListener('deviceorientation', onBgTilt, { passive: true });
+      } else {
+        DeviceOrientationEvent.requestPermission().then(function (r) {
+          if (r === 'granted') {
+            bgTiltAttached = true;
+            window.addEventListener('deviceorientation', onBgTilt, { passive: true });
+          }
+        }).catch(function () {});
+      }
+    }
     if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', function (ev) {
-        if (ev.gamma == null || ev.beta == null) return;
-        tilt.x = clamp(ev.gamma / 45, -1, 1);
-        tilt.y = clamp(ev.beta / 45, -1, 1);
-      }, { passive: true });
+      var iOSPerm = typeof DeviceOrientationEvent.requestPermission === 'function';
+      if (!iOSPerm) {
+        attachBgTilt();
+      } else {
+        var bgTiltOneShot = function () {
+          document.removeEventListener('touchstart', bgTiltOneShot, true);
+          document.removeEventListener('pointerdown', bgTiltOneShot, true);
+          attachBgTilt();
+        };
+        document.addEventListener('touchstart', bgTiltOneShot, { capture: true, once: true });
+        document.addEventListener('pointerdown', bgTiltOneShot, { capture: true, once: true });
+      }
     }
 
     document.addEventListener('visibilitychange', function () {
@@ -3643,6 +3692,29 @@ class Knob {
     forceSlider.addEventListener('input', function () {
       interaction = parseFloat(forceSlider.value);
       if (forceValEl) forceValEl.textContent = interaction.toFixed(2);
+    });
+  }
+
+  // Tilt sliders are CSS-hidden on desktop but the JS hookup is harmless if
+  // the elements happen to exist (e.g. devtools mobile emulation).
+  var tiltXSlider = document.getElementById('bgTiltX');
+  var tiltXValEl  = document.getElementById('bgTiltXVal');
+  var tiltYSlider = document.getElementById('bgTiltY');
+  var tiltYValEl  = document.getElementById('bgTiltYVal');
+  if (tiltXSlider) {
+    tiltStrengthX = parseFloat(tiltXSlider.value);
+    if (tiltXValEl) tiltXValEl.textContent = tiltStrengthX.toFixed(2);
+    tiltXSlider.addEventListener('input', function () {
+      tiltStrengthX = parseFloat(tiltXSlider.value);
+      if (tiltXValEl) tiltXValEl.textContent = tiltStrengthX.toFixed(2);
+    });
+  }
+  if (tiltYSlider) {
+    tiltStrengthY = parseFloat(tiltYSlider.value);
+    if (tiltYValEl) tiltYValEl.textContent = tiltStrengthY.toFixed(2);
+    tiltYSlider.addEventListener('input', function () {
+      tiltStrengthY = parseFloat(tiltYSlider.value);
+      if (tiltYValEl) tiltYValEl.textContent = tiltStrengthY.toFixed(2);
     });
   }
 
