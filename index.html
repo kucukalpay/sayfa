@@ -1585,7 +1585,7 @@
     <details class="synth-subcard has-pcb" open>
       <summary class="synth-subcard-head">
         <h3 class="synth-subcard-title"><span class="abbr">ANE</span> Annoying Noise Emulator</h3>
-        <p class="synth-subcard-desc">A web-playable synth & pedal rig — the patchable noise box that lives on this page. Drag knobs, route the LFO, map any control to a sensor.</p>
+        <p class="synth-subcard-desc">A web based simple emulator of Annoying Noise Generator for your fun.</p>
       </summary>
       <div class="synth-subcard-body">
     <div class="rig">
@@ -1708,7 +1708,7 @@
     <details class="synth-subcard">
       <summary class="synth-subcard-head">
         <h3 class="synth-subcard-title"><span class="abbr">ANG</span> Annoying Noise Generator</h3>
-        <p class="synth-subcard-desc">The hardware version — DIY synth modules and effect pedals built on perfboard, in enclosures, with real knobs you can twist.</p>
+        <p class="synth-subcard-desc">Annoying Noise Generator and some other devices for making noise and low fidelity effects. You can buy or order from my Etsy page. You can find the sounds and samples made by these devices streamable and downloadable in the “Music: Loops and Samples” section.</p>
       </summary>
       <div class="synth-subcard-body">
     <div class="synth-grid">
@@ -2430,6 +2430,17 @@ class Knob {
   // drone
   const droneBtn = document.getElementById('droneBtn');
   const droneIco = droneBtn.querySelector('.drone-ico');
+  function stopDrone() {
+    if (!dronePlaying) return;
+    dronePlaying = false;
+    droneBtn.classList.remove('on');
+    if (droneIco) droneIco.textContent = '▶';
+    if (ac && gate) {
+      const now = ac.currentTime;
+      gate.gain.cancelScheduledValues(now);
+      gate.gain.setTargetAtTime(0, now, 0.04);
+    }
+  }
   droneBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     await bootAudio();
@@ -2441,6 +2452,11 @@ class Knob {
     gate.gain.cancelScheduledValues(now);
     gate.gain.setTargetAtTime(dronePlaying ? 0.55 : 0, now, 0.04);
     kickVizLoop();
+  });
+  // Auto-stop the drone when the Synths popup closes — otherwise it keeps
+  // humming behind the rest of the page.
+  document.addEventListener('modal:closed', (e) => {
+    if (e.detail && e.detail.id === 'modal-synths') stopDrone();
   });
 
   // pedals — only the stomp switch toggles; knob drags don't bubble here
