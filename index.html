@@ -1228,6 +1228,87 @@
   }
   @media (prefers-reduced-motion: reduce) { #bg-canvas { opacity: 0.35; } }
 
+  /* ----- Background network controls (link probability + range sliders) ----- */
+  .bg-controls {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 8000;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .bg-controls-toggle {
+    background: rgba(10, 10, 11, 0.85);
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .bg-controls-toggle:hover { color: var(--ink); border-color: var(--ink-dim); }
+  .bg-controls-panel {
+    display: none;
+    position: absolute;
+    bottom: 44px;
+    right: 0;
+    background: rgba(10, 10, 11, 0.92);
+    border: 1px solid var(--line);
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    min-width: 210px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .bg-controls.open .bg-controls-panel { display: block; }
+  .bg-controls-panel label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.85rem;
+    font-size: 0.6rem;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .bg-controls-panel label:last-child { margin-bottom: 0; }
+  .bg-controls-panel .row {
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .bg-controls-panel .val { color: var(--accent); font-size: 0.6rem; }
+  .bg-controls-panel input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    margin: 0;
+    height: 14px;
+  }
+  .bg-controls-panel input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px; background: var(--line); border-radius: 1px;
+  }
+  .bg-controls-panel input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-top: -5px;
+    cursor: pointer;
+    border: none;
+  }
+  .bg-controls-panel input[type="range"]::-moz-range-track {
+    height: 2px; background: var(--line); border-radius: 1px;
+  }
+  .bg-controls-panel input[type="range"]::-moz-range-thumb {
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
   /* Lift all primary content above the fixed z-index:0 parallax layer.
      nav (z-100), .section-3d-content (z-2), .synth-inner (z-1) are already lifted;
      these rules cover the remaining wrapper elements whose default static/relative
@@ -1365,6 +1446,29 @@
 
 <!-- Code-generated evolving network background. Painted behind all content. -->
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+<!-- Background network controls (link probability + range). -->
+<div class="bg-controls" id="bgControls">
+  <button class="bg-controls-toggle" type="button" aria-label="Background controls" title="Background controls">⚙</button>
+  <div class="bg-controls-panel">
+    <label>
+      <span class="row"><span>LINKS</span><span class="val" id="bgLinkProbVal">0.50</span></span>
+      <input type="range" id="bgLinkProb" min="0" max="1" step="0.01" value="0.5">
+    </label>
+    <label>
+      <span class="row"><span>RANGE</span><span class="val" id="bgLinkDistVal">200</span></span>
+      <input type="range" id="bgLinkDist" min="50" max="450" step="5" value="200">
+    </label>
+    <label>
+      <span class="row"><span>COUNT</span><span class="val" id="bgNodeCountVal">90</span></span>
+      <input type="range" id="bgNodeCount" min="10" max="250" step="1" value="90">
+    </label>
+    <label>
+      <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">1.00</span></span>
+      <input type="range" id="bgInteraction" min="0" max="2" step="0.05" value="1">
+    </label>
+  </div>
+</div>
 
 <nav>
   <div class="logo">AL<span>/</span>BAY</div>
@@ -3196,12 +3300,26 @@ class Knob {
   var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5);
   var W = 0, H = 0;
   var nodes = [];
+  var pairs = [];           // precomputed candidate pair list, sorted by hash
   var ripples = [];
   var pointer = { x: -9999, y: -9999, active: false };
   var tilt = { x: 0, y: 0 };
   var progress = 0;
   var rafId = 0;
   var lastT = 0;
+  // Slider-controlled connectivity. linkProb gates how many candidate pairs are
+  // eligible to draw on a given frame (lower = sparser). linkRange is the max
+  // pixel distance for a connection to render (after the eligibility gate).
+  // The pair list is built once per sprinkle/resize so we don't recompute
+  // pair identity every frame — only distance is checked at runtime.
+  var linkProb = 0.5;
+  var linkRange = 200;
+  // nodeCount: total nodes painted on the background. Changing it triggers a
+  // re-sprinkle (which also rebuilds the pair list).
+  // interaction: multiplier on hover-repel + ripple-kick forces. 0 = inert
+  // background (springs only), 1 = current feel, 2 = exaggerated.
+  var nodeCount = 90;
+  var interaction = 1;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -3217,13 +3335,28 @@ class Knob {
   }
 
   function sprinkle() {
-    var density = isMobile ? 0.000025 : 0.00005;
-    var n = clamp(Math.round(W * H * density), isMobile ? 25 : 40, isMobile ? 80 : 120);
+    // Slider owns the count now. Cap defensively to keep the O(n²) pair
+    // build from blowing up if someone pushes it past sensible limits.
+    var n = clamp(nodeCount | 0, 5, 400);
     nodes = new Array(n);
     for (var i = 0; i < n; i++) {
       var bx = Math.random() * W, by = Math.random() * H;
       nodes[i] = { bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0 };
     }
+    buildPairs();
+  }
+
+  // Build the candidate pair list once. Each entry has a stable hash value
+  // h ∈ [0, 1); we sort ascending so render() can iterate up to linkProb
+  // and break early — the sliders adjust how deep into the list we walk.
+  function buildPairs() {
+    pairs.length = 0;
+    for (var i = 0; i < nodes.length; i++) {
+      for (var j = i + 1; j < nodes.length; j++) {
+        pairs.push({ i: i, j: j, h: hash(i, j) });
+      }
+    }
+    pairs.sort(function (a, b) { return a.h - b.h; });
   }
 
   function updateProgress() {
@@ -3302,7 +3435,7 @@ class Knob {
         var d2 = dx * dx + dy * dy;
         if (d2 < hoverR2 && d2 > 0.5) {
           var d = Math.sqrt(d2);
-          var f = (1 - d / hoverR) * 0.6;
+          var f = (1 - d / hoverR) * 0.6 * interaction;
           n.vx += (dx / d) * f;
           n.vy += (dy / d) * f;
         }
@@ -3324,7 +3457,7 @@ class Knob {
         var rd = Math.hypot(rdx, rdy) || 1;
         var bandDist = Math.abs(rd - radius);
         if (bandDist < 30) {
-          var kick = (1 - bandDist / 30) * (1 - age / 1.2) * 1.4;
+          var kick = (1 - bandDist / 30) * (1 - age / 1.2) * 1.4 * interaction;
           nn.vx += (rdx / rd) * kick;
           nn.vy += (rdy / rd) * kick;
         }
@@ -3335,30 +3468,33 @@ class Knob {
   function render() {
     ctx.clearRect(0, 0, W, H);
     var prog = progress;
-    var distMin = 90 + (170 - 90) * prog;
+    // Sliders own connectivity now; scroll progress only drives the visual
+    // style transitions (straight → ortho → curve → branch).
+    var distMin = linkRange;
     var distMin2 = distMin * distMin;
-    var drawProb = 0.25 + 0.75 * prog;
+    var drawProb = linkProb;
     var aStraight = styleAlphaForBand(prog, 0.00, 0.40);
     var aOrtho    = styleAlphaForBand(prog, 0.40, 0.60);
     var aCurve    = styleAlphaForBand(prog, 0.60, 0.80);
     var aBranch   = styleAlphaForBand(prog, 0.80, 1.00);
 
-    for (var i = 0; i < nodes.length; i++) {
-      for (var j = i + 1; j < nodes.length; j++) {
-        var a = nodes[i], b = nodes[j];
-        var dx = a.x - b.x, dy = a.y - b.y;
-        var d2 = dx * dx + dy * dy;
-        if (d2 > distMin2) continue;
-        if (hash(i, j) > drawProb) continue;
-        var fade = 1 - Math.sqrt(d2) / distMin;
-        if (aStraight > 0) drawLink(a, b, 0.2, aStraight * fade);
-        if (aOrtho > 0) {
-          drawLink(a, b, 0.5, aOrtho * fade);
-          if (((i + j) % 3) === 0) drawElbowMarker(a, b);
-        }
-        if (aCurve > 0) drawLink(a, b, 0.7, aCurve * fade);
-        if (aBranch > 0) drawLink(a, b, 0.9, aBranch * fade);
+    // Walk the precomputed (sorted) pair list. Pairs with h > drawProb are
+    // skipped wholesale because sorted — the rest will be even further out.
+    for (var p = 0; p < pairs.length; p++) {
+      var pair = pairs[p];
+      if (pair.h > drawProb) break;
+      var a = nodes[pair.i], b = nodes[pair.j];
+      var dx = a.x - b.x, dy = a.y - b.y;
+      var d2 = dx * dx + dy * dy;
+      if (d2 > distMin2) continue;
+      var fade = 1 - Math.sqrt(d2) / distMin;
+      if (aStraight > 0) drawLink(a, b, 0.2, aStraight * fade);
+      if (aOrtho > 0) {
+        drawLink(a, b, 0.5, aOrtho * fade);
+        if (((pair.i + pair.j) % 3) === 0) drawElbowMarker(a, b);
       }
+      if (aCurve > 0) drawLink(a, b, 0.7, aCurve * fade);
+      if (aBranch > 0) drawLink(a, b, 0.9, aBranch * fade);
     }
 
     // dots
@@ -3453,6 +3589,60 @@ class Knob {
 
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') start();
+    });
+  }
+
+  // Slider hookups for the floating bg-controls panel.
+  var bgControls    = document.getElementById('bgControls');
+  var probSlider    = document.getElementById('bgLinkProb');
+  var distSlider    = document.getElementById('bgLinkDist');
+  var probValEl     = document.getElementById('bgLinkProbVal');
+  var distValEl     = document.getElementById('bgLinkDistVal');
+  if (bgControls) {
+    var toggle = bgControls.querySelector('.bg-controls-toggle');
+    if (toggle) toggle.addEventListener('click', function () {
+      bgControls.classList.toggle('open');
+    });
+  }
+  if (probSlider) {
+    linkProb = parseFloat(probSlider.value);
+    if (probValEl) probValEl.textContent = linkProb.toFixed(2);
+    probSlider.addEventListener('input', function () {
+      linkProb = parseFloat(probSlider.value);
+      if (probValEl) probValEl.textContent = linkProb.toFixed(2);
+      if (reduced) render();
+    });
+  }
+  if (distSlider) {
+    linkRange = parseFloat(distSlider.value);
+    if (distValEl) distValEl.textContent = String(linkRange | 0);
+    distSlider.addEventListener('input', function () {
+      linkRange = parseFloat(distSlider.value);
+      if (distValEl) distValEl.textContent = String(linkRange | 0);
+      if (reduced) render();
+    });
+  }
+
+  var countSlider = document.getElementById('bgNodeCount');
+  var countValEl  = document.getElementById('bgNodeCountVal');
+  var forceSlider = document.getElementById('bgInteraction');
+  var forceValEl  = document.getElementById('bgInteractionVal');
+  if (countSlider) {
+    nodeCount = parseInt(countSlider.value, 10);
+    if (countValEl) countValEl.textContent = String(nodeCount);
+    countSlider.addEventListener('input', function () {
+      nodeCount = parseInt(countSlider.value, 10);
+      if (countValEl) countValEl.textContent = String(nodeCount);
+      sprinkle();           // re-seeds nodes + rebuilds pair list
+      if (reduced) render();
+    });
+  }
+  if (forceSlider) {
+    interaction = parseFloat(forceSlider.value);
+    if (forceValEl) forceValEl.textContent = interaction.toFixed(2);
+    forceSlider.addEventListener('input', function () {
+      interaction = parseFloat(forceSlider.value);
+      if (forceValEl) forceValEl.textContent = interaction.toFixed(2);
     });
   }
 
