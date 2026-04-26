@@ -880,6 +880,154 @@
   .track-dl:hover { color: var(--accent-2); border-color: var(--accent-2); }
   .track-dl.muted { opacity: 0.4; pointer-events: none; }
 
+  /* ---- Sample / loop preview rows (Music modal · SL subcard) ---- */
+  .audio-list {
+    display: flex; flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+  }
+  .audio-list:last-child { margin-bottom: 0; }
+  .audio-group-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.55rem;
+  }
+  .audio-row {
+    display: grid;
+    grid-template-columns: 32px 1fr auto 32px;
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .audio-row.playing { border-color: var(--accent); background: rgba(255, 87, 34, 0.08); }
+  .audio-play {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    transition: all 0.2s;
+  }
+  .audio-play:hover { background: var(--accent); color: var(--bg); }
+  .audio-row.playing .audio-play { background: var(--accent); color: var(--bg); }
+  .audio-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .audio-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--ink-faint);
+    min-width: 2.5em;
+    text-align: right;
+  }
+  .audio-dl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    text-decoration: none;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .audio-dl:hover { color: var(--accent-2); border-color: var(--accent-2); }
+
+  /* "Keep playing when closed" toggle inside the music player. */
+  .keep-playing {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-top: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    cursor: pointer;
+    user-select: none;
+  }
+  .keep-playing input { accent-color: var(--accent); cursor: pointer; }
+  .keep-playing:hover { color: var(--ink-dim); }
+
+  /* Floating mini player — appears when modal closes with audio still on. */
+  .mini-player {
+    position: fixed;
+    bottom: 1rem;
+    left: 1rem;
+    z-index: 8000;
+    display: none;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.4rem 0.5rem 0.4rem 0.45rem;
+    background: rgba(10, 10, 11, 0.92);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  }
+  .mini-player.show { display: flex; }
+  .mini-play {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    transition: filter 0.2s;
+  }
+  .mini-play:hover { filter: brightness(1.15); }
+  .mini-name {
+    font-size: 0.7rem;
+    color: var(--ink);
+    letter-spacing: 0.05em;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mini-close {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .mini-close:hover { color: var(--ink); border-color: var(--ink-dim); }
+  @media (max-width: 480px) {
+    .mini-player { left: 0.5rem; right: 0.5rem; bottom: 0.5rem; }
+    .mini-name { max-width: none; flex: 1; }
+  }
+
   /* model-viewer cards */
   .build-media model-viewer {
     width: 100%; height: 100%;
@@ -1452,6 +1600,14 @@
 <!-- Code-generated evolving network background. Painted behind all content. -->
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
+<!-- Mini hovering music player (only visible when "Keep playing" is on
+     and the music modal has been closed mid-playback). -->
+<div class="mini-player" id="miniPlayer" aria-hidden="true">
+  <button class="mini-play" id="miniPlay" type="button" aria-label="Play / Pause">▶</button>
+  <span class="mini-name" id="miniName">—</span>
+  <button class="mini-close" id="miniClose" type="button" aria-label="Close player">×</button>
+</div>
+
 <!-- Background network controls (link probability + range). -->
 <div class="bg-controls" id="bgControls">
   <button class="bg-controls-toggle" type="button" aria-label="Background controls" title="Background controls">⚙</button>
@@ -1469,16 +1625,16 @@
       <input type="range" id="bgNodeCount" min="10" max="250" step="1" value="90">
     </label>
     <label>
-      <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">1.00</span></span>
-      <input type="range" id="bgInteraction" min="0" max="2" step="0.05" value="1">
+      <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">2.00</span></span>
+      <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="2">
     </label>
     <label class="mobile-only">
-      <span class="row"><span>TILT X</span><span class="val" id="bgTiltXVal">1.00</span></span>
-      <input type="range" id="bgTiltX" min="0" max="4" step="0.05" value="1">
+      <span class="row"><span>TILT X</span><span class="val" id="bgTiltXVal">4.00</span></span>
+      <input type="range" id="bgTiltX" min="0" max="8" step="0.05" value="4">
     </label>
     <label class="mobile-only">
-      <span class="row"><span>TILT Y</span><span class="val" id="bgTiltYVal">1.00</span></span>
-      <input type="range" id="bgTiltY" min="0" max="4" step="0.05" value="1">
+      <span class="row"><span>TILT Y</span><span class="val" id="bgTiltYVal">4.00</span></span>
+      <input type="range" id="bgTiltY" min="0" max="8" step="0.05" value="4">
     </label>
   </div>
 </div>
@@ -1799,10 +1955,10 @@
 <!-- 03 · MUSIC (card) -->
 <section id="music" class="section-shell reveal">
   <div class="section-card" data-modal-target="modal-music">
-    <img class="card-hero" src="assets/images/forest-01.png" alt="Forest scene used as music artwork" loading="lazy">
+    <img class="card-hero" src="assets/images/musiccardbg.png" alt="Music — DIY instrument samples and ambient jams" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Music</h2>
-      <p class="card-desc">Ambient pieces and beat loops built from field recordings and hardware jams. Free to download.</p>
+      <p class="card-desc">Samples of my DIY instruments and loops done with those. Also some ambient hardware+instrument jam tracks. Visit my Bandcamp page to listen and buy songs that I experimented with my devices and samples.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -1816,82 +1972,129 @@
   <div class="section-head">
     <span class="num">03 /</span>
     <h2>Music</h2>
-    <span class="tag">Ambient · Loops · Free</span>
+    <span class="tag">Samples · Loops · Ambient</span>
   </div>
   <p class="music-blurb">
-    Ambient pieces and beat loops built from my own field recordings and hardware jams. Everything below is <strong>free to download</strong> and flip into your own work. Credit is nice but not required.
+    Samples of my DIY instruments and loops done with those. Also some ambient hardware+instrument jam tracks. Visit my <strong>Bandcamp</strong> page to listen and buy songs that I experimented with my devices and samples.
   </p>
-  <div class="music-player">
-    <div class="now-playing">
-      <button class="play-btn" id="playBtn" aria-label="Play">▶</button>
-      <div class="track-info">
-        <div class="name">Live generative sketch</div>
-        <div class="meta" id="trackMeta">LIVE · PRESS PLAY</div>
+
+  <details class="synth-subcard" open>
+    <summary class="synth-subcard-head">
+      <h3 class="synth-subcard-title"><span class="abbr">SL</span> Samples &amp; Loops</h3>
+      <p class="synth-subcard-desc">Single-shot samples and looped phrases recorded out of my DIY instruments. Click to preview, arrow to download.</p>
+    </summary>
+    <div class="synth-subcard-body">
+      <h4 class="audio-group-title">Samples</h4>
+      <div class="audio-list">
+        <div class="audio-row" data-src="assets/Audio/sample-ang_rb_czrt.wav">
+          <button class="audio-play" type="button" aria-label="Preview">▶</button>
+          <span class="audio-name">ANG · Rb · Czrt</span>
+          <span class="audio-time">—</span>
+          <a class="audio-dl" href="assets/Audio/sample-ang_rb_czrt.wav" download title="Download">↓</a>
+        </div>
+        <div class="audio-row" data-src="assets/Audio/sample-ang_rb_v1_shamanik.wav">
+          <button class="audio-play" type="button" aria-label="Preview">▶</button>
+          <span class="audio-name">ANG · Rb · V1 Shamanik</span>
+          <span class="audio-time">—</span>
+          <a class="audio-dl" href="assets/Audio/sample-ang_rb_v1_shamanik.wav" download title="Download">↓</a>
+        </div>
+        <div class="audio-row" data-src="assets/Audio/sample-shaman_bas_hit.wav">
+          <button class="audio-play" type="button" aria-label="Preview">▶</button>
+          <span class="audio-name">Shaman · Bass Hit</span>
+          <span class="audio-time">—</span>
+          <a class="audio-dl" href="assets/Audio/sample-shaman_bas_hit.wav" download title="Download">↓</a>
+        </div>
+      </div>
+
+      <h4 class="audio-group-title">Loops</h4>
+      <div class="audio-list">
+        <div class="audio-row" data-src="assets/Audio/loop-12barblues.wav">
+          <button class="audio-play" type="button" aria-label="Preview">▶</button>
+          <span class="audio-name">12-Bar Blues</span>
+          <span class="audio-time">—</span>
+          <a class="audio-dl" href="assets/Audio/loop-12barblues.wav" download title="Download">↓</a>
+        </div>
+        <div class="audio-row" data-src="assets/Audio/loop-bluzunu-hala.wav">
+          <button class="audio-play" type="button" aria-label="Preview">▶</button>
+          <span class="audio-name">Bluzunu Hala</span>
+          <span class="audio-time">—</span>
+          <a class="audio-dl" href="assets/Audio/loop-bluzunu-hala.wav" download title="Download">↓</a>
+        </div>
+        <div class="audio-row" data-src="assets/Audio/loop-hczcorev3.wav">
+          <button class="audio-play" type="button" aria-label="Preview">▶</button>
+          <span class="audio-name">HCZ Core v3</span>
+          <span class="audio-time">—</span>
+          <a class="audio-dl" href="assets/Audio/loop-hczcorev3.wav" download title="Download">↓</a>
+        </div>
+        <div class="audio-row" data-src="assets/Audio/loop-hczcorev4.wav">
+          <button class="audio-play" type="button" aria-label="Preview">▶</button>
+          <span class="audio-name">HCZ Core v4</span>
+          <span class="audio-time">—</span>
+          <a class="audio-dl" href="assets/Audio/loop-hczcorev4.wav" download title="Download">↓</a>
+        </div>
+        <div class="audio-row" data-src="assets/Audio/loop-k-rep-kkprj-B.wav">
+          <button class="audio-play" type="button" aria-label="Preview">▶</button>
+          <span class="audio-name">K-Rep · KKPRJ B</span>
+          <span class="audio-time">—</span>
+          <a class="audio-dl" href="assets/Audio/loop-k-rep-kkprj-B.wav" download title="Download">↓</a>
+        </div>
       </div>
     </div>
-    <canvas class="viz-canvas" id="musicViz"></canvas>
-  </div>
-  <div class="music-library">
-    <div class="lib-head">
-      <span>#</span>
-      <span>Track</span>
-      <span>Tag</span>
-      <span>Len</span>
-      <span>File</span>
+  </details>
+
+  <details class="synth-subcard">
+    <summary class="synth-subcard-head">
+      <h3 class="synth-subcard-title"><span class="abbr">AT</span> Ambient Tracks</h3>
+      <p class="synth-subcard-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
+    </summary>
+    <div class="synth-subcard-body">
+      <div class="music-player">
+        <div class="now-playing">
+          <button class="play-btn" id="playBtn" aria-label="Play">▶</button>
+          <div class="track-info">
+            <div class="name" id="trackName">—</div>
+            <div class="meta" id="trackMeta">SELECT A TRACK</div>
+          </div>
+        </div>
+        <canvas class="viz-canvas" id="musicViz"></canvas>
+        <label class="keep-playing">
+          <input type="checkbox" id="keepPlaying">
+          <span>Keep playing when closed</span>
+        </label>
+      </div>
+      <div class="music-library">
+        <div class="lib-head">
+          <span>#</span>
+          <span>Track</span>
+          <span>Tag</span>
+          <span>Len</span>
+          <span>File</span>
+        </div>
+        <ul class="track-list">
+          <li class="track-row" data-track="0" data-src="assets/Tracks/Bul_uzun15-4.mp3">
+            <span class="track-num">01</span>
+            <div class="track-meta">
+              <span class="track-name">Bul Uzun 15-4</span>
+              <span class="track-sub">hardware jam · ambient</span>
+            </div>
+            <span class="track-tag">Ambient</span>
+            <span class="track-dur" data-dur>—</span>
+            <a class="track-dl" href="assets/Tracks/Bul_uzun15-4.mp3" download>MP3 ↓</a>
+          </li>
+          <li class="track-row" data-track="1" data-src="assets/Tracks/tambirbiyans.mp3">
+            <span class="track-num">02</span>
+            <div class="track-meta">
+              <span class="track-name">Tambirbiyans</span>
+              <span class="track-sub">hardware jam · ambient</span>
+            </div>
+            <span class="track-tag">Ambient</span>
+            <span class="track-dur" data-dur>—</span>
+            <a class="track-dl" href="assets/Tracks/tambirbiyans.mp3" download>MP3 ↓</a>
+          </li>
+        </ul>
+      </div>
     </div>
-    <ul class="track-list">
-      <li class="track-row">
-        <span class="track-num">01</span>
-        <div class="track-meta">
-          <span class="track-name">Untitled ambient 01</span>
-          <span class="track-sub">tape loop · granular</span>
-        </div>
-        <span class="track-tag">Ambient</span>
-        <span class="track-dur">3:42</span>
-        <a class="track-dl muted" href="#" download>WAV ↓</a>
-      </li>
-      <li class="track-row">
-        <span class="track-num">02</span>
-        <div class="track-meta">
-          <span class="track-name">Field study 02</span>
-          <span class="track-sub">field rec · modular</span>
-        </div>
-        <span class="track-tag">Ambient</span>
-        <span class="track-dur">5:18</span>
-        <a class="track-dl muted" href="#" download>WAV ↓</a>
-      </li>
-      <li class="track-row">
-        <span class="track-num">03</span>
-        <div class="track-meta">
-          <span class="track-name">Hardware loop 01</span>
-          <span class="track-sub">72 BPM · 4 bars</span>
-        </div>
-        <span class="track-tag">Beat loop</span>
-        <span class="track-dur">0:13</span>
-        <a class="track-dl muted" href="#" download>WAV ↓</a>
-      </li>
-      <li class="track-row">
-        <span class="track-num">04</span>
-        <div class="track-meta">
-          <span class="track-name">Hardware loop 02</span>
-          <span class="track-sub">88 BPM · 8 bars</span>
-        </div>
-        <span class="track-tag">Beat loop</span>
-        <span class="track-dur">0:22</span>
-        <a class="track-dl muted" href="#" download>WAV ↓</a>
-      </li>
-      <li class="track-row">
-        <span class="track-num">05</span>
-        <div class="track-meta">
-          <span class="track-name">Sample pack 01</span>
-          <span class="track-sub">drums · textures · one-shots</span>
-        </div>
-        <span class="track-tag">Pack</span>
-        <span class="track-dur">—</span>
-        <a class="track-dl muted" href="#" download>ZIP ↓</a>
-      </li>
-    </ul>
-  </div>
+  </details>
   </div><!-- /.block -->
   </div><!-- /.modal-content -->
 </div><!-- /#modal-music -->
@@ -2905,7 +3108,9 @@ class Knob {
 (function initMusic() {
   const btn = document.getElementById('playBtn');
   const meta = document.getElementById('trackMeta');
+  const nameEl = document.getElementById('trackName');
   const canvas = document.getElementById('musicViz');
+  if (!btn || !canvas) return;
   const ctx2d = canvas.getContext('2d');
   function fitCanvas() {
     const dpr = Math.min(window.devicePixelRatio, 2);
@@ -2916,118 +3121,287 @@ class Knob {
   fitCanvas();
   window.addEventListener('resize', fitCanvas);
 
-  let ac = null, analyser = null, data = null, master = null;
-  let playing = false, schedulerId = null, nextTime = 0, chordIdx = 0;
-  const bpm = 68, beat = 60 / bpm;
-  const prog = [
-    [220, 261.63, 329.63, 440],
-    [174.61, 220, 261.63, 349.23],
-    [130.81, 196, 261.63, 329.63],
-    [196, 246.94, 293.66, 392]
-  ];
+  // One AudioContext shared between the playlist player and the sample/loop
+  // previewer. Each gets its own <audio> element so a quick sample preview
+  // doesn't collide with an ambient track that's mid-playback (and vice
+  // versa — when one starts, we pause the other).
+  let ac = null, analyser = null, data = null;
+  const trackAudio  = new Audio(); trackAudio.preload  = 'metadata'; trackAudio.crossOrigin  = 'anonymous';
+  const sampleAudio = new Audio(); sampleAudio.preload = 'metadata'; sampleAudio.crossOrigin = 'anonymous';
 
-  function boot() {
+  function ensureAudio() {
     if (ac) return;
     ac = new (window.AudioContext || window.webkitAudioContext)();
-
-    master = ac.createGain();
-    master.gain.value = 0.45;
-
     analyser = ac.createAnalyser();
     analyser.fftSize = 1024;
     data = new Uint8Array(analyser.frequencyBinCount);
-
-    // clean routing: master → analyser → destination
-    master.connect(analyser);
+    const ts = ac.createMediaElementSource(trackAudio);
+    const ss = ac.createMediaElementSource(sampleAudio);
+    ts.connect(analyser);
+    ss.connect(analyser);
     analyser.connect(ac.destination);
-
-    // subtle parallel slap-echo (doesn't touch dry path)
-    const slap = ac.createDelay(0.6);
-    slap.delayTime.value = 0.22;
-    const slapGain = ac.createGain();
-    slapGain.gain.value = 0.18;
-    master.connect(slap);
-    slap.connect(slapGain);
-    slapGain.connect(ac.destination);
   }
 
-  function playChord(chord, time) {
-    chord.forEach((f, i) => {
-      const o = ac.createOscillator();
-      const g = ac.createGain();
-      const fl = ac.createBiquadFilter();
-      o.type = i === 0 ? 'triangle' : 'sine';
-      o.frequency.value = f * (1 + (Math.random() - 0.5) * 0.003);
-      fl.type = 'lowpass';
-      fl.frequency.value = 1400 + i * 280;
-      fl.Q.value = 0.9;
-      const dur = beat * 4;
-      const peak = 0.3 / (i + 1);
-      g.gain.setValueAtTime(0.0001, time);
-      g.gain.linearRampToValueAtTime(peak, time + 0.5);
-      g.gain.exponentialRampToValueAtTime(0.0008, time + dur);
-      o.connect(fl);
-      fl.connect(g);
-      g.connect(master);
-      o.start(time);
-      o.stop(time + dur + 0.05);
-    });
-    for (let s = 0; s < 4; s++) {
-      const t = time + s * beat;
-      const f = chord[(s * 2) % chord.length] * 2;
-      const o = ac.createOscillator();
-      const g = ac.createGain();
-      o.type = 'sine';
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(0.14, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0008, t + 1.1);
-      o.connect(g);
-      g.connect(master);
-      o.start(t);
-      o.stop(t + 1.2);
-    }
+  function fmtDur(s) {
+    if (!isFinite(s) || s <= 0) return '—';
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return m + ':' + (sec < 10 ? '0' + sec : sec);
   }
 
-  function scheduler() {
-    if (!ac || !playing) return;
-    while (nextTime < ac.currentTime + 0.3) {
-      playChord(prog[chordIdx % prog.length], nextTime);
-      chordIdx++;
-      nextTime += beat * 4;
+  // ============== Ambient tracks playlist ==============
+  const trackRows = Array.from(document.querySelectorAll('#modal-music .track-row[data-src]'));
+  let currentTrackIdx = -1;
+
+  function loadTrack(idx) {
+    if (idx < 0 || idx >= trackRows.length) return;
+    currentTrackIdx = idx;
+    const row = trackRows[idx];
+    trackAudio.src = row.dataset.src;
+    if (nameEl) {
+      const n = row.querySelector('.track-name');
+      nameEl.textContent = n ? n.textContent : '—';
     }
+    if (meta) meta.textContent = 'LOADED · PRESS PLAY';
+    trackRows.forEach(r => r.classList.toggle('active', r === row));
   }
 
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    boot();
-    if (ac.state === 'suspended') {
-      try { await ac.resume(); } catch (err) { console.warn('resume failed', err); }
-    }
-    if (!playing) {
-      playing = true;
-      btn.textContent = '❙❙';
-      btn.classList.add('playing');
-      meta.textContent = 'LIVE · PLAYING';
-      // restore master in case it was faded
-      master.gain.cancelScheduledValues(ac.currentTime);
-      master.gain.setValueAtTime(0.45, ac.currentTime);
-      nextTime = ac.currentTime + 0.08;
-      playChord(prog[chordIdx % prog.length], nextTime);
-      chordIdx++;
-      nextTime += beat * 4;
-      schedulerId = setInterval(scheduler, 100);
+  async function togglePlayTrack() {
+    ensureAudio();
+    if (ac.state === 'suspended') { try { await ac.resume(); } catch (_) {} }
+    if (currentTrackIdx < 0) loadTrack(0);
+    if (trackAudio.paused) {
+      if (!sampleAudio.paused) sampleAudio.pause();
+      try { await trackAudio.play(); } catch (e) { console.warn('track play failed', e); }
     } else {
-      playing = false;
-      btn.textContent = '▶';
-      btn.classList.remove('playing');
-      meta.textContent = 'LIVE · PRESS PLAY';
-      clearInterval(schedulerId);
-      // soft fade so tails don't click
-      const now = ac.currentTime;
-      master.gain.cancelScheduledValues(now);
-      master.gain.setTargetAtTime(0, now, 0.15);
+      trackAudio.pause();
     }
+  }
+
+  btn.addEventListener('click', (e) => { e.preventDefault(); togglePlayTrack(); });
+
+  trackAudio.addEventListener('play', () => {
+    btn.textContent = '❙❙';
+    btn.classList.add('playing');
+    if (meta) meta.textContent = 'PLAYING';
+  });
+  trackAudio.addEventListener('pause', () => {
+    btn.textContent = '▶';
+    btn.classList.remove('playing');
+    if (meta && !trackAudio.ended) meta.textContent = 'PAUSED';
+  });
+  trackAudio.addEventListener('ended', () => {
+    if (meta) meta.textContent = 'ENDED';
+    btn.textContent = '▶';
+    btn.classList.remove('playing');
+    const next = (currentTrackIdx + 1) % trackRows.length;
+    loadTrack(next);
+    // Auto-advance only if there's another track distinct from the one that ended.
+    if (trackRows.length > 1) {
+      setTimeout(() => { trackAudio.play().catch(() => {}); }, 80);
+    }
+  });
+
+  // Click anywhere on a track row to load+play it (except the download anchor).
+  trackRows.forEach((row, i) => {
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', async (e) => {
+      if (e.target.closest('a')) return;
+      ensureAudio();
+      if (ac.state === 'suspended') { try { await ac.resume(); } catch (_) {} }
+      if (currentTrackIdx === i && !trackAudio.paused) {
+        trackAudio.pause();
+        return;
+      }
+      if (!sampleAudio.paused) sampleAudio.pause();
+      loadTrack(i);
+      try { await trackAudio.play(); } catch (err) { console.warn('play failed', err); }
+    });
+  });
+
+  // Probe each track for its duration once metadata loads (separate Audio
+  // objects so we don't disturb the player's currentSrc).
+  trackRows.forEach(row => {
+    const probe = new Audio();
+    probe.preload = 'metadata';
+    probe.src = row.dataset.src;
+    probe.addEventListener('loadedmetadata', () => {
+      const slot = row.querySelector('[data-dur]');
+      if (slot) slot.textContent = fmtDur(probe.duration);
+    });
+  });
+
+  // ============== Sample / loop previewer ==============
+  const sampleRows = Array.from(document.querySelectorAll('#modal-music .audio-row[data-src]'));
+  let currentSampleRow = null;
+
+  function clearSampleRow() {
+    if (currentSampleRow) {
+      currentSampleRow.classList.remove('playing');
+      const b = currentSampleRow.querySelector('.audio-play');
+      if (b) b.textContent = '▶';
+    }
+  }
+
+  sampleRows.forEach(row => {
+    const playBtn = row.querySelector('.audio-play');
+    if (!playBtn) return;
+    playBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      ensureAudio();
+      if (ac.state === 'suspended') { try { await ac.resume(); } catch (_) {} }
+      if (currentSampleRow === row && !sampleAudio.paused) {
+        sampleAudio.pause();
+        return;
+      }
+      if (!trackAudio.paused) trackAudio.pause();
+      clearSampleRow();
+      currentSampleRow = row;
+      sampleAudio.src = row.dataset.src;
+      try { await sampleAudio.play(); } catch (err) { console.warn('preview failed', err); }
+    });
+  });
+
+  sampleAudio.addEventListener('play', () => {
+    if (currentSampleRow) {
+      currentSampleRow.classList.add('playing');
+      const b = currentSampleRow.querySelector('.audio-play');
+      if (b) b.textContent = '❙❙';
+    }
+  });
+  sampleAudio.addEventListener('pause', () => {
+    if (currentSampleRow) {
+      const b = currentSampleRow.querySelector('.audio-play');
+      if (b) b.textContent = '▶';
+    }
+  });
+  sampleAudio.addEventListener('ended', () => {
+    clearSampleRow();
+    currentSampleRow = null;
+  });
+
+  sampleRows.forEach(row => {
+    const probe = new Audio();
+    probe.preload = 'metadata';
+    probe.src = row.dataset.src;
+    probe.addEventListener('loadedmetadata', () => {
+      const slot = row.querySelector('.audio-time');
+      if (slot) slot.textContent = fmtDur(probe.duration);
+    });
+  });
+
+  // ============== "Keep playing" + mini hovering player ==============
+  const keepPlayingChk = document.getElementById('keepPlaying');
+  const miniPlayer     = document.getElementById('miniPlayer');
+  const miniPlayBtn    = document.getElementById('miniPlay');
+  const miniNameEl     = document.getElementById('miniName');
+  const miniCloseBtn   = document.getElementById('miniClose');
+
+  function activeAudioInfo() {
+    // Returns the audio element + display name for whatever is currently
+    // making sound, or — if nothing is — for the most-recently-loaded source
+    // so the mini play button can resume it.
+    if (!trackAudio.paused) {
+      return { audio: trackAudio, name: nameEl ? nameEl.textContent : '—' };
+    }
+    if (!sampleAudio.paused) {
+      const n = currentSampleRow ? currentSampleRow.querySelector('.audio-name') : null;
+      return { audio: sampleAudio, name: n ? n.textContent : '—' };
+    }
+    // Nothing playing — fall back to whichever was last loaded.
+    if (currentTrackIdx >= 0) {
+      return { audio: trackAudio, name: nameEl ? nameEl.textContent : '—' };
+    }
+    if (currentSampleRow) {
+      const n = currentSampleRow.querySelector('.audio-name');
+      return { audio: sampleAudio, name: n ? n.textContent : '—' };
+    }
+    return null;
+  }
+
+  function syncMini() {
+    if (!miniPlayer) return;
+    const playing = !trackAudio.paused || !sampleAudio.paused;
+    if (miniPlayBtn) miniPlayBtn.textContent = playing ? '❙❙' : '▶';
+    const info = activeAudioInfo();
+    if (info && miniNameEl) miniNameEl.textContent = info.name;
+  }
+  function showMini() {
+    if (!miniPlayer) return;
+    syncMini();
+    miniPlayer.classList.add('show');
+    miniPlayer.setAttribute('aria-hidden', 'false');
+  }
+  function hideMini() {
+    if (!miniPlayer) return;
+    miniPlayer.classList.remove('show');
+    miniPlayer.setAttribute('aria-hidden', 'true');
+  }
+
+  // Modal close: respect the checkbox.
+  document.addEventListener('modal:closed', (e) => {
+    if (!e.detail || e.detail.id !== 'modal-music') return;
+    const keepOn = keepPlayingChk && keepPlayingChk.checked;
+    if (keepOn) {
+      // Leave audio alone; surface the mini player if anything is audible.
+      if (!trackAudio.paused || !sampleAudio.paused) showMini();
+    } else {
+      if (!trackAudio.paused)  trackAudio.pause();
+      if (!sampleAudio.paused) sampleAudio.pause();
+      hideMini();
+    }
+  });
+
+  // Modal reopen: full UI takes over again, dismiss the mini.
+  document.addEventListener('modal:opened', (e) => {
+    if (!e.detail || e.detail.id !== 'modal-music') return;
+    hideMini();
+  });
+
+  // If user un-ticks "keep playing" while modal is open, retroactively act on
+  // it so the next close behaves as expected (no surprises).
+  if (keepPlayingChk) {
+    keepPlayingChk.addEventListener('change', () => {
+      if (!keepPlayingChk.checked) hideMini();
+    });
+  }
+
+  // Mini play button toggles whichever audio is active (or resumes last one).
+  if (miniPlayBtn) {
+    miniPlayBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      ensureAudio();
+      if (ac.state === 'suspended') { try { await ac.resume(); } catch (_) {} }
+      if (!trackAudio.paused || !sampleAudio.paused) {
+        if (!trackAudio.paused)  trackAudio.pause();
+        if (!sampleAudio.paused) sampleAudio.pause();
+      } else {
+        const info = activeAudioInfo();
+        if (info) { try { await info.audio.play(); } catch (_) {} }
+      }
+    });
+  }
+
+  // Mini close = hard stop + dismiss.
+  if (miniCloseBtn) {
+    miniCloseBtn.addEventListener('click', () => {
+      if (!trackAudio.paused)  trackAudio.pause();
+      if (!sampleAudio.paused) sampleAudio.pause();
+      hideMini();
+    });
+  }
+
+  // Keep the mini player's icon / name in sync with the audio elements'
+  // own state changes (auto-advance between tracks, manual pause via the
+  // main UI, etc.). setTimeout lets currentSampleRow / nameEl settle first.
+  ['play', 'pause', 'ended'].forEach(ev => {
+    trackAudio.addEventListener(ev,  () => { setTimeout(syncMini, 60); });
+    sampleAudio.addEventListener(ev, () => {
+      setTimeout(syncMini, 60);
+      // If a sample finished and nothing else is going, retire the mini.
+      if (ev === 'ended' && trackAudio.paused && miniPlayer && miniPlayer.classList.contains('show')) {
+        hideMini();
+      }
+    });
   });
 
   // Cache one gradient — the old code created 96 gradients per frame.
@@ -3066,7 +3440,10 @@ class Knob {
     musicVizLastDraw = now || 0;
     const w = canvas.clientWidth, h = canvas.clientHeight;
     ctx2d.clearRect(0, 0, w, h);
-    if (analyser) {
+    // Only run the FFT visualization when something is actually playing —
+    // otherwise the bars freeze on the last buffer (looks broken).
+    const audible = analyser && (!trackAudio.paused || !sampleAudio.paused);
+    if (audible) {
       analyser.getByteFrequencyData(data);
       // 64 bars instead of 96 — a third fewer fill ops.
       // TRADEOFF: slightly chunkier bars.
@@ -3348,11 +3725,11 @@ class Knob {
   // interaction: multiplier on hover-repel + ripple-kick forces. 0 = inert
   // background (springs only), 1 = current feel, 2 = exaggerated.
   var nodeCount = 90;
-  var interaction = 1;
+  var interaction = 2;
   // Per-axis tilt drift strength (mobile only — desktop has no orientation
   // sensor so the sliders for these are hidden via CSS).
-  var tiltStrengthX = 1;
-  var tiltStrengthY = 1;
+  var tiltStrengthX = 4;
+  var tiltStrengthY = 4;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
