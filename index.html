@@ -1670,7 +1670,7 @@
     <p style="opacity: 0.75;">Showreel and selected works.</p>
 
     <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 24px 0;">
-      <iframe src="https://player.vimeo.com/video/49562505" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="3D showreel"></iframe>
+      <iframe data-src="https://player.vimeo.com/video/49562505" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="3D showreel"></iframe>
     </div>
 
     <div class="works-grid">
@@ -1703,7 +1703,7 @@
     <p style="opacity: 0.75;">Generative scenes, FX rigs, and asset systems.</p>
 
     <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 24px 0;">
-      <iframe src="https://player.vimeo.com/video/49562505" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Procedural showreel"></iframe>
+      <iframe data-src="https://player.vimeo.com/video/49562505" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Procedural showreel"></iframe>
     </div>
 
     <div class="works-grid">
@@ -3643,6 +3643,9 @@ class Knob {
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
+    modal.querySelectorAll('iframe[data-src]').forEach(function(f) {
+      if (!f.getAttribute('src')) f.setAttribute('src', f.getAttribute('data-src'));
+    });
     openModal = modal;
     var closeBtn = modal.querySelector('.modal-close');
     if (closeBtn) closeBtn.focus();
@@ -3654,6 +3657,9 @@ class Knob {
     openModal.classList.remove('open');
     openModal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
+    document.querySelectorAll('.modal iframe[data-src]').forEach(function(f) {
+      f.setAttribute('src', '');
+    });
     openModal = null;
     document.dispatchEvent(new CustomEvent('modal:closed', { detail: { id: id } }));
   }
@@ -3741,7 +3747,7 @@ class Knob {
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    sprinkle();
+    if (!nodes.length) sprinkle();
   }
 
   function sprinkle() {
@@ -4005,8 +4011,8 @@ class Knob {
       if (ev.gamma == null || ev.beta == null) return;
       // Tighter saturation (30° instead of 45°) so a small wrist flick already
       // pushes |tilt| toward 1 — the bg now responds at typical handheld angles.
-      tilt.x = clamp(ev.gamma / 30, -1, 1);
-      tilt.y = clamp(ev.beta / 30, -1, 1);
+      tilt.x = clamp(ev.gamma / 60, -1, 1);
+      tilt.y = clamp(ev.beta / 60, -1, 1);
     }
     function attachBgTilt() {
       if (bgTiltAttached || !window.DeviceOrientationEvent) return;
