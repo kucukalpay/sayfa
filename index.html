@@ -1604,6 +1604,40 @@
     opacity: 0.75;
     line-height: 1.5;
   }
+  .subcard-toggle {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 32px;
+  }
+  .subcard-toggle h3,
+  .subcard-toggle .subcard-desc {
+    pointer-events: none;
+  }
+  .subcard-chev {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 1rem;
+    opacity: 0.6;
+    transition: transform 200ms ease;
+    pointer-events: none;
+  }
+  .subcard.expanded .subcard-chev {
+    transform: rotate(180deg);
+  }
+  .subcard-body {
+    display: none;
+    margin-top: 16px;
+  }
+  .subcard.expanded .subcard-body {
+    display: block;
+  }
+  .subcard-toggle:focus-visible {
+    outline: 2px solid rgba(255,255,255,0.4);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
   @media (max-width: 768px) {
     .subcard { padding: 18px; margin: 20px 0; }
   }
@@ -1691,30 +1725,40 @@
     <p style="opacity: 0.75;">Showreel, selected works, generative scenes, and FX rigs.</p>
 
     <div class="subcard">
-      <h3>3D</h3>
-      <p class="subcard-desc">Showreel and selected works.</p>
-      <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 16px 0;">
-        <iframe data-src="https://player.vimeo.com/video/49562505" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="3D showreel"></iframe>
+      <div class="subcard-toggle" role="button" tabindex="0" aria-expanded="false">
+        <h3>3D</h3>
+        <p class="subcard-desc">Showreel and selected works.</p>
+        <span class="subcard-chev" aria-hidden="true">▾</span>
       </div>
-      <div class="works-grid">
-        <figure class="work-tile"><img src="assets/images/dur3.png" alt="DUR3" loading="lazy"><figcaption><strong>DUR3</strong>Feather styling and simulation, lookdev, and scene lighting.</figcaption></figure>
-        <figure class="work-tile"><img src="assets/images/car-road.png" alt="Car · road" loading="lazy"><figcaption><strong>Car · road</strong>Landscape built from different patches of real ones; lighting and rendering.</figcaption></figure>
-        <figure class="work-tile"><img src="assets/images/forest-01.png" alt="Forest 01" loading="lazy"><figcaption><strong>Forest 01</strong>Trees animated; scenes populated from layouts done in Unreal Engine.</figcaption></figure>
-        <figure class="work-tile"><img src="assets/images/forest-02.png" alt="Forest 02" loading="lazy"><figcaption><strong>Forest 02</strong>Trees animated; scenes populated from layouts done in Unreal Engine.</figcaption></figure>
-        <figure class="work-tile"><img src="assets/images/forest-03.png" alt="Forest 03" loading="lazy"><figcaption><strong>Forest 03</strong>Trees animated; scenes populated from layouts done in Unreal Engine.</figcaption></figure>
+      <div class="subcard-body">
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 16px 0;">
+          <iframe data-src="https://player.vimeo.com/video/49562505" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="3D showreel"></iframe>
+        </div>
+        <div class="works-grid">
+          <figure class="work-tile"><img src="assets/images/dur3.png" alt="DUR3" loading="lazy"><figcaption><strong>DUR3</strong>Feather styling and simulation, lookdev, and scene lighting.</figcaption></figure>
+          <figure class="work-tile"><img src="assets/images/car-road.png" alt="Car · road" loading="lazy"><figcaption><strong>Car · road</strong>Landscape built from different patches of real ones; lighting and rendering.</figcaption></figure>
+          <figure class="work-tile"><img src="assets/images/forest-01.png" alt="Forest 01" loading="lazy"><figcaption><strong>Forest 01</strong>Trees animated; scenes populated from layouts done in Unreal Engine.</figcaption></figure>
+          <figure class="work-tile"><img src="assets/images/forest-02.png" alt="Forest 02" loading="lazy"><figcaption><strong>Forest 02</strong>Trees animated; scenes populated from layouts done in Unreal Engine.</figcaption></figure>
+          <figure class="work-tile"><img src="assets/images/forest-03.png" alt="Forest 03" loading="lazy"><figcaption><strong>Forest 03</strong>Trees animated; scenes populated from layouts done in Unreal Engine.</figcaption></figure>
+        </div>
       </div>
     </div>
 
     <div class="subcard">
-      <h3>Procedural</h3>
-      <p class="subcard-desc">Generative scenes, FX rigs, and asset systems.</p>
-      <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 16px 0;">
-        <iframe data-src="https://player.vimeo.com/video/49562505" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Procedural showreel"></iframe>
+      <div class="subcard-toggle" role="button" tabindex="0" aria-expanded="false">
+        <h3>Procedural</h3>
+        <p class="subcard-desc">Generative scenes, FX rigs, and asset systems.</p>
+        <span class="subcard-chev" aria-hidden="true">▾</span>
       </div>
-      <div class="works-grid">
-        <figure class="work-tile"><img src="assets/images/dur3.png" alt="DUR3" loading="lazy"><figcaption><strong>DUR3</strong>Feather tool built on top of Houdini's hair system — an approach that anticipated today's native feather infrastructure in Houdini.</figcaption></figure>
-        <figure class="work-tile"><img src="assets/images/car-bridge.png" alt="Car · bridge" loading="lazy"><figcaption><strong>Car · bridge</strong>Procedural car simulation idea that evolved into a setup later mirrored conceptually in Houdini's RBD car simulation rig.</figcaption></figure>
-        <figure class="work-tile"><img src="assets/images/beach-wires.png" alt="Beach · wires" loading="lazy"><figcaption><strong>Beach · wires</strong>Art-directed wooden plank structure imported and turned into source curves; geometric constraints rebuilt, then relaxed and collided under bending and twisting rules — for a Jennifer Lopez video.</figcaption></figure>
+      <div class="subcard-body">
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 16px 0;">
+          <iframe data-src="https://player.vimeo.com/video/49562505" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Procedural showreel"></iframe>
+        </div>
+        <div class="works-grid">
+          <figure class="work-tile"><img src="assets/images/dur3.png" alt="DUR3" loading="lazy"><figcaption><strong>DUR3</strong>Feather tool built on top of Houdini's hair system — an approach that anticipated today's native feather infrastructure in Houdini.</figcaption></figure>
+          <figure class="work-tile"><img src="assets/images/car-bridge.png" alt="Car · bridge" loading="lazy"><figcaption><strong>Car · bridge</strong>Procedural car simulation idea that evolved into a setup later mirrored conceptually in Houdini's RBD car simulation rig.</figcaption></figure>
+          <figure class="work-tile"><img src="assets/images/beach-wires.png" alt="Beach · wires" loading="lazy"><figcaption><strong>Beach · wires</strong>Art-directed wooden plank structure imported and turned into source curves; geometric constraints rebuilt, then relaxed and collided under bending and twisting rules — for a Jennifer Lopez video.</figcaption></figure>
+        </div>
       </div>
     </div>
   </div><!-- /.modal-content -->
@@ -3650,6 +3694,7 @@ class Knob {
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
     modal.querySelectorAll('iframe[data-src]').forEach(function(f) {
+      if (f.closest('.subcard:not(.expanded)')) return;
       if (!f.getAttribute('src')) f.setAttribute('src', f.getAttribute('data-src'));
     });
     openModal = modal;
@@ -3698,6 +3743,31 @@ class Knob {
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') close();
+  });
+
+  document.addEventListener('click', function(e) {
+    var t = e.target.closest('.subcard-toggle');
+    if (!t) return;
+    var card = t.closest('.subcard');
+    if (!card) return;
+    var willExpand = !card.classList.contains('expanded');
+    card.classList.toggle('expanded');
+    t.setAttribute('aria-expanded', willExpand ? 'true' : 'false');
+    card.querySelectorAll('iframe[data-src]').forEach(function(f) {
+      if (willExpand) {
+        if (!f.getAttribute('src')) f.setAttribute('src', f.getAttribute('data-src'));
+      } else {
+        f.setAttribute('src', '');
+      }
+    });
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var t = document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('subcard-toggle') ? document.activeElement : null;
+    if (!t) return;
+    e.preventDefault();
+    t.click();
   });
 })();
 </script>
