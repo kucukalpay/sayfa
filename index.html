@@ -1658,12 +1658,153 @@
     .modal { padding: 50px 12px 20px; }
     .modal-content { padding: 20px; }
   }
+
+  body.lock-scroll {
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  .hero {
+    position: relative;
+    z-index: 2;
+    height: 100vh;
+    width: 100%;
+    padding: 24px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-nav {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    right: 24px;
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .hero-nav a {
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    padding: 4px 0;
+    border-bottom: 1px solid transparent;
+    transition: color 200ms, border-color 200ms;
+  }
+  .hero-nav a:hover,
+  .hero-nav a:focus-visible {
+    color: rgba(255,255,255,0.95);
+    border-bottom-color: rgba(255,255,255,0.4);
+    outline: none;
+  }
+
+  .hero-center {
+    text-align: center;
+    pointer-events: none;
+  }
+  .hero-title {
+    margin: 0;
+    font-size: clamp(2rem, 7vw, 5rem);
+    letter-spacing: 0.18em;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .hero-sub {
+    margin: 14px 0 0;
+    font-size: 0.8rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    opacity: 0.55;
+  }
+
+  .hero-controls {
+    position: absolute;
+    bottom: 24px;
+    display: flex;
+    gap: 10px;
+  }
+  .hero-controls-left { left: 24px; }
+  .hero-btn {
+    background: rgba(0,0,0,0.4);
+    color: rgba(255,255,255,0.85);
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 7px 12px;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.72rem;
+    border-radius: 4px;
+    transition: background 200ms, border-color 200ms;
+  }
+  .hero-btn:hover:not(:disabled) {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.5);
+  }
+  .hero-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .hero-btn[hidden] { display: none; }
+
+  .hero-meta {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+  }
+  .hero-meta-value {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    opacity: 0.95;
+  }
+
+  @media (max-width: 640px) {
+    .hero-nav { gap: 12px; font-size: 0.7rem; }
+    .hero-controls, .hero-meta { bottom: 16px; }
+    .hero-controls-left { left: 16px; }
+    .hero-meta { right: 16px; }
+  }
 </style>
 </head>
 <body>
 
 <!-- Code-generated evolving network background. Painted behind all content. -->
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+<section class="hero" id="hero" aria-label="Welcome">
+  <nav class="hero-nav" aria-label="Sections">
+    <a href="#three-d" data-target="three-d">3D</a>
+    <a href="#synths" data-target="synths">Synths</a>
+    <a href="#music" data-target="music">Music</a>
+    <a href="#photography" data-target="photography">Photography</a>
+    <a href="#contact" data-target="contact">Contact</a>
+  </nav>
+  <div class="hero-center">
+    <h1 class="hero-title">UNDER CONSTRUCTION</h1>
+    <p class="hero-sub">— in flux —</p>
+  </div>
+  <div class="hero-controls hero-controls-left">
+    <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
+    <button class="hero-btn" id="resetSim" type="button" disabled>RESET</button>
+    <button class="hero-btn" id="resumeSim" type="button" hidden>RESUME</button>
+  </div>
+  <div class="hero-meta">
+    <span class="hero-meta-label">ENTROPY</span>
+    <span class="hero-meta-value" id="entropyMeter">0.00</span>
+  </div>
+</section>
 
 <!-- Mini hovering music player (only visible when "Keep playing" is on
      and the music modal has been closed mid-playback). -->
@@ -3769,12 +3910,12 @@ class Knob {
 </script>
 
 <script>
-/* ================= EVOLVING NETWORK BG =================
-   Code-generated canvas background. A graph of nodes whose linkage style
-   evolves with scroll progress (dots → straight lines → orthogonal traces
-   → flowing curves → branching crosses). Hover repels nearby nodes,
-   click/tap emits a ripple, deviceorientation gives a subtle drift.
-   Pauses on tab blur; respects prefers-reduced-motion. */
+/* ================= POLYLINE BG =================
+   Code-generated canvas background. A single ordered chain of nodes
+   evenly spaced across the viewport at vertical center, with a gentle
+   sine wave along the line. Nodes spring back to their base positions;
+   hover gives a subtle push, click/tap emits a ripple, deviceorientation
+   drifts the chain. Pauses on tab blur; respects prefers-reduced-motion. */
 (function bgCanvasEngine() {
   var canvas = document.getElementById('bg-canvas');
   if (!canvas) return;
@@ -3784,26 +3925,21 @@ class Knob {
   var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5);
   var W = 0, H = 0;
   var nodes = [];
-  var pairs = [];           // precomputed candidate pair list, sorted by hash
   var ripples = [];
   var pointer = { x: -9999, y: -9999, active: false };
   var tilt = { x: 0, y: 0 };
   var progress = 0;
   var rafId = 0;
   var lastT = 0;
-  // Slider-controlled connectivity. linkProb gates how many candidate pairs are
-  // eligible to draw on a given frame (lower = sparser). linkRange is the max
-  // pixel distance for a connection to render (after the eligibility gate).
-  // The pair list is built once per sprinkle/resize so we don't recompute
-  // pair identity every frame — only distance is checked at runtime.
+  // Legacy slider-controlled vars. The polyline doesn't use connectivity
+  // gates or distance thresholds anymore, but the slider input handlers
+  // below still write to these — leaving them defined keeps that harmless.
   var linkProb = 0.5;
   var linkRange = 200;
-  // nodeCount: total nodes painted on the background. Changing it triggers a
-  // re-sprinkle (which also rebuilds the pair list).
-  // interaction: multiplier on hover-repel + ripple-kick forces. 0 = inert
-  // background (springs only), 1 = current feel, 2 = exaggerated.
   var nodeCount = 90;
-  var interaction = 2;
+  // interaction: multiplier on hover-repel + ripple-kick forces. Lowered
+  // from 2 → 1 since chain distortion reads more loudly than scattered dots.
+  var interaction = 1;
   // Per-axis tilt drift strength (mobile only — desktop has no orientation
   // sensor so the sliders for these are hidden via CSS).
   var tiltStrengthX = 4;
@@ -3823,92 +3959,22 @@ class Knob {
   }
 
   function sprinkle() {
-    // Slider owns the count now. Cap defensively to keep the O(n²) pair
-    // build from blowing up if someone pushes it past sensible limits.
-    var n = clamp(nodeCount | 0, 5, 400);
+    // Build a single ordered chain across the viewport. Count scales with
+    // width — clamp(40, W/18, 120), halved on mobile.
+    var n = Math.round(clamp(W / 18, 40, 120));
+    if (isMobile) n = Math.max(20, Math.round(n / 2));
     nodes = new Array(n);
     for (var i = 0; i < n; i++) {
-      var bx = Math.random() * W, by = Math.random() * H;
-      nodes[i] = { bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0 };
+      var t = n > 1 ? i / (n - 1) : 0;
+      var bx = W * 0.08 + t * W * 0.84;
+      var by = H * 0.5 + Math.sin(t * Math.PI * 2) * H * 0.05;
+      nodes[i] = { idx: i, bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0 };
     }
-    buildPairs();
-  }
-
-  // Build the candidate pair list once. Each entry has a stable hash value
-  // h ∈ [0, 1); we sort ascending so render() can iterate up to linkProb
-  // and break early — the sliders adjust how deep into the list we walk.
-  function buildPairs() {
-    pairs.length = 0;
-    for (var i = 0; i < nodes.length; i++) {
-      for (var j = i + 1; j < nodes.length; j++) {
-        pairs.push({ i: i, j: j, h: hash(i, j) });
-      }
-    }
-    pairs.sort(function (a, b) { return a.h - b.h; });
   }
 
   function updateProgress() {
     var max = document.documentElement.scrollHeight - window.innerHeight;
     progress = max > 0 ? clamp((window.scrollY || window.pageYOffset) / max, 0, 1) : 0;
-  }
-
-  // deterministic per-pair hash used to gate which links draw
-  function hash(i, j) {
-    var h = (i * 9973 + j * 257) | 0;
-    h = (h ^ (h >>> 13)) * 1274126177;
-    return ((h >>> 0) % 1000) / 1000;
-  }
-
-  function styleAlphaForBand(prog, lo, hi) {
-    var fade = 0.05;
-    if (prog < lo - fade || prog > hi + fade) return 0;
-    if (prog < lo) return (prog - (lo - fade)) / fade;
-    if (prog > hi) return 1 - (prog - hi) / fade;
-    return 1;
-  }
-
-  function drawLink(a, b, prog, alpha) {
-    if (alpha <= 0) return;
-    ctx.globalAlpha = 0.5 * alpha;
-    ctx.strokeStyle = 'rgba(220, 226, 232, 1)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    if (prog < 0.4) {
-      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-    } else if (prog < 0.6) {
-      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, a.y); ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-    } else if (prog < 0.8) {
-      var mx = (a.x + b.x) * 0.5, my = (a.y + b.y) * 0.5;
-      var nx = -(b.y - a.y), ny = (b.x - a.x);
-      var nl = Math.hypot(nx, ny) || 1;
-      var off = 18;
-      ctx.moveTo(a.x, a.y);
-      ctx.quadraticCurveTo(mx + (nx / nl) * off, my + (ny / nl) * off, b.x, b.y);
-      ctx.stroke();
-    } else {
-      var mx2 = (a.x + b.x) * 0.5, my2 = (a.y + b.y) * 0.5;
-      ctx.moveTo(a.x, a.y); ctx.lineTo(mx2, my2); ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawElbowMarker(a, b) {
-    ctx.fillStyle = 'rgba(220, 226, 232, 0.5)';
-    ctx.fillRect(b.x - 1.5, a.y - 1.5, 3, 3);
-  }
-
-  function drawCross(n, alpha) {
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = 'rgba(220, 226, 232, 1)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(n.x - 2.5, n.y); ctx.lineTo(n.x + 2.5, n.y);
-    ctx.moveTo(n.x, n.y - 2.5); ctx.lineTo(n.x, n.y + 2.5);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
   }
 
   function step(dt) {
@@ -3962,47 +4028,26 @@ class Knob {
 
   function render() {
     ctx.clearRect(0, 0, W, H);
-    var prog = progress;
-    // Sliders own connectivity now; scroll progress only drives the visual
-    // style transitions (straight → ortho → curve → branch).
-    var distMin = linkRange;
-    var distMin2 = distMin * distMin;
-    var drawProb = linkProb;
-    var aStraight = styleAlphaForBand(prog, 0.00, 0.40);
-    var aOrtho    = styleAlphaForBand(prog, 0.40, 0.60);
-    var aCurve    = styleAlphaForBand(prog, 0.60, 0.80);
-    var aBranch   = styleAlphaForBand(prog, 0.80, 1.00);
 
-    // Walk the precomputed (sorted) pair list. Pairs with h > drawProb are
-    // skipped wholesale because sorted — the rest will be even further out.
-    for (var p = 0; p < pairs.length; p++) {
-      var pair = pairs[p];
-      if (pair.h > drawProb) break;
-      var a = nodes[pair.i], b = nodes[pair.j];
-      var dx = a.x - b.x, dy = a.y - b.y;
-      var d2 = dx * dx + dy * dy;
-      if (d2 > distMin2) continue;
-      var fade = 1 - Math.sqrt(d2) / distMin;
-      if (aStraight > 0) drawLink(a, b, 0.2, aStraight * fade);
-      if (aOrtho > 0) {
-        drawLink(a, b, 0.5, aOrtho * fade);
-        if (((pair.i + pair.j) % 3) === 0) drawElbowMarker(a, b);
-      }
-      if (aCurve > 0) drawLink(a, b, 0.7, aCurve * fade);
-      if (aBranch > 0) drawLink(a, b, 0.9, aBranch * fade);
+    // Single connected polyline: pairwise segments along the chain, no
+    // distance threshold and no per-pair gating. Each segment is its own
+    // moveTo/lineTo so any future per-segment styling stays trivial.
+    ctx.strokeStyle = 'rgba(220, 226, 232, 0.55)';
+    ctx.lineWidth = 1;
+    for (var i = 0; i < nodes.length - 1; i++) {
+      var a = nodes[i], b = nodes[i + 1];
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
     }
 
-    // dots
-    var dotR = 1.5 + prog * 1.0;
-    if (aBranch > 0.5) {
-      for (var p = 0; p < nodes.length; p++) drawCross(nodes[p], 0.7);
-    } else {
-      ctx.fillStyle = 'rgba(220, 226, 232, 0.7)';
-      for (var q = 0; q < nodes.length; q++) {
-        ctx.beginPath();
-        ctx.arc(nodes[q].x, nodes[q].y, dotR, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    // Small filled dot at each node — same off-white as the line.
+    ctx.fillStyle = 'rgba(220, 226, 232, 0.7)';
+    for (var q = 0; q < nodes.length; q++) {
+      ctx.beginPath();
+      ctx.arc(nodes[q].x, nodes[q].y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     // ripple rings
@@ -4201,6 +4246,113 @@ class Knob {
   resize();
   updateProgress();
   start();
+})();
+</script>
+
+<script>
+(function heroScrollLock() {
+  document.body.classList.add('lock-scroll');
+  document.querySelectorAll('.hero-nav a').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      var href = a.getAttribute('href');
+      document.body.classList.remove('lock-scroll');
+      var target = href ? document.querySelector(href) : null;
+      if (target) {
+        requestAnimationFrame(function() {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    });
+  });
+})();
+
+(function droneEngine() {
+  var ac = null;
+  var osc = null, sub = null, filter = null, gain = null;
+  var isOn = false;
+  var btn = document.getElementById('droneToggle');
+  if (!btn) return;
+
+  function init() {
+    if (ac) return;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    ac = new Ctx();
+    // Two detuned oscillators for a slightly richer drone
+    osc = ac.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 80;
+    sub = ac.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.value = 80.6; // slight beat
+    // Lowpass filter modulated on click
+    filter = ac.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 280;
+    filter.Q.value = 4;
+    gain = ac.createGain();
+    gain.gain.value = 0; // start silent — enable on toggle
+    osc.connect(filter);
+    sub.connect(filter);
+    filter.connect(gain);
+    gain.connect(ac.destination);
+    osc.start();
+    sub.start();
+  }
+
+  function setOn(on) {
+    if (!ac) init();
+    if (!ac) return;
+    if (ac.state === 'suspended') ac.resume();
+    isOn = !!on;
+    var t = ac.currentTime;
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(gain.gain.value, t);
+    gain.gain.linearRampToValueAtTime(isOn ? 0.045 : 0, t + 0.5);
+    btn.textContent = 'DRONE · ' + (isOn ? 'ON' : 'OFF');
+    btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+  }
+
+  function burst() {
+    if (!ac || !filter) return;
+    var t = ac.currentTime;
+    filter.frequency.cancelScheduledValues(t);
+    filter.frequency.setValueAtTime(filter.frequency.value, t);
+    filter.frequency.linearRampToValueAtTime(900, t + 0.04);
+    filter.frequency.exponentialRampToValueAtTime(280, t + 0.7);
+    // Tiny pitch bend
+    if (osc && sub) {
+      osc.frequency.cancelScheduledValues(t);
+      sub.frequency.cancelScheduledValues(t);
+      osc.frequency.setValueAtTime(osc.frequency.value, t);
+      sub.frequency.setValueAtTime(sub.frequency.value, t);
+      osc.frequency.linearRampToValueAtTime(82, t + 0.03);
+      osc.frequency.linearRampToValueAtTime(80, t + 0.6);
+      sub.frequency.linearRampToValueAtTime(82.6, t + 0.03);
+      sub.frequency.linearRampToValueAtTime(80.6, t + 0.6);
+    }
+  }
+
+  // Wire up
+  btn.disabled = false;
+  btn.removeAttribute('disabled');
+  btn.setAttribute('aria-pressed', 'false');
+  btn.addEventListener('click', function() {
+    setOn(!isOn);
+  });
+
+  // Burst on click/tap anywhere in the document — but ignore clicks inside hero-controls (so toggling the button doesn't double-fire)
+  function onPress(e) {
+    if (e.target && e.target.closest && e.target.closest('.hero-controls')) return;
+    burst();
+  }
+  document.addEventListener('click', onPress, { passive: true });
+  document.addEventListener('touchstart', onPress, { passive: true });
+
+  // Expose for later phases (entropy / reset)
+  window.__hero = window.__hero || {};
+  window.__hero.drone = { burst: burst, setOn: setOn, isOn: function(){ return isOn; } };
 })();
 </script>
 
