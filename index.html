@@ -3706,7 +3706,6 @@ class Knob {
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
     modal.querySelectorAll('iframe[data-src]').forEach(function(f) {
-      if (f.closest('.subcard:not(.expanded)')) return;
       if (!f.getAttribute('src')) f.setAttribute('src', f.getAttribute('data-src'));
     });
     openModal = modal;
@@ -3765,21 +3764,6 @@ class Knob {
     var willExpand = !card.classList.contains('expanded');
     card.classList.toggle('expanded');
     t.setAttribute('aria-expanded', willExpand ? 'true' : 'false');
-    card.querySelectorAll('iframe[data-src]').forEach(function(f) {
-      if (willExpand) {
-        if (!f.getAttribute('src')) f.setAttribute('src', f.getAttribute('data-src'));
-      } else {
-        f.setAttribute('src', '');
-      }
-    });
-  });
-
-  document.addEventListener('keydown', function(e) {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    var t = document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('subcard-toggle') ? document.activeElement : null;
-    if (!t) return;
-    e.preventDefault();
-    t.click();
   });
 })();
 </script>
