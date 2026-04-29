@@ -1818,11 +1818,11 @@
 <div class="bg-controls" id="bgControls">
   <button class="bg-controls-toggle" type="button" aria-label="Background controls" title="Background controls">⚙</button>
   <div class="bg-controls-panel">
-    <label>
+    <label style="display:none">
       <span class="row"><span>LINKS</span><span class="val" id="bgLinkProbVal">0.50</span></span>
       <input type="range" id="bgLinkProb" min="0" max="1" step="0.01" value="0.5">
     </label>
-    <label>
+    <label style="display:none">
       <span class="row"><span>RANGE</span><span class="val" id="bgLinkDistVal">200</span></span>
       <input type="range" id="bgLinkDist" min="50" max="450" step="5" value="200">
     </label>
@@ -1833,6 +1833,22 @@
     <label>
       <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">2.00</span></span>
       <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="2">
+    </label>
+    <label>
+      <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">0.12</span></span>
+      <input type="range" id="bgPointer" min="0" max="1" step="0.01" value="0.12">
+    </label>
+    <label>
+      <span class="row"><span>TILT</span><span class="val" id="bgTiltMultVal">0.50</span></span>
+      <input type="range" id="bgTiltMult" min="0" max="1" step="0.01" value="0.5">
+    </label>
+    <label>
+      <span class="row"><span>CLICK</span><span class="val" id="bgClickVal">1.00</span></span>
+      <input type="range" id="bgClick" min="0" max="1" step="0.01" value="1">
+    </label>
+    <label>
+      <span class="row"><span>DRONE</span><span class="val" id="bgDroneVal">1.00</span></span>
+      <input type="range" id="bgDrone" min="0" max="1" step="0.01" value="1">
     </label>
     <label class="mobile-only">
       <span class="row"><span>TILT X</span><span class="val" id="bgTiltXVal">4.00</span></span>
@@ -3951,6 +3967,15 @@ class Knob {
   // sensor so the sliders for these are hidden via CSS).
   var tiltStrengthX = 4;
   var tiltStrengthY = 4;
+  // Phase 1: plastic-pointer state. POINTER_PLASTICITY scales how much the
+  // pointer drags base positions per move event (with 1/d falloff). lastPx/
+  // lastPy hold the previous pointer location so we can compute a delta.
+  // tiltMult / clickMult are global multipliers on the existing tilt and
+  // click forces, exposed via setters for the settings menu sliders.
+  var POINTER_PLASTICITY = 0.12;
+  var tiltMult = 0.5;
+  var clickMult = 1.0;
+  var lastPx = null, lastPy = null;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -4008,8 +4033,8 @@ class Knob {
       // baseline replaces the old 0.05 — that was too subtle to notice.
       var edgeFx = W > 0 ? Math.min(n.x, W - n.x) / (W * 0.5) : 0;
       var edgeFy = H > 0 ? Math.min(n.y, H - n.y) / (H * 0.5) : 0;
-      n.vx += tilt.x * 0.5 * tiltStrengthX * edgeFx;
-      n.vy += tilt.y * 0.5 * tiltStrengthY * edgeFy;
+      n.vx += tilt.x * 0.5 * tiltStrengthX * edgeFx * tiltMult;
+      n.vy += tilt.y * 0.5 * tiltStrengthY * edgeFy * tiltMult;
       n.vx *= damp; n.vy *= damp;
       n.x += n.vx; n.y += n.vy;
     }
@@ -4119,15 +4144,43 @@ class Knob {
   }, { passive: true });
 
   if (!reduced) {
+    // Phase 1: pointer motion plastically drags nearby base positions in
+    // the direction of travel. Spring physics still pulls toward bx/by, but
+    // bx/by themselves drift, so the line stays deformed instead of
+    // snapping back. Repulsion-on-vx/vy is preserved (composes nicely).
+    function applyPlasticDrag(px, py) {
+      if (lastPx !== null && lastPy !== null) {
+        var pdx = px - lastPx, pdy = py - lastPy;
+        // Guard against giant deltas after a long gap (e.g. tab switch).
+        if (pdx*pdx + pdy*pdy > 40000) { lastPx = px; lastPy = py; return; }
+        var R = 120, R2 = R * R;
+        for (var i = 0; i < nodes.length; i++) {
+          var n = nodes[i];
+          var dx = n.x - px, dy = n.y - py;
+          var d2 = dx*dx + dy*dy;
+          if (d2 > R2) continue;
+          var d = Math.sqrt(d2);
+          var falloff = 1 - d / R;
+          n.bx += pdx * falloff * POINTER_PLASTICITY * 0.8;
+          n.by += pdy * falloff * POINTER_PLASTICITY * 0.8;
+        }
+      }
+      lastPx = px; lastPy = py;
+    }
     window.addEventListener('mousemove', function (e) {
       pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true;
+      applyPlasticDrag(e.clientX, e.clientY);
     }, { passive: true });
-    window.addEventListener('mouseout', function () { pointer.active = false; }, { passive: true });
+    window.addEventListener('mouseout', function () {
+      pointer.active = false; lastPx = null; lastPy = null;
+    }, { passive: true });
     window.addEventListener('touchmove', function (e) {
       if (e.touches && e.touches[0]) {
         pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY; pointer.active = true;
+        applyPlasticDrag(e.touches[0].clientX, e.touches[0].clientY);
       }
     }, { passive: true });
+    window.addEventListener('touchend', function () { lastPx = null; lastPy = null; }, { passive: true });
 
     function pushRipple(x, y) {
       ripples.push({ x: x, y: y, t0: performance.now() });
@@ -4135,7 +4188,7 @@ class Knob {
       // Phase 4: each ripple accumulates entropy and permanently nudges
       // base positions of nearby nodes — they spring toward a moved
       // target instead of the original, so the line drifts over time.
-      entropy = Math.min(1, entropy + 0.05);
+      entropy = Math.min(1, entropy + 0.05 * clickMult);
       var rx = x, ry = y;
       var R = 180;
       nodes.forEach(function(n) {
@@ -4145,8 +4198,8 @@ class Knob {
         if (d2 > R*R) return;
         var d = Math.sqrt(d2) || 1;
         var falloff = 1 - d/R;
-        n.bx += (Math.random() - 0.5) * 6 * falloff;
-        n.by += (Math.random() - 0.5) * 12 * falloff;
+        n.bx += (Math.random() - 0.5) * 6 * falloff * clickMult;
+        n.by += (Math.random() - 0.5) * 12 * falloff * clickMult;
       });
     }
     window.addEventListener('click', function (e) { pushRipple(e.clientX, e.clientY); }, { passive: true });
@@ -4278,6 +4331,64 @@ class Knob {
     });
   }
 
+  // Phase 3: new settings-menu sliders. POINTER controls plastic drag
+  // strength, TILT multiplies the existing tilt force, CLICK multiplies
+  // entropy + jitter range, DRONE scales the drone gain via its setLevel.
+  var pointerSlider = document.getElementById('bgPointer');
+  var pointerValEl  = document.getElementById('bgPointerVal');
+  if (pointerSlider) {
+    POINTER_PLASTICITY = parseFloat(pointerSlider.value);
+    if (pointerValEl) pointerValEl.textContent = POINTER_PLASTICITY.toFixed(2);
+    pointerSlider.addEventListener('input', function () {
+      var v = parseFloat(pointerSlider.value);
+      if (window.__hero && window.__hero.poly && window.__hero.poly.setPointer) {
+        window.__hero.poly.setPointer(v);
+      } else { POINTER_PLASTICITY = v; }
+      if (pointerValEl) pointerValEl.textContent = v.toFixed(2);
+    });
+  }
+
+  var tiltMultSlider = document.getElementById('bgTiltMult');
+  var tiltMultValEl  = document.getElementById('bgTiltMultVal');
+  if (tiltMultSlider) {
+    tiltMult = parseFloat(tiltMultSlider.value);
+    if (tiltMultValEl) tiltMultValEl.textContent = tiltMult.toFixed(2);
+    tiltMultSlider.addEventListener('input', function () {
+      var v = parseFloat(tiltMultSlider.value);
+      if (window.__hero && window.__hero.poly && window.__hero.poly.setTilt) {
+        window.__hero.poly.setTilt(v);
+      } else { tiltMult = v; }
+      if (tiltMultValEl) tiltMultValEl.textContent = v.toFixed(2);
+    });
+  }
+
+  var clickSlider = document.getElementById('bgClick');
+  var clickValEl  = document.getElementById('bgClickVal');
+  if (clickSlider) {
+    clickMult = parseFloat(clickSlider.value);
+    if (clickValEl) clickValEl.textContent = clickMult.toFixed(2);
+    clickSlider.addEventListener('input', function () {
+      var v = parseFloat(clickSlider.value);
+      if (window.__hero && window.__hero.poly && window.__hero.poly.setClick) {
+        window.__hero.poly.setClick(v);
+      } else { clickMult = v; }
+      if (clickValEl) clickValEl.textContent = v.toFixed(2);
+    });
+  }
+
+  var droneSlider = document.getElementById('bgDrone');
+  var droneValEl  = document.getElementById('bgDroneVal');
+  if (droneSlider) {
+    if (droneValEl) droneValEl.textContent = parseFloat(droneSlider.value).toFixed(2);
+    droneSlider.addEventListener('input', function () {
+      var v = parseFloat(droneSlider.value);
+      if (window.__hero && window.__hero.drone && window.__hero.drone.setLevel) {
+        window.__hero.drone.setLevel(v);
+      }
+      if (droneValEl) droneValEl.textContent = v.toFixed(2);
+    });
+  }
+
   // Phase 4: expose engine controls so the hero's RESET / RESUME buttons
   // and the IntersectionObserver auto-pause can drive the polyline.
   window.__hero = window.__hero || {};
@@ -4285,15 +4396,24 @@ class Knob {
     reset: function() {
       entropy = 0;
       // Rebuild base positions to a fresh polyline; sprinkle() also
-      // reseats current x/y to the new bx/by.
+      // reseats current x/y to the new bx/by. Also clear plastic-drag
+      // pointer history so the first move post-reset starts clean.
       nodes = [];
       sprinkle();
+      lastPx = null; lastPy = null;
       var meter = document.getElementById('entropyMeter');
       if (meter) meter.textContent = '0.00';
     },
     pause: function() { paused = true; },
     resume: function() { paused = false; },
-    isPaused: function() { return paused; }
+    isPaused: function() { return paused; },
+    // Phase 3: settings-menu setters. Each slider input updates one of
+    // the closure-scoped multipliers above without the menu code needing
+    // to live inside the IIFE.
+    setPointer: function(v) { POINTER_PLASTICITY = +v; },
+    setTilt: function(v) { tiltMult = +v; },
+    setClick: function(v) { clickMult = +v; },
+    getEntropy: function() { return entropy; }
   };
 
   resize();
@@ -4327,6 +4447,55 @@ class Knob {
   var btn = document.getElementById('droneToggle');
   if (!btn) return;
 
+  // Phase 2: modulation state. Pointer position normalized 0..1, gamma-tilt
+  // mirrored from a local deviceorientation listener (duplicating the bg
+  // listener is fine — both fire). lastMoveTime drives a brief gain bump
+  // when the pointer is active, so the drone "breathes" with motion.
+  // `level` is a 0..1 multiplier exposed via setLevel for the menu slider.
+  var level = 1.0;
+  var pointerNX = 0.5, pointerNY = 0.5;
+  var tiltX = 0;
+  var lastMoveTime = 0;
+  var modTimer = null;
+
+  function getEntropy() {
+    var p = window.__hero && window.__hero.poly;
+    return (p && typeof p.getEntropy === 'function') ? p.getEntropy() : 0;
+  }
+
+  function updateMod() {
+    if (!ac || !filter || !osc || !sub || !gain) return;
+    if (!isOn) return;
+    var t = ac.currentTime;
+    var ent = getEntropy();
+    // Filter cutoff drifts with pointerX + entropy; Q with pointerY.
+    var cutoff = 280 + (pointerNX * 800) + (ent * 200);
+    filter.frequency.cancelScheduledValues(t);
+    filter.frequency.setValueAtTime(filter.frequency.value, t);
+    filter.frequency.linearRampToValueAtTime(cutoff, t + 0.12);
+    var q = 2 + (pointerNY * 6);
+    filter.Q.cancelScheduledValues(t);
+    filter.Q.setValueAtTime(filter.Q.value, t);
+    filter.Q.linearRampToValueAtTime(q, t + 0.12);
+    // Detune (cents) — keeps the osc/sub beat intact, unlike a freq nudge.
+    var det = tiltX * 30;
+    osc.detune.cancelScheduledValues(t);
+    osc.detune.setValueAtTime(osc.detune.value, t);
+    osc.detune.linearRampToValueAtTime(det, t + 0.12);
+    sub.detune.cancelScheduledValues(t);
+    sub.detune.setValueAtTime(sub.detune.value, t);
+    sub.detune.linearRampToValueAtTime(det, t + 0.12);
+    // Subtle "breathing" on recent pointer motion.
+    var since = performance.now() - lastMoveTime;
+    if (since < 200) {
+      var base = 0.045 * level;
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(gain.gain.value, t);
+      gain.gain.linearRampToValueAtTime(base + 0.005, t + 0.06);
+      gain.gain.linearRampToValueAtTime(base, t + 0.18);
+    }
+  }
+
   function init() {
     if (ac) return;
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -4352,6 +4521,9 @@ class Knob {
     gain.connect(ac.destination);
     osc.start();
     sub.start();
+    // Phase 2: 12fps param-update tick. Web Audio handles the actual
+    // smoothing via linearRampToValueAtTime, so 80ms is plenty.
+    if (!modTimer) modTimer = setInterval(updateMod, 80);
   }
 
   function setOn(on) {
@@ -4362,17 +4534,30 @@ class Knob {
     var t = ac.currentTime;
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(gain.gain.value, t);
-    gain.gain.linearRampToValueAtTime(isOn ? 0.045 : 0, t + 0.5);
+    gain.gain.linearRampToValueAtTime(isOn ? 0.045 * level : 0, t + 0.5);
     btn.textContent = 'DRONE · ' + (isOn ? 'ON' : 'OFF');
     btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+  }
+
+  function setLevel(v) {
+    level = Math.max(0, Math.min(1, +v));
+    if (ac && gain && isOn) {
+      var t = ac.currentTime;
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(gain.gain.value, t);
+      gain.gain.linearRampToValueAtTime(0.045 * level, t + 0.2);
+    }
   }
 
   function burst() {
     if (!ac || !filter) return;
     var t = ac.currentTime;
+    // Phase 2: peak cutoff scales with entropy — clicks feel more
+    // pronounced as the line accumulates damage.
+    var ent = getEntropy();
     filter.frequency.cancelScheduledValues(t);
     filter.frequency.setValueAtTime(filter.frequency.value, t);
-    filter.frequency.linearRampToValueAtTime(900, t + 0.04);
+    filter.frequency.linearRampToValueAtTime(800 + ent * 1200, t + 0.04);
     filter.frequency.exponentialRampToValueAtTime(280, t + 0.7);
     // Tiny pitch bend
     if (osc && sub) {
@@ -4386,6 +4571,28 @@ class Knob {
       sub.frequency.linearRampToValueAtTime(80.6, t + 0.6);
     }
   }
+
+  // Phase 2: pointer + tilt listeners feed the modulation tick. These run
+  // unconditionally — cheap, and they keep the state warm if the user
+  // toggles the drone on after moving around.
+  window.addEventListener('mousemove', function(e) {
+    pointerNX = e.clientX / Math.max(1, window.innerWidth);
+    pointerNY = e.clientY / Math.max(1, window.innerHeight);
+    lastMoveTime = performance.now();
+  }, { passive: true });
+  window.addEventListener('touchmove', function(e) {
+    if (e.touches && e.touches[0]) {
+      pointerNX = e.touches[0].clientX / Math.max(1, window.innerWidth);
+      pointerNY = e.touches[0].clientY / Math.max(1, window.innerHeight);
+      lastMoveTime = performance.now();
+    }
+  }, { passive: true });
+  window.addEventListener('deviceorientation', function(ev) {
+    if (ev.gamma == null) return;
+    var v = ev.gamma / 60;
+    if (v < -1) v = -1; else if (v > 1) v = 1;
+    tiltX = v;
+  }, { passive: true });
 
   // Wire up
   btn.disabled = false;
@@ -4405,7 +4612,7 @@ class Knob {
 
   // Expose for later phases (entropy / reset)
   window.__hero = window.__hero || {};
-  window.__hero.drone = { burst: burst, setOn: setOn, isOn: function(){ return isOn; } };
+  window.__hero.drone = { burst: burst, setOn: setOn, setLevel: setLevel, isOn: function(){ return isOn; } };
 })();
 
 (function heroControls() {
