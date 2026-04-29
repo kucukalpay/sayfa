@@ -1797,7 +1797,7 @@
   </div>
   <div class="hero-controls hero-controls-left">
     <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
-    <button class="hero-btn" id="resetSim" type="button" disabled>RESET</button>
+    <button class="hero-btn" id="resetSim" type="button">RESET</button>
     <button class="hero-btn" id="resumeSim" type="button" hidden>RESUME</button>
   </div>
   <div class="hero-meta">
@@ -3931,6 +3931,13 @@ class Knob {
   var progress = 0;
   var rafId = 0;
   var lastT = 0;
+  // Phase 4: entropy accumulates with each ripple, drives the visible
+  // ENTROPY meter, and persists base-position drift so the line never
+  // fully recovers. `paused` is a manual pause flag (separate from the
+  // existing visibility-pause); set true when hero scrolls offscreen.
+  var entropy = 0;
+  var lastMeterUpdate = 0;
+  var paused = false;
   // Legacy slider-controlled vars. The polyline doesn't use connectivity
   // gates or distance thresholds anymore, but the slider input handlers
   // below still write to these — leaving them defined keeps that harmless.
@@ -4069,10 +4076,22 @@ class Knob {
 
   function loop(t) {
     if (document.visibilityState !== 'visible') { rafId = 0; return; }
+    if (paused) {
+      // Keep the rAF chain alive so resume() just flips the flag — no
+      // restart needed. lastT advances so we don't get a giant dt jump.
+      lastT = t;
+      rafId = requestAnimationFrame(loop);
+      return;
+    }
     var dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
     lastT = t;
     step(dt);
     render();
+    if (t - lastMeterUpdate > 200) {
+      lastMeterUpdate = t;
+      var meter = document.getElementById('entropyMeter');
+      if (meter) meter.textContent = entropy.toFixed(2);
+    }
     rafId = requestAnimationFrame(loop);
   }
 
@@ -4113,6 +4132,22 @@ class Knob {
     function pushRipple(x, y) {
       ripples.push({ x: x, y: y, t0: performance.now() });
       if (ripples.length > 6) ripples.shift();
+      // Phase 4: each ripple accumulates entropy and permanently nudges
+      // base positions of nearby nodes — they spring toward a moved
+      // target instead of the original, so the line drifts over time.
+      entropy = Math.min(1, entropy + 0.05);
+      var rx = x, ry = y;
+      var R = 180;
+      nodes.forEach(function(n) {
+        var dx = n.bx - rx;
+        var dy = n.by - ry;
+        var d2 = dx*dx + dy*dy;
+        if (d2 > R*R) return;
+        var d = Math.sqrt(d2) || 1;
+        var falloff = 1 - d/R;
+        n.bx += (Math.random() - 0.5) * 6 * falloff;
+        n.by += (Math.random() - 0.5) * 12 * falloff;
+      });
     }
     window.addEventListener('click', function (e) { pushRipple(e.clientX, e.clientY); }, { passive: true });
     window.addEventListener('touchstart', function (e) {
@@ -4243,6 +4278,24 @@ class Knob {
     });
   }
 
+  // Phase 4: expose engine controls so the hero's RESET / RESUME buttons
+  // and the IntersectionObserver auto-pause can drive the polyline.
+  window.__hero = window.__hero || {};
+  window.__hero.poly = {
+    reset: function() {
+      entropy = 0;
+      // Rebuild base positions to a fresh polyline; sprinkle() also
+      // reseats current x/y to the new bx/by.
+      nodes = [];
+      sprinkle();
+      var meter = document.getElementById('entropyMeter');
+      if (meter) meter.textContent = '0.00';
+    },
+    pause: function() { paused = true; },
+    resume: function() { paused = false; },
+    isPaused: function() { return paused; }
+  };
+
   resize();
   updateProgress();
   start();
@@ -4353,6 +4406,45 @@ class Knob {
   // Expose for later phases (entropy / reset)
   window.__hero = window.__hero || {};
   window.__hero.drone = { burst: burst, setOn: setOn, isOn: function(){ return isOn; } };
+})();
+
+(function heroControls() {
+  // Phase 4: wire the RESET and RESUME buttons to the polyline engine,
+  // and auto-pause that engine when the hero scrolls out of view.
+  var resetBtn = document.getElementById('resetSim');
+  var resumeBtn = document.getElementById('resumeSim');
+  var hero = document.getElementById('hero');
+  if (!resetBtn || !resumeBtn || !hero) return;
+
+  var poly = function() { return (window.__hero && window.__hero.poly) || null; };
+
+  resetBtn.disabled = false;
+  resetBtn.removeAttribute('disabled');
+  resetBtn.addEventListener('click', function() {
+    var p = poly(); if (p && p.reset) p.reset();
+  });
+
+  resumeBtn.addEventListener('click', function() {
+    var p = poly();
+    if (p && p.resume) p.resume();
+    resumeBtn.hidden = true;
+  });
+
+  // Auto-pause when hero leaves viewport. Resume is button-driven only —
+  // do NOT auto-resume on re-entry.
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        var p = poly();
+        if (!p) return;
+        if (!e.isIntersecting) {
+          p.pause();
+          resumeBtn.hidden = false;
+        }
+      });
+    }, { threshold: 0.3 });
+    io.observe(hero);
+  }
 })();
 </script>
 
