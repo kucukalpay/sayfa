@@ -1762,28 +1762,34 @@
   .hero-btn[hidden] { display: none; }
 
   .hero-meta {
-    position: absolute;
-    bottom: 24px;
-    right: 24px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     font-size: 0.72rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    opacity: 0.7;
+    opacity: 0.55;
+    pointer-events: none;
     display: flex;
-    gap: 10px;
-    align-items: baseline;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+    z-index: 3;
   }
   .hero-meta-value {
+    font-size: 1.1rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.05em;
-    opacity: 0.95;
+    opacity: 1;
   }
 
   @media (max-width: 640px) {
     .hero-nav { gap: 12px; font-size: 0.7rem; }
-    .hero-controls, .hero-meta { bottom: 16px; }
+    .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
-    .hero-meta { right: 16px; }
+    .hero-meta { font-size: 0.65rem; }
     .hero-center { top: 110px; left: 16px; max-width: 240px; }
   }
 </style>
@@ -1845,8 +1851,8 @@
       <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="2">
     </label>
     <label>
-      <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">0.28</span></span>
-      <input type="range" id="bgPointer" min="0" max="1" step="0.01" value="0.28">
+      <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">1.00</span></span>
+      <input type="range" id="bgPointer" min="0" max="1" step="0.01" value="1.0">
     </label>
     <label>
       <span class="row"><span>TILT</span><span class="val" id="bgTiltMultVal">0.50</span></span>
@@ -3981,7 +3987,7 @@ class Knob {
   // lastPy hold the previous pointer location so we can compute a delta.
   // tiltMult / clickMult are global multipliers on the existing tilt and
   // click forces, exposed via setters for the settings menu sliders.
-  var POINTER_PLASTICITY = 0.28;
+  var POINTER_PLASTICITY = 1.0;
   var tiltMult = 0.5;
   var clickMult = 1.0;
   var lastPx = null, lastPy = null;
@@ -4146,6 +4152,8 @@ class Knob {
         var pdx = px - lastPx, pdy = py - lastPy;
         // Guard against giant deltas after a long gap (e.g. tab switch).
         if (pdx*pdx + pdy*pdy > 40000) { lastPx = px; lastPy = py; return; }
+        var motion = Math.sqrt(pdx * pdx + pdy * pdy);
+        entropy += motion * 0.0003;
         var R = 120, R2 = R * R;
         for (var i = 0; i < nodes.length; i++) {
           var n = nodes[i];
@@ -4201,7 +4209,7 @@ class Knob {
       // Phase 4: accumulate entropy and permanently nudge base positions of
       // nearby nodes — they spring toward a moved target instead of the
       // original, so the line drifts over time.
-      entropy = Math.min(1, entropy + 0.05 * clickMult);
+      entropy += 0.05 * clickMult;
       var BR = 180;
       nodes.forEach(function(n) {
         var dx = n.bx - rx;
@@ -4224,12 +4232,18 @@ class Knob {
     // We attach immediately on Android; on iOS we defer until the first
     // touch/click and ask for permission then.
     var bgTiltAttached = false;
+    var prevTiltX = 0, prevTiltY = 0;
     function onBgTilt(ev) {
       if (ev.gamma == null || ev.beta == null) return;
       // Tighter saturation (30° instead of 45°) so a small wrist flick already
       // pushes |tilt| toward 1 — the bg now responds at typical handheld angles.
       tilt.x = clamp(ev.gamma / 60, -1, 1);
       tilt.y = clamp(ev.beta / 60, -1, 1);
+      var tiltX = tilt.x, tiltY = tilt.y;
+      var dt = Math.abs(tiltX - prevTiltX) + Math.abs(tiltY - prevTiltY);
+      entropy += dt * 0.005;
+      prevTiltX = tiltX;
+      prevTiltY = tiltY;
     }
     function attachBgTilt() {
       if (bgTiltAttached || !window.DeviceOrientationEvent) return;
