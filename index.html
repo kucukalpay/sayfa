@@ -1845,8 +1845,8 @@
       <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="2">
     </label>
     <label>
-      <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">0.12</span></span>
-      <input type="range" id="bgPointer" min="0" max="1" step="0.01" value="0.12">
+      <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">0.28</span></span>
+      <input type="range" id="bgPointer" min="0" max="1" step="0.01" value="0.28">
     </label>
     <label>
       <span class="row"><span>TILT</span><span class="val" id="bgTiltMultVal">0.50</span></span>
@@ -3951,7 +3951,6 @@ class Knob {
   var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5);
   var W = 0, H = 0;
   var nodes = [];
-  var ripples = [];
   var pointer = { x: -9999, y: -9999, active: false };
   var tilt = { x: 0, y: 0 };
   var progress = 0;
@@ -3982,7 +3981,7 @@ class Knob {
   // lastPy hold the previous pointer location so we can compute a delta.
   // tiltMult / clickMult are global multipliers on the existing tilt and
   // click forces, exposed via setters for the settings menu sliders.
-  var POINTER_PLASTICITY = 0.12;
+  var POINTER_PLASTICITY = 0.28;
   var tiltMult = 0.5;
   var clickMult = 1.0;
   var lastPx = null, lastPy = null;
@@ -4025,7 +4024,7 @@ class Knob {
   }
 
   function step(dt) {
-    var stiff = 0.04, damp = 0.85;
+    var stiff = 0.06, damp = 0.62;
     var hoverR = 140, hoverR2 = hoverR * hoverR;
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
@@ -4053,24 +4052,6 @@ class Knob {
       n.vx *= damp; n.vy *= damp;
       n.x += n.vx; n.y += n.vy;
     }
-    // ripples
-    for (var r = ripples.length - 1; r >= 0; r--) {
-      var R = ripples[r];
-      var age = (performance.now() - R.t0) / 1000;
-      if (age > 1.2) { ripples.splice(r, 1); continue; }
-      var radius = age * 500;
-      for (var k = 0; k < nodes.length; k++) {
-        var nn = nodes[k];
-        var rdx = nn.x - R.x, rdy = nn.y - R.y;
-        var rd = Math.hypot(rdx, rdy) || 1;
-        var bandDist = Math.abs(rd - radius);
-        if (bandDist < 30) {
-          var kick = (1 - bandDist / 30) * (1 - age / 1.2) * 1.4 * interaction;
-          nn.vx += (rdx / rd) * kick;
-          nn.vy += (rdy / rd) * kick;
-        }
-      }
-    }
   }
 
   function render() {
@@ -4097,22 +4078,6 @@ class Knob {
       ctx.beginPath();
       ctx.arc(nodes[q].x, nodes[q].y, 1.5, 0, Math.PI * 2);
       ctx.fill();
-    }
-
-    // ripple rings
-    for (var rr = 0; rr < ripples.length; rr++) {
-      var R = ripples[rr];
-      var age = (performance.now() - R.t0) / 1000;
-      var radius = age * 500;
-      var alpha = (1 - age / 1.2) * 0.25;
-      if (alpha <= 0) continue;
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = 'rgba(220, 226, 232, 1)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(R.x, R.y, radius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
     }
   }
 
@@ -4178,8 +4143,8 @@ class Knob {
           if (d2 > R2) continue;
           var d = Math.sqrt(d2);
           var falloff = 1 - d / R;
-          n.bx += pdx * falloff * POINTER_PLASTICITY * 0.8;
-          n.by += pdy * falloff * POINTER_PLASTICITY * 0.8;
+          n.bx += pdx * falloff * POINTER_PLASTICITY * 1.0;
+          n.by += pdy * falloff * POINTER_PLASTICITY * 1.0;
         }
       }
       lastPx = px; lastPy = py;
@@ -4199,29 +4164,48 @@ class Knob {
     }, { passive: true });
     window.addEventListener('touchend', function () { lastPx = null; lastPy = null; }, { passive: true });
 
-    function pushRipple(x, y) {
-      ripples.push({ x: x, y: y, t0: performance.now() });
-      if (ripples.length > 6) ripples.shift();
-      // Phase 4: each ripple accumulates entropy and permanently nudges
-      // base positions of nearby nodes — they spring toward a moved
-      // target instead of the original, so the line drifts over time.
+    function clickImpulse(rx, ry) {
+      // One-shot radial impulse: outward velocity applied once, falling off
+      // with distance from the click point. Replaces the old expanding-ring
+      // band-force ripple. Entropy + permanent base-position jitter on
+      // nearby nodes is preserved so the line still drifts over time.
+      var R = 280; // radius of effect, generous
+      var STRENGTH = 14 * clickMult; // tunable; multiplied by clickMult slider value
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        var dx = n.x - rx;
+        var dy = n.y - ry;
+        var d2 = dx * dx + dy * dy;
+        if (d2 > R * R) continue;
+        var d = Math.sqrt(d2);
+        if (d < 0.001) continue;
+        var falloff = 1 - d / R; // 1 at center, 0 at edge
+        // smooth squared falloff so the kick stays mostly local
+        falloff = falloff * falloff;
+        var nx = dx / d;
+        var ny = dy / d;
+        n.vx += nx * STRENGTH * falloff;
+        n.vy += ny * STRENGTH * falloff;
+      }
+      // Phase 4: accumulate entropy and permanently nudge base positions of
+      // nearby nodes — they spring toward a moved target instead of the
+      // original, so the line drifts over time.
       entropy = Math.min(1, entropy + 0.05 * clickMult);
-      var rx = x, ry = y;
-      var R = 180;
+      var BR = 180;
       nodes.forEach(function(n) {
         var dx = n.bx - rx;
         var dy = n.by - ry;
         var d2 = dx*dx + dy*dy;
-        if (d2 > R*R) return;
+        if (d2 > BR*BR) return;
         var d = Math.sqrt(d2) || 1;
-        var falloff = 1 - d/R;
+        var falloff = 1 - d/BR;
         n.bx += (Math.random() - 0.5) * 6 * falloff * clickMult;
         n.by += (Math.random() - 0.5) * 12 * falloff * clickMult;
       });
     }
-    window.addEventListener('click', function (e) { pushRipple(e.clientX, e.clientY); }, { passive: true });
+    window.addEventListener('click', function (e) { clickImpulse(e.clientX, e.clientY); }, { passive: true });
     window.addEventListener('touchstart', function (e) {
-      if (e.touches && e.touches[0]) pushRipple(e.touches[0].clientX, e.touches[0].clientY);
+      if (e.touches && e.touches[0]) clickImpulse(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
 
     // Tilt: iOS Safari requires DeviceOrientationEvent.requestPermission() to be
