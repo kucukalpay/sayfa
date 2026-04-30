@@ -1707,7 +1707,7 @@
 
   .hero-center {
     position: absolute;
-    top: 64px;
+    top: 132px;
     left: 24px;
     text-align: left;
     pointer-events: none;
@@ -1784,7 +1784,7 @@
     .hero-controls, .hero-meta { bottom: 16px; }
     .hero-controls-left { left: 16px; }
     .hero-meta { right: 16px; }
-    .hero-center { top: 56px; left: 16px; max-width: 240px; }
+    .hero-center { top: 110px; left: 16px; max-width: 240px; }
   }
 </style>
 </head>
@@ -4005,8 +4005,8 @@ class Knob {
     // that tapers amplitude smoothly to zero at the left/right edges.
     nodes = [];
     var isMobile = W <= 768;
-    var perLine = Math.round(Math.max(150, Math.min(450, (W / 22) * 5)));
-    if (isMobile) perLine = Math.max(100, Math.floor(perLine / 2));
+    var perLine = Math.round(Math.max(300, Math.min(900, (W / 22) * 10)));
+    if (isMobile) perLine = Math.max(200, Math.floor(perLine / 2));
     var lineY = H * 0.5;
     var cycles = 5;
     for (var i = 0; i < perLine; i++) {
@@ -4062,13 +4062,24 @@ class Knob {
     // moveTo/lineTo so any future per-segment styling stays trivial.
     ctx.strokeStyle = 'rgba(220, 226, 232, 0.55)';
     ctx.lineWidth = 1;
-    for (var i = 0; i < nodes.length - 1; i++) {
-      var a = nodes[i], b = nodes[i + 1];
-      // Only connect adjacent nodes that belong to the same line.
-      if (a.line !== b.line) continue;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
+    ctx.beginPath();
+    if (nodes.length > 0) {
+      ctx.moveTo(nodes[0].x, nodes[0].y);
+      for (var i = 0; i < nodes.length - 1; i++) {
+        var p1 = nodes[i];
+        var p2 = nodes[i + 1];
+        if (p1.line !== p2.line) {
+          ctx.moveTo(p2.x, p2.y);
+          continue;
+        }
+        var p0 = (i > 0 && nodes[i - 1].line === p1.line) ? nodes[i - 1] : p1;
+        var p3 = (i + 2 < nodes.length && nodes[i + 2].line === p2.line) ? nodes[i + 2] : p2;
+        var c1x = p1.x + (p2.x - p0.x) / 6;
+        var c1y = p1.y + (p2.y - p0.y) / 6;
+        var c2x = p2.x - (p3.x - p1.x) / 6;
+        var c2y = p2.y - (p3.y - p1.y) / 6;
+        ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
+      }
       ctx.stroke();
     }
 
@@ -4170,7 +4181,7 @@ class Knob {
       // band-force ripple. Entropy + permanent base-position jitter on
       // nearby nodes is preserved so the line still drifts over time.
       var R = 280; // radius of effect, generous
-      var STRENGTH = 14 * clickMult; // tunable; multiplied by clickMult slider value
+      var STRENGTH = 42 * clickMult; // tunable; multiplied by clickMult slider value
       for (var i = 0; i < nodes.length; i++) {
         var n = nodes[i];
         var dx = n.x - rx;
@@ -4199,8 +4210,8 @@ class Knob {
         if (d2 > BR*BR) return;
         var d = Math.sqrt(d2) || 1;
         var falloff = 1 - d/BR;
-        n.bx += (Math.random() - 0.5) * 6 * falloff * clickMult;
-        n.by += (Math.random() - 0.5) * 12 * falloff * clickMult;
+        n.bx += (Math.random() - 0.5) * 2.4 * falloff * clickMult;
+        n.by += (Math.random() - 0.5) * 4.8 * falloff * clickMult;
       });
     }
     window.addEventListener('click', function (e) { clickImpulse(e.clientX, e.clientY); }, { passive: true });
