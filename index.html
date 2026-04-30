@@ -1763,7 +1763,7 @@
 
   .hero-meta {
     position: fixed;
-    top: 50%;
+    top: 75%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 0.72rem;
@@ -1865,6 +1865,10 @@
     <label>
       <span class="row"><span>DRONE</span><span class="val" id="bgDroneVal">1.00</span></span>
       <input type="range" id="bgDrone" min="0" max="1" step="0.01" value="1">
+    </label>
+    <label>
+      <span class="row"><span>ATTRACTION</span><span class="val" id="bgAttractionVal">0.50</span></span>
+      <input type="range" id="bgAttraction" min="0" max="1" step="0.01" value="0.5">
     </label>
     <label class="mobile-only">
       <span class="row"><span>TILT X</span><span class="val" id="bgTiltXVal">4.00</span></span>
@@ -3990,6 +3994,8 @@ class Knob {
   var POINTER_PLASTICITY = 1.0;
   var tiltMult = 0.5;
   var clickMult = 1.0;
+  var ATTRACTION_BASE = 0.00006;
+  var attractionMult = 0.5;
   var lastPx = null, lastPy = null;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -4029,9 +4035,33 @@ class Knob {
     progress = max > 0 ? clamp((window.scrollY || window.pageYOffset) / max, 0, 1) : 0;
   }
 
+  function applyNeighborAttraction() {
+    if (attractionMult <= 0) return;
+    var coef = ATTRACTION_BASE * attractionMult;
+    for (var i = 0; i < nodes.length - 1; i++) {
+      var a = nodes[i];
+      var b = nodes[i + 1];
+      if (a.line !== b.line) continue;
+      var dx = b.x - a.x;
+      var dy = b.y - a.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 4) continue;
+      var inv = 1 / dist;
+      var nx = dx * inv;
+      var ny = dy * inv;
+      var delta = dist - 4;
+      var F = coef * delta * delta;
+      a.vx += nx * F;
+      a.vy += ny * F;
+      b.vx -= nx * F;
+      b.vy -= ny * F;
+    }
+  }
+
   function step(dt) {
     var stiff = 0.06, damp = 0.62;
     var hoverR = 140, hoverR2 = hoverR * hoverR;
+    applyNeighborAttraction();
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       n.vx += (n.bx - n.x) * stiff;
@@ -4415,6 +4445,18 @@ class Knob {
     });
   }
 
+  var bgAttraction = document.getElementById('bgAttraction');
+  var bgAttractionVal = document.getElementById('bgAttractionVal');
+  if (bgAttraction) {
+    bgAttraction.addEventListener('input', function() {
+      var v = parseFloat(bgAttraction.value);
+      if (bgAttractionVal) bgAttractionVal.textContent = v.toFixed(2);
+      if (window.__hero && window.__hero.poly && window.__hero.poly.setAttraction) {
+        window.__hero.poly.setAttraction(v);
+      }
+    });
+  }
+
   // Phase 4: expose engine controls so the hero's RESET / RESUME buttons
   // and the IntersectionObserver auto-pause can drive the polyline.
   window.__hero = window.__hero || {};
@@ -4439,6 +4481,7 @@ class Knob {
     setPointer: function(v) { POINTER_PLASTICITY = +v; },
     setTilt: function(v) { tiltMult = +v; },
     setClick: function(v) { clickMult = +v; },
+    setAttraction: function(v) { attractionMult = Math.max(0, Math.min(1, +v) || 0); },
     getEntropy: function() { return entropy; }
   };
 
