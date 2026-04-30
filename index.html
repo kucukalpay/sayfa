@@ -1679,20 +1679,57 @@
      .hero-nav, and the old one is redundant on the cards section too. */
   nav:not(.hero-nav) { display: none; }
 
-  .hero-nav {
+  .hero-nav-toggle {
     position: absolute;
     top: 24px;
     left: 24px;
-    right: 24px;
+    background: rgba(0,0,0,0.4);
+    color: rgba(255,255,255,0.85);
+    border: 1px solid rgba(255,255,255,0.25);
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 200ms, border-color 200ms, transform 200ms;
+    z-index: 4;
+  }
+  .hero-nav-toggle:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.5);
+  }
+  .hero-nav-toggle[aria-expanded="true"] {
+    transform: rotate(180deg);
+  }
+
+  .hero-nav {
+    position: absolute;
+    top: 64px;
+    left: 24px;
     display: flex;
-    gap: 18px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
     font-size: 0.78rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity 200ms, transform 200ms;
+    z-index: 3;
+  }
+  .hero-nav.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
   }
   .hero-nav a {
-    color: rgba(255,255,255,0.65);
+    color: rgba(255,255,255,0.7);
     text-decoration: none;
     padding: 4px 0;
     border-bottom: 1px solid transparent;
@@ -1715,7 +1752,7 @@
   }
   .hero-title {
     margin: 0;
-    font-size: clamp(1.1rem, 2vw, 1.6rem);
+    font-size: clamp(0.33rem, 0.6vw, 0.48rem);
     letter-spacing: 0.22em;
     font-weight: 500;
     line-height: 1.1;
@@ -1786,7 +1823,8 @@
   }
 
   @media (max-width: 640px) {
-    .hero-nav { gap: 12px; font-size: 0.7rem; }
+    .hero-nav-toggle { top: 16px; left: 16px; }
+    .hero-nav { top: 56px; left: 16px; gap: 10px; font-size: 0.7rem; }
     .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
     .hero-meta { font-size: 0.65rem; }
@@ -1800,7 +1838,8 @@
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
 <section class="hero" id="hero" aria-label="Welcome">
-  <nav class="hero-nav" aria-label="Sections">
+  <button class="hero-nav-toggle" type="button" aria-expanded="false" aria-controls="heroNav" aria-label="Toggle navigation">▾</button>
+  <nav class="hero-nav" id="heroNav" aria-label="Sections">
     <a href="#three-d" data-target="three-d">3D</a>
     <a href="#synths" data-target="synths">Synths</a>
     <a href="#music" data-target="music">Music</a>
@@ -4531,6 +4570,24 @@ class Knob {
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
       }
+    });
+  });
+})();
+
+(function heroNavToggle() {
+  var btn = document.querySelector('.hero-nav-toggle');
+  var nav = document.getElementById('heroNav');
+  if (!btn || !nav) return;
+  btn.addEventListener('click', function() {
+    var open = !nav.classList.contains('open');
+    nav.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  // Close after any link click
+  nav.querySelectorAll('a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      nav.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
     });
   });
 })();
