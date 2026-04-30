@@ -1870,6 +1870,10 @@
       <span class="row"><span>ATTRACTION</span><span class="val" id="bgAttractionVal">0.50</span></span>
       <input type="range" id="bgAttraction" min="0" max="1" step="0.01" value="0.5">
     </label>
+    <label>
+      <span class="row"><span>SPLATTER</span><span class="val" id="bgSplatterVal">0.60</span></span>
+      <input type="range" id="bgSplatter" min="0" max="2" step="0.05" value="0.6">
+    </label>
     <label class="mobile-only">
       <span class="row"><span>TILT X</span><span class="val" id="bgTiltXVal">4.00</span></span>
       <input type="range" id="bgTiltX" min="0" max="8" step="0.05" value="4">
@@ -3994,8 +3998,9 @@ class Knob {
   var POINTER_PLASTICITY = 1.0;
   var tiltMult = 0.5;
   var clickMult = 1.0;
-  var ATTRACTION_BASE = 0.00006;
+  var ATTRACTION_BASE = 0.0006;
   var attractionMult = 0.5;
+  var splatterMult = 0.6;
   var lastPx = null, lastPy = null;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -4233,24 +4238,23 @@ class Knob {
         falloff = falloff * falloff;
         var nx = dx / d;
         var ny = dy / d;
-        n.vx += nx * STRENGTH * falloff;
-        n.vy += ny * STRENGTH * falloff;
+        // Smooth base + log-distributed splatter spike
+        // Math.random() is uniform 0..1; -log(u) is exp-distributed (mean 1, heavy tail)
+        var splat = -Math.log(Math.random() + 1e-6); // small epsilon prevents Math.log(0)
+        // Combine: base smooth force + splatter contribution that scales with proximity
+        var F = STRENGTH * (falloff + splatterMult * splat * falloff);
+        n.vx += nx * F;
+        n.vy += ny * F;
+        // Permanent base-position shift outward, proportional to kick magnitude (with splat)
+        var retainAmount = 18 * falloff * (1 + splatterMult * splat);
+        n.bx += nx * retainAmount;
+        n.by += ny * retainAmount;
       }
-      // Phase 4: accumulate entropy and permanently nudge base positions of
-      // nearby nodes — they spring toward a moved target instead of the
-      // original, so the line drifts over time.
+      // Phase 4: accumulate entropy so the line drifts over time.
+      // Base positions are now retained outward in the velocity-kick loop above
+      // — the spring pulls each node toward its newly scattered location
+      // instead of the original baseline.
       entropy += 0.05 * clickMult;
-      var BR = 180;
-      nodes.forEach(function(n) {
-        var dx = n.bx - rx;
-        var dy = n.by - ry;
-        var d2 = dx*dx + dy*dy;
-        if (d2 > BR*BR) return;
-        var d = Math.sqrt(d2) || 1;
-        var falloff = 1 - d/BR;
-        n.bx += (Math.random() - 0.5) * 2.4 * falloff * clickMult;
-        n.by += (Math.random() - 0.5) * 4.8 * falloff * clickMult;
-      });
     }
     window.addEventListener('click', function (e) { clickImpulse(e.clientX, e.clientY); }, { passive: true });
     window.addEventListener('touchstart', function (e) {
@@ -4351,7 +4355,16 @@ class Knob {
     countSlider.addEventListener('input', function () {
       nodeCount = parseInt(countSlider.value, 10);
       if (countValEl) countValEl.textContent = String(nodeCount);
-      sprinkle();           // re-seeds nodes + rebuilds pair list
+      // reset() zeros entropy, clears nodes, and calls sprinkle() — which
+      // reads the updated nodeCount — so the meter/drone restart fresh on
+      // the new shape instead of carrying over disturbance from the old one.
+      if (window.__hero && window.__hero.poly && window.__hero.poly.reset) {
+        window.__hero.poly.reset();
+      } else {
+        entropy = 0;
+        nodes = [];
+        sprinkle();
+      }
       if (reduced) render();
     });
   }
@@ -4457,6 +4470,18 @@ class Knob {
     });
   }
 
+  var bgSplatter = document.getElementById('bgSplatter');
+  var bgSplatterVal = document.getElementById('bgSplatterVal');
+  if (bgSplatter) {
+    bgSplatter.addEventListener('input', function() {
+      var v = parseFloat(bgSplatter.value);
+      if (bgSplatterVal) bgSplatterVal.textContent = v.toFixed(2);
+      if (window.__hero && window.__hero.poly && window.__hero.poly.setSplatter) {
+        window.__hero.poly.setSplatter(v);
+      }
+    });
+  }
+
   // Phase 4: expose engine controls so the hero's RESET / RESUME buttons
   // and the IntersectionObserver auto-pause can drive the polyline.
   window.__hero = window.__hero || {};
@@ -4482,6 +4507,7 @@ class Knob {
     setTilt: function(v) { tiltMult = +v; },
     setClick: function(v) { clickMult = +v; },
     setAttraction: function(v) { attractionMult = Math.max(0, Math.min(1, +v) || 0); },
+    setSplatter: function(v) { splatterMult = Math.max(0, Math.min(2, +v) || 0); },
     getEntropy: function() { return entropy; }
   };
 
