@@ -1675,6 +1675,10 @@
     box-sizing: border-box;
   }
 
+  /* Hide the legacy top <nav> (logo + nav-links) — the hero now owns its own
+     .hero-nav, and the old one is redundant on the cards section too. */
+  nav:not(.hero-nav) { display: none; }
+
   .hero-nav {
     position: absolute;
     top: 24px;
@@ -3997,20 +4001,21 @@ class Knob {
   }
 
   function sprinkle() {
-    // Build five stacked horizontal chains. Each line L has (L+1) sine cycles
-    // across its width, so the top line is gentle and the bottom is dense.
+    // Single horizontal polyline at vertical center: 5 sine cycles across the
+    // width, ~5x denser than the old per-line count, with a sin(πt) envelope
+    // that tapers amplitude smoothly to zero at the left/right edges.
     nodes = [];
-    var perLine = Math.round(clamp(W / 22, 30, 90));
-    if (isMobile) perLine = Math.max(20, Math.floor(perLine / 2));
-    for (var L = 0; L < 5; L++) {
-      var cycles = L + 1;
-      var lineY = H * (0.2 + L * 0.15);
-      for (var i = 0; i < perLine; i++) {
-        var t = perLine > 1 ? i / (perLine - 1) : 0.5;
-        var bx = W * 0.08 + t * W * 0.84;
-        var by = lineY + Math.sin(t * Math.PI * 2 * cycles) * H * 0.04;
-        nodes.push({ idx: i, line: L, bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0 });
-      }
+    var isMobile = W <= 768;
+    var perLine = Math.round(Math.max(150, Math.min(450, (W / 22) * 5)));
+    if (isMobile) perLine = Math.max(100, Math.floor(perLine / 2));
+    var lineY = H * 0.5;
+    var cycles = 5;
+    for (var i = 0; i < perLine; i++) {
+      var t = perLine > 1 ? i / (perLine - 1) : 0.5;
+      var bx = W * 0.04 + t * W * 0.92;
+      var envelope = Math.sin(t * Math.PI); // 0 at t=0, 1 at t=0.5, 0 at t=1 — smooth taper
+      var by = lineY + envelope * Math.sin(t * Math.PI * 2 * cycles) * H * 0.08;
+      nodes.push({ bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0, idx: i, line: 0 });
     }
   }
 
