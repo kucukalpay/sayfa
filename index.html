@@ -1754,16 +1754,8 @@
   .hero-title {
     margin: 0;
     font-size: clamp(0.7rem, 1.2vw, 0.9rem);
-    letter-spacing: 0.22em;
-    font-weight: 500;
-    line-height: 1.1;
-    text-transform: uppercase;
-    opacity: 0.95;
-  }
-  .hero-sub {
-    margin: 8px 0 0;
-    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
     letter-spacing: 0.3em;
+    line-height: 1.1;
     text-transform: uppercase;
     opacity: 0.5;
   }
@@ -1849,7 +1841,6 @@
   </nav>
   <div class="hero-center">
     <h1 class="hero-title">UNDER CONSTRUCTION</h1>
-    <p class="hero-sub">so construct!</p>
   </div>
   <div class="hero-controls hero-controls-left">
     <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
@@ -4164,13 +4155,7 @@ class Knob {
       ctx.stroke();
     }
 
-    // Small filled dot at each node — same off-white as the line.
-    ctx.fillStyle = 'rgba(220, 226, 232, 0.7)';
-    for (var q = 0; q < nodes.length; q++) {
-      ctx.beginPath();
-      ctx.arc(nodes[q].x, nodes[q].y, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // Per-node dots removed — only the bezier curve renders.
   }
 
   function loop(t) {
