@@ -4030,6 +4030,10 @@ class Knob {
   var attractionMult = 0.5;
   var splatterMult = 0.6;
   var lastPx = null, lastPy = null;
+  var pullActive = false;
+  var pullTimer = null;
+  var pullX = -9999;
+  var pullY = -9999;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -4091,10 +4095,31 @@ class Knob {
     }
   }
 
+  function applyHoldPull() {
+    if (!pullActive) return;
+    if (pullX < 0 || pullY < 0) return;
+    var R = 220;
+    var STRENGTH = 0.6;
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      var dx = pullX - n.x;
+      var dy = pullY - n.y;
+      var d2 = dx * dx + dy * dy;
+      if (d2 > R * R) continue;
+      var d = Math.sqrt(d2);
+      if (d < 0.5) continue;
+      var falloff = 1 - d / R;
+      var f = STRENGTH * falloff;
+      n.vx += (dx / d) * f;
+      n.vy += (dy / d) * f;
+    }
+  }
+
   function step(dt) {
     var stiff = 0.06, damp = 0.62;
     var hoverR = 140, hoverR2 = hoverR * hoverR;
     applyNeighborAttraction();
+    applyHoldPull();
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       n.vx += (n.bx - n.x) * stiff;
@@ -4282,6 +4307,41 @@ class Knob {
     window.addEventListener('touchstart', function (e) {
       if (e.touches && e.touches[0]) clickImpulse(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
+
+    function startPressHold(x, y) {
+      pullX = x;
+      pullY = y;
+      if (pullTimer) clearTimeout(pullTimer);
+      pullTimer = setTimeout(function() {
+        pullActive = true;
+      }, 500);
+    }
+    function updatePressHold(x, y) {
+      pullX = x;
+      pullY = y;
+    }
+    function endPressHold() {
+      if (pullTimer) clearTimeout(pullTimer);
+      pullTimer = null;
+      pullActive = false;
+    }
+
+    window.addEventListener('mousedown', function(e) {
+      startPressHold(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', function(e) {
+      if (pullActive || pullTimer) updatePressHold(e.clientX, e.clientY);
+    }, { passive: true });
+    window.addEventListener('mouseup', endPressHold);
+    window.addEventListener('mouseleave', endPressHold);
+    window.addEventListener('touchstart', function(e) {
+      if (e.touches && e.touches[0]) startPressHold(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener('touchmove', function(e) {
+      if ((pullActive || pullTimer) && e.touches && e.touches[0]) updatePressHold(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener('touchend', endPressHold);
+    window.addEventListener('touchcancel', endPressHold);
 
     // Tilt: iOS Safari requires DeviceOrientationEvent.requestPermission() to be
     // called from inside a user gesture, otherwise the listener never fires.
