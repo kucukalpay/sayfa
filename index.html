@@ -1845,6 +1845,7 @@
   <div class="hero-controls hero-controls-left">
     <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
     <button class="hero-btn" id="resetSim" type="button">RESET</button>
+    <button class="hero-btn" id="saveSim" type="button">SAVE</button>
     <button class="hero-btn" id="resumeSim" type="button" hidden>RESUME</button>
   </div>
   <div class="hero-meta">
@@ -1872,10 +1873,6 @@
     <label style="display:none">
       <span class="row"><span>RANGE</span><span class="val" id="bgLinkDistVal">200</span></span>
       <input type="range" id="bgLinkDist" min="50" max="450" step="5" value="200">
-    </label>
-    <label>
-      <span class="row"><span>COUNT</span><span class="val" id="bgNodeCountVal">90</span></span>
-      <input type="range" id="bgNodeCount" min="10" max="250" step="1" value="90">
     </label>
     <label>
       <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">2.00</span></span>
@@ -4370,29 +4367,8 @@ class Knob {
     });
   }
 
-  var countSlider = document.getElementById('bgNodeCount');
-  var countValEl  = document.getElementById('bgNodeCountVal');
   var forceSlider = document.getElementById('bgInteraction');
   var forceValEl  = document.getElementById('bgInteractionVal');
-  if (countSlider) {
-    nodeCount = parseInt(countSlider.value, 10);
-    if (countValEl) countValEl.textContent = String(nodeCount);
-    countSlider.addEventListener('input', function () {
-      nodeCount = parseInt(countSlider.value, 10);
-      if (countValEl) countValEl.textContent = String(nodeCount);
-      // reset() zeros entropy, clears nodes, and calls sprinkle() — which
-      // reads the updated nodeCount — so the meter/drone restart fresh on
-      // the new shape instead of carrying over disturbance from the old one.
-      if (window.__hero && window.__hero.poly && window.__hero.poly.reset) {
-        window.__hero.poly.reset();
-      } else {
-        entropy = 0;
-        nodes = [];
-        sprinkle();
-      }
-      if (reduced) render();
-    });
-  }
   if (forceSlider) {
     interaction = parseFloat(forceSlider.value);
     if (forceValEl) forceValEl.textContent = interaction.toFixed(2);
@@ -4557,6 +4533,56 @@ class Knob {
         });
       }
     });
+  });
+})();
+
+(function heroSaveButton() {
+  var btn = document.getElementById('saveSim');
+  var canvas = document.getElementById('bg-canvas');
+  if (!btn || !canvas) return;
+  btn.addEventListener('click', function() {
+    try {
+      var off = document.createElement('canvas');
+      off.width = canvas.width;
+      off.height = canvas.height;
+      var octx = off.getContext('2d');
+      // Use the page body's background color so the export matches what's on screen
+      var bg = window.getComputedStyle(document.body).backgroundColor || '#0a0a0c';
+      octx.fillStyle = bg;
+      octx.fillRect(0, 0, off.width, off.height);
+      octx.drawImage(canvas, 0, 0);
+
+      var ts = new Date();
+      var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+      var name = 'sayfa-' + ts.getFullYear() + pad(ts.getMonth()+1) + pad(ts.getDate())
+        + '-' + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds()) + '.png';
+
+      if (off.toBlob) {
+        off.toBlob(function(blob) {
+          if (!blob) return;
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function() {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 100);
+        }, 'image/png');
+      } else {
+        var dataURL = off.toDataURL('image/png');
+        var a = document.createElement('a');
+        a.href = dataURL;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (e) {
+      console.error('canvas save failed', e);
+    }
   });
 })();
 
