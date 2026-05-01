@@ -1708,8 +1708,9 @@
     top: 64px;
     left: 24px;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 18px;
     padding: 12px 16px;
     background: rgba(0,0,0,0.55);
     border: 1px solid rgba(255,255,255,0.12);
@@ -1752,7 +1753,7 @@
   }
   .hero-title {
     margin: 0;
-    font-size: clamp(0.33rem, 0.6vw, 0.48rem);
+    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
     letter-spacing: 0.22em;
     font-weight: 500;
     line-height: 1.1;
@@ -1761,7 +1762,7 @@
   }
   .hero-sub {
     margin: 8px 0 0;
-    font-size: 0.7rem;
+    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
     letter-spacing: 0.3em;
     text-transform: uppercase;
     opacity: 0.5;
@@ -1848,7 +1849,7 @@
   </nav>
   <div class="hero-center">
     <h1 class="hero-title">UNDER CONSTRUCTION</h1>
-    <p class="hero-sub">— in flux —</p>
+    <p class="hero-sub">so construct!</p>
   </div>
   <div class="hero-controls hero-controls-left">
     <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
@@ -4062,7 +4063,7 @@ class Knob {
     nodes = [];
     var isMobile = W <= 768;
     var perLine = Math.round(Math.max(300, Math.min(900, (W / 22) * 10)));
-    if (isMobile) perLine = Math.max(200, Math.floor(perLine / 2));
+    if (isMobile) perLine = Math.max(400, Math.floor(perLine));
     var lineY = H * 0.5;
     var cycles = 5;
     for (var i = 0; i < perLine; i++) {
