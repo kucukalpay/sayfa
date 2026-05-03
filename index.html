@@ -4608,6 +4608,15 @@ class Knob {
 
 <script>
 (function heroScrollLock() {
+  // Prevent the browser from auto-restoring the previous scroll position on
+  // reload — otherwise the page reloads scrolled into a section *and* the
+  // hero lock kicks in, stranding the user mid-page with no scroll. Force
+  // the viewport to the top before applying the lock so a reload always
+  // lands back at the hero.
+  if ('scrollRestoration' in history) {
+    try { history.scrollRestoration = 'manual'; } catch (e) {}
+  }
+  window.scrollTo(0, 0);
   document.body.classList.add('lock-scroll');
   document.querySelectorAll('.hero-nav a').forEach(function(a) {
     a.addEventListener('click', function(e) {
