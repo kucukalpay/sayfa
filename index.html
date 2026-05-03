@@ -1665,6 +1665,28 @@
     height: 100dvh;
   }
 
+  /* ----- Return Home button — visible only when scroll lock is OFF ----- */
+  .return-home {
+    position: fixed;
+    bottom: 1rem;
+    left: 1rem;
+    z-index: 8000;
+    background: rgba(10, 10, 11, 0.85);
+    color: rgba(255,255,255,0.85);
+    border: 1px solid var(--line);
+    padding: 7px 12px;
+    font: inherit;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 200ms, border-color 200ms, opacity 200ms;
+  }
+  .return-home:hover { background: rgba(255,255,255,0.08); border-color: var(--ink-dim); }
+  body.lock-scroll .return-home { display: none; }
+
   .hero {
     position: relative;
     z-index: 2;
@@ -1853,6 +1875,12 @@
     <span class="hero-meta-value" id="entropyMeter">0.00</span>
   </div>
 </section>
+
+<!-- Return Home button: lives outside hero, always rendered, but the CSS rule
+     `body.lock-scroll .return-home { display: none; }` keeps it invisible while
+     the page is in its initial hero-locked state. Click → smooth scroll back
+     to the hero and re-apply the scroll lock. -->
+<button class="return-home" id="returnHome" type="button" aria-label="Return to hero">↑ HOME</button>
 
 <!-- Mini hovering music player (only visible when "Keep playing" is on
      and the music modal has been closed mid-playback). -->
@@ -4594,6 +4622,33 @@ class Knob {
       }
     });
   });
+
+  // Return Home: smooth scroll to top, then re-apply lock-scroll once the
+  // viewport has settled at the hero. We poll briefly because `scrollend`
+  // isn't supported everywhere; bail after 2.5s as a safety net so we never
+  // leave the scroll lock un-applied if the user interrupts the scroll.
+  var homeBtn = document.getElementById('returnHome');
+  if (homeBtn) {
+    homeBtn.addEventListener('click', function() {
+      var hero = document.getElementById('hero');
+      if (hero && hero.scrollIntoView) {
+        hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      var startedAt = performance.now();
+      var settle = setInterval(function() {
+        var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+        if (y <= 2) {
+          document.body.classList.add('lock-scroll');
+          clearInterval(settle);
+        } else if (performance.now() - startedAt > 2500) {
+          // User scrolled away mid-animation — abort re-locking.
+          clearInterval(settle);
+        }
+      }, 80);
+    });
+  }
 })();
 
 (function heroSaveButton() {
