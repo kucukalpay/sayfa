@@ -1875,8 +1875,8 @@
       <input type="range" id="bgLinkDist" min="50" max="450" step="5" value="200">
     </label>
     <label>
-      <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">2.00</span></span>
-      <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="2">
+      <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">3.50</span></span>
+      <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="3.5">
     </label>
     <label>
       <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">1.00</span></span>
@@ -1887,8 +1887,8 @@
       <input type="range" id="bgTiltMult" min="0" max="1" step="0.01" value="0.5">
     </label>
     <label>
-      <span class="row"><span>CLICK</span><span class="val" id="bgClickVal">1.00</span></span>
-      <input type="range" id="bgClick" min="0" max="1" step="0.01" value="1">
+      <span class="row"><span>CLICK</span><span class="val" id="bgClickVal">0.10</span></span>
+      <input type="range" id="bgClick" min="0" max="1" step="0.01" value="0.1">
     </label>
     <label>
       <span class="row"><span>DRONE</span><span class="val" id="bgDroneVal">1.00</span></span>
@@ -4154,7 +4154,7 @@ class Knob {
     // Single connected polyline: pairwise segments along the chain, no
     // distance threshold and no per-pair gating. Each segment is its own
     // moveTo/lineTo so any future per-segment styling stays trivial.
-    ctx.strokeStyle = 'rgba(220, 226, 232, 0.55)';
+    ctx.strokeStyle = 'rgba(220, 226, 232, 0.8)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     if (nodes.length > 0) {
@@ -4666,7 +4666,7 @@ class Knob {
 
 (function droneEngine() {
   var ac = null;
-  var osc = null, sub = null, filter = null, gain = null;
+  var oscs = null, preGain = null, layerGains = null, filter = null, gain = null;
   var isOn = false;
   var btn = document.getElementById('droneToggle');
   if (!btn) return;
@@ -4688,7 +4688,7 @@ class Knob {
   }
 
   function updateMod() {
-    if (!ac || !filter || !osc || !sub || !gain) return;
+    if (!ac || !filter || !oscs || !gain) return;
     if (!isOn) return;
     var t = ac.currentTime;
     var entropy = (window.__hero && window.__hero.poly && window.__hero.poly.getEntropy)
@@ -4702,14 +4702,21 @@ class Knob {
     filter.Q.cancelScheduledValues(t);
     filter.Q.setValueAtTime(filter.Q.value, t);
     filter.Q.linearRampToValueAtTime(q, t + 0.12);
-    // Detune (cents) — keeps the osc/sub beat intact; entropy nudges pitch.
-    var det = tiltX * 30 + entropy * 8;
-    osc.detune.cancelScheduledValues(t);
-    osc.detune.setValueAtTime(osc.detune.value, t);
-    osc.detune.linearRampToValueAtTime(det, t + 0.12);
-    sub.detune.cancelScheduledValues(t);
-    sub.detune.setValueAtTime(sub.detune.value, t);
-    sub.detune.linearRampToValueAtTime(det, t + 0.12);
+    // Detune (cents) — applied uniformly across the chord; entropy nudges pitch.
+    var detuneTarget = tiltX * 30 + entropy * 8;
+    oscs.forEach(function(o) {
+      o.detune.cancelScheduledValues(t);
+      o.detune.setValueAtTime(o.detune.value, t);
+      o.detune.linearRampToValueAtTime(detuneTarget, t + 0.12);
+    });
+    // preGain headroom — divided down by (1 + entropy) so the chord/Shepherd
+    // stack auto-attenuates as the line accumulates damage.
+    if (preGain) {
+      var preTarget = 1 / (1 + entropy);
+      preGain.gain.cancelScheduledValues(t);
+      preGain.gain.setValueAtTime(preGain.gain.value, t);
+      preGain.gain.linearRampToValueAtTime(preTarget, t + 0.12);
+    }
     // Master gain swells with entropy so the drone audibly thickens.
     var gainTarget = isOn ? 0.045 * level * (1 + entropy * 0.3) : 0;
     gain.gain.cancelScheduledValues(t);
@@ -4731,26 +4738,47 @@ class Knob {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     ac = new Ctx();
-    // Two detuned oscillators for a slightly richer drone
-    osc = ac.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = 80;
-    sub = ac.createOscillator();
-    sub.type = 'sine';
-    sub.frequency.value = 80.6; // slight beat
-    // Lowpass filter modulated on click
+
+    // A1 / D2 / F#2 / A2 — same pitch classes stacked across three octaves
+    // for a Shepherd-tone substrate. The chord stays on these notes; only
+    // the per-octave amplitudes shift during burst() to fake a continuous rise.
+    var chordPitches = [55, 73.4162, 92.4986, 110];
+    var octaveMults = [1, 2, 4]; // base, +1 oct, +2 oct
+    // Steady-state weights — bell weighted toward the base layer so the drone
+    // sits low until burst sweeps the bell upward.
+    var baselineWeights = [1.0, 0.5, 0.25];
+    oscs = [];
+    layerGains = octaveMults.map(function(mult, i) {
+      var lg = ac.createGain();
+      lg.gain.value = baselineWeights[i];
+      chordPitches.forEach(function(f) {
+        var o = ac.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = f * mult;
+        o.connect(lg);
+        oscs.push(o);
+      });
+      return lg;
+    });
+
     filter = ac.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 280;
     filter.Q.value = 4;
+
+    // Per-osc gain stage so combined sum doesn't clip; sawtooths are louder
+    // than sines, and we now have 12 of them across 3 octave layers.
+    preGain = ac.createGain();
+    preGain.gain.value = 1;
+
     gain = ac.createGain();
-    gain.gain.value = 0; // start silent — enable on toggle
-    osc.connect(filter);
-    sub.connect(filter);
+    gain.gain.value = 0;
+
+    layerGains.forEach(function(lg) { lg.connect(preGain); });
+    oscs.forEach(function(o) { o.start(); });
+    preGain.connect(filter);
     filter.connect(gain);
     gain.connect(ac.destination);
-    osc.start();
-    sub.start();
     // Phase 2: 12fps param-update tick. Web Audio handles the actual
     // smoothing via linearRampToValueAtTime, so 80ms is plenty.
     if (!modTimer) modTimer = setInterval(updateMod, 80);
@@ -4789,16 +4817,35 @@ class Knob {
     filter.frequency.setValueAtTime(filter.frequency.value, t);
     filter.frequency.linearRampToValueAtTime(1200 + entropy * 1500, t + 0.04);
     filter.frequency.exponentialRampToValueAtTime(280, t + 0.7);
-    // Tiny pitch bend
-    if (osc && sub) {
-      osc.frequency.cancelScheduledValues(t);
-      sub.frequency.cancelScheduledValues(t);
-      osc.frequency.setValueAtTime(osc.frequency.value, t);
-      sub.frequency.setValueAtTime(sub.frequency.value, t);
-      osc.frequency.linearRampToValueAtTime(82, t + 0.03);
-      osc.frequency.linearRampToValueAtTime(80, t + 0.6);
-      sub.frequency.linearRampToValueAtTime(82.6, t + 0.03);
-      sub.frequency.linearRampToValueAtTime(80.6, t + 0.6);
+    // Tiny pitch bend across the chord
+    if (oscs && oscs.length) {
+      oscs.forEach(function(o) {
+        var base = o.frequency.value;
+        o.frequency.cancelScheduledValues(t);
+        o.frequency.setValueAtTime(base, t);
+        o.frequency.linearRampToValueAtTime(base * 1.025, t + 0.03);
+        o.frequency.linearRampToValueAtTime(base, t + 0.6);
+      });
+    }
+    // Shepherd-tone rise: a spectral bell sweeps up the three octave layers
+    // of the same chord (A/D/F#/A pitch classes). As L2 peaks at the top and
+    // begins fading, L0 swells back from its mid-burst dip — perceived as a
+    // fresh rise emerging from below, so the rising sensation continues even
+    // though the chord stays on the same notes.
+    if (layerGains && layerGains.length === 3) {
+      var L0 = layerGains[0], L1 = layerGains[1], L2 = layerGains[2];
+      L0.gain.cancelScheduledValues(t);
+      L0.gain.setValueAtTime(L0.gain.value, t);
+      L0.gain.linearRampToValueAtTime(0.3, t + 0.35);
+      L0.gain.linearRampToValueAtTime(1.0, t + 0.7);
+      L1.gain.cancelScheduledValues(t);
+      L1.gain.setValueAtTime(L1.gain.value, t);
+      L1.gain.linearRampToValueAtTime(1.0, t + 0.2);
+      L1.gain.linearRampToValueAtTime(0.5, t + 0.7);
+      L2.gain.cancelScheduledValues(t);
+      L2.gain.setValueAtTime(L2.gain.value, t);
+      L2.gain.linearRampToValueAtTime(1.0, t + 0.4);
+      L2.gain.linearRampToValueAtTime(0.25, t + 0.7);
     }
   }
 
