@@ -4033,7 +4033,7 @@ class Knob {
   var ctx = canvas.getContext('2d');
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isMobile = window.innerWidth <= 768;
-  var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5);
+  var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.25);
   var W = 0, H = 0;
   var nodes = [];
   var pointer = { x: -9999, y: -9999, active: false };
@@ -4113,8 +4113,8 @@ class Knob {
     // that tapers amplitude smoothly to zero at the left/right edges.
     nodes = [];
     var isMobile = W <= 768;
-    var perLine = Math.round(Math.max(300, Math.min(900, (W / 22) * 10)));
-    if (isMobile) perLine = Math.max(400, Math.floor(perLine));
+    var perLine = Math.round(Math.max(180, Math.min(420, (W / 22) * 6)));
+    if (isMobile) perLine = Math.max(140, Math.min(260, Math.floor(perLine)));
     var lineY = H * 0.5;
     var cycles = 5;
     for (var i = 0; i < perLine; i++) {
