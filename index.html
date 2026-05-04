@@ -4732,6 +4732,9 @@ class Knob {
   var ac = null;
   var oscs = null, preGain = null, layerGains = null, filter = null, gain = null;
   var isOn = false;
+  // A1 / D2 / F#2 / G2 / A2 — base chord frequencies, hoisted to closure
+  // scope so resetNotes() can snap oscs back to canonical values.
+  var freqs = [55, 73.4162, 92.4986, 98.0, 110];
   var btn = document.getElementById('droneToggle');
   if (!btn) return;
 
@@ -4803,10 +4806,10 @@ class Knob {
     if (!Ctx) return;
     ac = new Ctx();
 
-    // A1 / D2 / F#2 / A2 — same pitch classes stacked across three octaves
+    // A1 / D2 / F#2 / G2 / A2 — same pitch classes stacked across three octaves
     // for a Shepherd-tone substrate. The chord stays on these notes; only
     // the per-octave amplitudes shift during burst() to fake a continuous rise.
-    var chordPitches = [55, 73.4162, 92.4986, 110];
+    // `freqs` is hoisted to closure scope above so resetNotes() can read it.
     var octaveMults = [1, 2, 4]; // base, +1 oct, +2 oct
     // Steady-state weights — bell weighted toward the base layer so the drone
     // sits low until burst sweeps the bell upward.
@@ -4815,7 +4818,7 @@ class Knob {
     layerGains = octaveMults.map(function(mult, i) {
       var lg = ac.createGain();
       lg.gain.value = baselineWeights[i];
-      chordPitches.forEach(function(f) {
+      freqs.forEach(function(f) {
         var o = ac.createOscillator();
         o.type = 'sawtooth';
         o.frequency.value = f * mult;
@@ -4868,6 +4871,18 @@ class Knob {
       gain.gain.cancelScheduledValues(t);
       gain.gain.setValueAtTime(gain.gain.value, t);
       gain.gain.linearRampToValueAtTime(0.045 * level, t + 0.2);
+    }
+  }
+
+  function resetNotes() {
+    if (!ac || !oscs || !oscs.length) return;
+    var t = ac.currentTime;
+    for (var i = 0; i < freqs.length && i < oscs.length; i++) {
+      var o = oscs[i];
+      o.frequency.cancelScheduledValues(t);
+      o.frequency.setValueAtTime(freqs[i], t);
+      o.detune.cancelScheduledValues(t);
+      o.detune.setValueAtTime(0, t);
     }
   }
 
@@ -4954,6 +4969,8 @@ class Knob {
   // Expose for later phases (entropy / reset)
   window.__hero = window.__hero || {};
   window.__hero.drone = { burst: burst, setOn: setOn, setLevel: setLevel, isOn: function(){ return isOn; } };
+  // Expose on the existing __hero.drone object alongside burst/setOn/isOn/setLevel
+  window.__hero.drone.resetNotes = resetNotes;
 })();
 
 (function heroControls() {
@@ -4970,6 +4987,9 @@ class Knob {
   resetBtn.removeAttribute('disabled');
   resetBtn.addEventListener('click', function() {
     var p = poly(); if (p && p.reset) p.reset();
+    if (window.__hero && window.__hero.drone && window.__hero.drone.resetNotes) {
+      window.__hero.drone.resetNotes();
+    }
   });
 
   resumeBtn.addEventListener('click', function() {
