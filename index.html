@@ -1830,6 +1830,11 @@
     text-align: center;
     z-index: 3;
   }
+  .hero-meta-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
   .hero-meta-value {
     font-size: 1.1rem;
     font-variant-numeric: tabular-nums;
@@ -1871,8 +1876,14 @@
     <button class="hero-btn" id="resumeSim" type="button" hidden>RESUME</button>
   </div>
   <div class="hero-meta">
-    <span class="hero-meta-label">ENTROPY</span>
-    <span class="hero-meta-value" id="entropyMeter">0.00</span>
+    <div class="hero-meta-row">
+      <span class="hero-meta-label">DISLOCATION</span>
+      <span class="hero-meta-value" id="entropyMeter">0.00</span>
+    </div>
+    <div class="hero-meta-row">
+      <span class="hero-meta-label">PARTING</span>
+      <span class="hero-meta-value" id="partingMeter">0.00</span>
+    </div>
   </div>
 </section>
 
@@ -4031,6 +4042,7 @@ class Knob {
   // fully recovers. `paused` is a manual pause flag (separate from the
   // existing visibility-pause); set true when hero scrolls offscreen.
   var entropy = 0;
+  var parting = 0;
   var lastMeterUpdate = 0;
   var paused = false;
   // Legacy slider-controlled vars. The polyline doesn't use connectivity
@@ -4166,10 +4178,38 @@ class Knob {
     }
   }
 
+  // Live-computed metrics. DISLOCATION (entropy) is the summed distance of
+  // every node from its home position — it climbs as interactions push the
+  // line around and falls as applySettle drifts nodes back. PARTING is the
+  // summed length of all polyline segments — it climbs when neighbors get
+  // stretched apart and shrinks as the chain settles. Both are scaled so a
+  // single human-readable digit ≈ 100 px of total drift / length.
+  function computeMetrics() {
+    var totalDist = 0;
+    var totalLen = 0;
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      var dx = n.x - n.hx;
+      var dy = n.y - n.hy;
+      totalDist += Math.sqrt(dx * dx + dy * dy);
+      if (i < nodes.length - 1) {
+        var b = nodes[i + 1];
+        if (n.line === b.line) {
+          var ldx = b.x - n.x;
+          var ldy = b.y - n.y;
+          totalLen += Math.sqrt(ldx * ldx + ldy * ldy);
+        }
+      }
+    }
+    entropy = totalDist * 0.01;
+    parting = totalLen * 0.01;
+  }
+
   function step(dt) {
     var stiff = 0.06, damp = 0.62;
     var hoverR = 140, hoverR2 = hoverR * hoverR;
     applySettle();
+    computeMetrics();
     applyNeighborAttraction();
     applyHoldPull();
     for (var i = 0; i < nodes.length; i++) {
@@ -4249,6 +4289,8 @@ class Knob {
       lastMeterUpdate = t;
       var meter = document.getElementById('entropyMeter');
       if (meter) meter.textContent = entropy.toFixed(2);
+      var partMeter = document.getElementById('partingMeter');
+      if (partMeter) partMeter.textContent = parting.toFixed(2);
     }
     rafId = requestAnimationFrame(loop);
   }
@@ -4287,7 +4329,6 @@ class Knob {
         // Guard against giant deltas after a long gap (e.g. tab switch).
         if (pdx*pdx + pdy*pdy > 40000) { lastPx = px; lastPy = py; return; }
         var motion = Math.sqrt(pdx * pdx + pdy * pdy);
-        entropy += motion * 0.0003;
         var R = 120, R2 = R * R;
         for (var i = 0; i < nodes.length; i++) {
           var n = nodes[i];
@@ -4351,11 +4392,10 @@ class Knob {
         n.bx += nx * retainAmount;
         n.by += ny * retainAmount;
       }
-      // Phase 4: accumulate entropy so the line drifts over time.
-      // Base positions are now retained outward in the velocity-kick loop above
-      // — the spring pulls each node toward its newly scattered location
-      // instead of the original baseline.
-      entropy += 0.05 * clickMult;
+      // Phase 4: base positions are retained outward in the velocity-kick
+      // loop above — the spring pulls each node toward its newly scattered
+      // location instead of the original baseline. The DISLOCATION metric
+      // (computed live in computeMetrics) reflects this drift automatically.
     }
     window.addEventListener('click', function (e) { bumpInteraction(); clickImpulse(e.clientX, e.clientY); }, { passive: true });
     window.addEventListener('touchstart', function (e) {
@@ -4413,8 +4453,6 @@ class Knob {
       tilt.x = clamp(ev.gamma / 60, -1, 1);
       tilt.y = clamp(ev.beta / 60, -1, 1);
       var tiltX = tilt.x, tiltY = tilt.y;
-      var dt = Math.abs(tiltX - prevTiltX) + Math.abs(tiltY - prevTiltY);
-      entropy += dt * 0.005;
       prevTiltX = tiltX;
       prevTiltY = tiltY;
     }
@@ -4613,8 +4651,11 @@ class Knob {
       sprinkle();
       lastPx = null; lastPy = null;
       lastInteractionTime = (performance.now ? performance.now() : Date.now());
+      parting = 0;
       var meter = document.getElementById('entropyMeter');
       if (meter) meter.textContent = '0.00';
+      var partMeter = document.getElementById('partingMeter');
+      if (partMeter) partMeter.textContent = '0.00';
     },
     pause: function() { paused = true; },
     resume: function() { paused = false; },
