@@ -4803,9 +4803,9 @@ class Knob {
   var ac = null;
   var oscs = null, preGain = null, layerGains = null, filter = null, gain = null;
   var isOn = false;
-  // A1 / D2 / F#2 / G2 / A2 — base chord frequencies, hoisted to closure
-  // scope so resetNotes() can snap oscs back to canonical values.
-  var freqs = [55, 73.4162, 92.4986, 98.0, 110];
+  // G0 / A0 / A1 / D2 / F#2 / G2 / A2 — base chord frequencies, hoisted to
+  // closure scope so resetNotes() can snap oscs back to canonical values.
+  var freqs = [24.4997, 27.5, 55, 73.4162, 92.4986, 98.0, 110];
   var btn = document.getElementById('droneToggle');
   if (!btn) return;
 
