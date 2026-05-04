@@ -1884,6 +1884,10 @@
       <span class="hero-meta-label">PARTING</span>
       <span class="hero-meta-value" id="partingMeter">0.00</span>
     </div>
+    <div class="hero-meta-row">
+      <span class="hero-meta-label">MOVED</span>
+      <span class="hero-meta-value" id="movedMeter">0.00</span>
+    </div>
   </div>
 </section>
 
@@ -4043,6 +4047,8 @@ class Knob {
   // existing visibility-pause); set true when hero scrolls offscreen.
   var entropy = 0;
   var parting = 0;
+  var totalMoved = 0;
+  var moved = 0;
   var lastMeterUpdate = 0;
   var paused = false;
   // Legacy slider-controlled vars. The polyline doesn't use connectivity
@@ -4116,7 +4122,7 @@ class Knob {
       var bx = W * 0.04 + t * W * 0.92;
       var envelope = Math.sin(t * Math.PI); // 0 at t=0, 1 at t=0.5, 0 at t=1 — smooth taper
       var by = lineY + envelope * Math.sin(t * Math.PI * 2 * cycles) * H * 0.08;
-      nodes.push({ bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0, idx: i, line: 0, hx: bx, hy: by });
+      nodes.push({ bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0, idx: i, line: 0, hx: bx, hy: by, prevX: bx, prevY: by });
     }
   }
 
@@ -4192,6 +4198,11 @@ class Knob {
       var dx = n.x - n.hx;
       var dy = n.y - n.hy;
       totalDist += Math.sqrt(dx * dx + dy * dy);
+      var mdx = n.x - n.prevX;
+      var mdy = n.y - n.prevY;
+      totalMoved += Math.sqrt(mdx * mdx + mdy * mdy);
+      n.prevX = n.x;
+      n.prevY = n.y;
       if (i < nodes.length - 1) {
         var b = nodes[i + 1];
         if (n.line === b.line) {
@@ -4203,6 +4214,7 @@ class Knob {
     }
     entropy = totalDist * 0.01;
     parting = totalLen * 0.01;
+    moved = totalMoved * 0.01;
   }
 
   function step(dt) {
@@ -4291,6 +4303,8 @@ class Knob {
       if (meter) meter.textContent = entropy.toFixed(2);
       var partMeter = document.getElementById('partingMeter');
       if (partMeter) partMeter.textContent = parting.toFixed(2);
+      var movMeter = document.getElementById('movedMeter');
+      if (movMeter) movMeter.textContent = moved.toFixed(2);
     }
     rafId = requestAnimationFrame(loop);
   }
@@ -4652,10 +4666,14 @@ class Knob {
       lastPx = null; lastPy = null;
       lastInteractionTime = (performance.now ? performance.now() : Date.now());
       parting = 0;
+      totalMoved = 0;
+      moved = 0;
       var meter = document.getElementById('entropyMeter');
       if (meter) meter.textContent = '0.00';
       var partMeter = document.getElementById('partingMeter');
       if (partMeter) partMeter.textContent = '0.00';
+      var movMeter = document.getElementById('movedMeter');
+      if (movMeter) movMeter.textContent = '0.00';
     },
     pause: function() { paused = true; },
     resume: function() { paused = false; },
@@ -4668,7 +4686,9 @@ class Knob {
     setClick: function(v) { clickMult = +v; },
     setAttraction: function(v) { attractionMult = Math.max(0, Math.min(1, +v) || 0); },
     setSplatter: function(v) { splatterMult = Math.max(0, Math.min(2, +v) || 0); },
-    getEntropy: function() { return entropy; }
+    getEntropy: function() { return entropy; },
+    getParting: function() { return parting; },
+    getMoved: function() { return moved; }
   };
 
   resize();
@@ -4829,8 +4849,10 @@ class Knob {
     if (!ac || !filter || !oscs || !gain) return;
     if (!isOn) return;
     var t = ac.currentTime;
-    var entropy = (window.__hero && window.__hero.poly && window.__hero.poly.getEntropy)
-      ? window.__hero.poly.getEntropy() : 0;
+    var poly = window.__hero && window.__hero.poly;
+    var entropy = poly && poly.getEntropy ? poly.getEntropy() : 0;
+    var parting = poly && poly.getParting ? poly.getParting() : 0;
+    var moved = poly && poly.getMoved ? poly.getMoved() : 0;
     // Overall interaction strength — halves the response of every parameter
     // (pointer / tilt / entropy) so the drone modulates more subtly.
     var K = 0.5;
@@ -4839,14 +4861,14 @@ class Knob {
     filter.frequency.cancelScheduledValues(t);
     filter.frequency.setValueAtTime(filter.frequency.value, t);
     filter.frequency.linearRampToValueAtTime(cutoff, t + 0.12);
-    var q = 2 + (pointerNY * 6 * K) + (entropy * 3 * K);
+    var q = 2 + pointerNY * 6 + parting * 0.5;
     filter.Q.cancelScheduledValues(t);
     filter.Q.setValueAtTime(filter.Q.value, t);
     filter.Q.linearRampToValueAtTime(q, t + 0.12);
     // Detune (cents) — applied uniformly across the chord. All four
     // parameters (pointerX/Y, tilt, entropy) now nudge pitch so every note
     // in the chord breathes with the interaction, not just tilt+entropy.
-    var detuneTarget = (tiltX * 30 + entropy * 8 + (pointerNX - 0.5) * 40 + (pointerNY - 0.5) * 20) * K;
+    var detuneTarget = (tiltX * 30 + (pointerNX - 0.5) * 40 + (pointerNY - 0.5) * 20) * K;
     oscs.forEach(function(o) {
       o.detune.cancelScheduledValues(t);
       o.detune.setValueAtTime(o.detune.value, t);
@@ -4861,7 +4883,7 @@ class Knob {
       preGain.gain.linearRampToValueAtTime(preTarget, t + 0.12);
     }
     // Master gain swells with entropy so the drone audibly thickens.
-    var gainTarget = isOn ? 0.045 * level * (1 + entropy * 0.3 * K) : 0;
+    var gainTarget = isOn ? 0.045 * level * (1 + Math.min(moved * 0.02, 1.5)) : 0;
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(gain.gain.value, t);
     gain.gain.linearRampToValueAtTime(gainTarget, t + 0.12);
