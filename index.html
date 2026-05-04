@@ -4857,11 +4857,11 @@ class Knob {
     // (pointer / tilt / entropy) so the drone modulates more subtly.
     var K = 0.5;
     // Filter cutoff drifts with pointerX + entropy; Q with pointerY + entropy.
-    var cutoff = 280 + (pointerNX * 800 * K) + (entropy * 600 * K);
+    var cutoff = 280 + (pointerNX * 800 * K) + (entropy * 60 * K);
     filter.frequency.cancelScheduledValues(t);
     filter.frequency.setValueAtTime(filter.frequency.value, t);
     filter.frequency.linearRampToValueAtTime(cutoff, t + 0.12);
-    var q = 2 + pointerNY * 6 + parting * 0.5;
+    var q = 2 + pointerNY * 6 + parting * 0.05;
     filter.Q.cancelScheduledValues(t);
     filter.Q.setValueAtTime(filter.Q.value, t);
     filter.Q.linearRampToValueAtTime(q, t + 0.12);
@@ -4883,7 +4883,7 @@ class Knob {
       preGain.gain.linearRampToValueAtTime(preTarget, t + 0.12);
     }
     // Master gain swells with entropy so the drone audibly thickens.
-    var gainTarget = isOn ? 0.045 * level * (1 + Math.min(moved * 0.02, 1.5)) : 0;
+    var gainTarget = isOn ? 0.045 * level * (1 + Math.min(moved * 0.002, 0.15)) : 0;
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(gain.gain.value, t);
     gain.gain.linearRampToValueAtTime(gainTarget, t + 0.12);
@@ -4992,7 +4992,7 @@ class Knob {
     var entropy = getEntropy();
     filter.frequency.cancelScheduledValues(t);
     filter.frequency.setValueAtTime(filter.frequency.value, t);
-    filter.frequency.linearRampToValueAtTime(1200 + entropy * 1500, t + 0.04);
+    filter.frequency.linearRampToValueAtTime(1200 + entropy * 150, t + 0.04);
     filter.frequency.exponentialRampToValueAtTime(280, t + 0.7);
     // Tiny pitch bend across the chord
     if (oscs && oscs.length) {
