@@ -4063,6 +4063,19 @@ class Knob {
   var pullX = -9999;
   var pullY = -9999;
 
+  // Idle-settle: when the user stops interacting, drift each node's base
+  // position back toward its original "home" (hx, hy) over ~30s of soft
+  // exponential decay. Neighbor attraction continues to apply during the
+  // migration so the chain still self-organizes while it relaxes home.
+  var lastInteractionTime = performance.now ? performance.now() : Date.now();
+  var IDLE_BEFORE_SETTLE = 10000; // ms
+  var SETTLE_HALF_LIFE = 30000;   // ms — full ~99% recovery in this window
+  // Per-frame decay rate for exponential approach. At 60fps, 1800 frames in 30s.
+  var SETTLE_RATE = 1 - Math.pow(0.01, 1 / (SETTLE_HALF_LIFE * 60 / 1000));
+  function bumpInteraction() {
+    lastInteractionTime = (performance.now ? performance.now() : Date.now());
+  }
+
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
   function resize() {
@@ -4091,7 +4104,7 @@ class Knob {
       var bx = W * 0.04 + t * W * 0.92;
       var envelope = Math.sin(t * Math.PI); // 0 at t=0, 1 at t=0.5, 0 at t=1 — smooth taper
       var by = lineY + envelope * Math.sin(t * Math.PI * 2 * cycles) * H * 0.08;
-      nodes.push({ bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0, idx: i, line: 0 });
+      nodes.push({ bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0, idx: i, line: 0, hx: bx, hy: by });
     }
   }
 
@@ -4123,6 +4136,16 @@ class Knob {
     }
   }
 
+  function applySettle() {
+    var now = (performance.now ? performance.now() : Date.now());
+    if (now - lastInteractionTime < IDLE_BEFORE_SETTLE) return;
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      n.bx += (n.hx - n.bx) * SETTLE_RATE;
+      n.by += (n.hy - n.by) * SETTLE_RATE;
+    }
+  }
+
   function applyHoldPull() {
     if (!pullActive) return;
     if (pullX < 0 || pullY < 0) return;
@@ -4146,6 +4169,7 @@ class Knob {
   function step(dt) {
     var stiff = 0.06, damp = 0.62;
     var hoverR = 140, hoverR2 = hoverR * hoverR;
+    applySettle();
     applyNeighborAttraction();
     applyHoldPull();
     for (var i = 0; i < nodes.length; i++) {
@@ -4279,6 +4303,7 @@ class Knob {
       lastPx = px; lastPy = py;
     }
     window.addEventListener('mousemove', function (e) {
+      bumpInteraction();
       pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true;
       applyPlasticDrag(e.clientX, e.clientY);
     }, { passive: true });
@@ -4286,12 +4311,13 @@ class Knob {
       pointer.active = false; lastPx = null; lastPy = null;
     }, { passive: true });
     window.addEventListener('touchmove', function (e) {
+      bumpInteraction();
       if (e.touches && e.touches[0]) {
         pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY; pointer.active = true;
         applyPlasticDrag(e.touches[0].clientX, e.touches[0].clientY);
       }
     }, { passive: true });
-    window.addEventListener('touchend', function () { lastPx = null; lastPy = null; }, { passive: true });
+    window.addEventListener('touchend', function () { bumpInteraction(); lastPx = null; lastPy = null; }, { passive: true });
 
     function clickImpulse(rx, ry) {
       // One-shot radial impulse: outward velocity applied once, falling off
@@ -4331,8 +4357,9 @@ class Knob {
       // instead of the original baseline.
       entropy += 0.05 * clickMult;
     }
-    window.addEventListener('click', function (e) { clickImpulse(e.clientX, e.clientY); }, { passive: true });
+    window.addEventListener('click', function (e) { bumpInteraction(); clickImpulse(e.clientX, e.clientY); }, { passive: true });
     window.addEventListener('touchstart', function (e) {
+      bumpInteraction();
       if (e.touches && e.touches[0]) clickImpulse(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
 
@@ -4355,6 +4382,7 @@ class Knob {
     }
 
     window.addEventListener('mousedown', function(e) {
+      bumpInteraction();
       startPressHold(e.clientX, e.clientY);
     });
     window.addEventListener('mousemove', function(e) {
@@ -4378,6 +4406,7 @@ class Knob {
     var bgTiltAttached = false;
     var prevTiltX = 0, prevTiltY = 0;
     function onBgTilt(ev) {
+      bumpInteraction();
       if (ev.gamma == null || ev.beta == null) return;
       // Tighter saturation (30° instead of 45°) so a small wrist flick already
       // pushes |tilt| toward 1 — the bg now responds at typical handheld angles.
@@ -4583,6 +4612,7 @@ class Knob {
       nodes = [];
       sprinkle();
       lastPx = null; lastPy = null;
+      lastInteractionTime = (performance.now ? performance.now() : Date.now());
       var meter = document.getElementById('entropyMeter');
       if (meter) meter.textContent = '0.00';
     },
