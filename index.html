@@ -4831,32 +4831,37 @@ class Knob {
     var t = ac.currentTime;
     var entropy = (window.__hero && window.__hero.poly && window.__hero.poly.getEntropy)
       ? window.__hero.poly.getEntropy() : 0;
+    // Overall interaction strength — halves the response of every parameter
+    // (pointer / tilt / entropy) so the drone modulates more subtly.
+    var K = 0.5;
     // Filter cutoff drifts with pointerX + entropy; Q with pointerY + entropy.
-    var cutoff = 280 + (pointerNX * 800) + (entropy * 600);
+    var cutoff = 280 + (pointerNX * 800 * K) + (entropy * 600 * K);
     filter.frequency.cancelScheduledValues(t);
     filter.frequency.setValueAtTime(filter.frequency.value, t);
     filter.frequency.linearRampToValueAtTime(cutoff, t + 0.12);
-    var q = 2 + (pointerNY * 6) + entropy * 3;
+    var q = 2 + (pointerNY * 6 * K) + (entropy * 3 * K);
     filter.Q.cancelScheduledValues(t);
     filter.Q.setValueAtTime(filter.Q.value, t);
     filter.Q.linearRampToValueAtTime(q, t + 0.12);
-    // Detune (cents) — applied uniformly across the chord; entropy nudges pitch.
-    var detuneTarget = tiltX * 30 + entropy * 8;
+    // Detune (cents) — applied uniformly across the chord. All four
+    // parameters (pointerX/Y, tilt, entropy) now nudge pitch so every note
+    // in the chord breathes with the interaction, not just tilt+entropy.
+    var detuneTarget = (tiltX * 30 + entropy * 8 + (pointerNX - 0.5) * 40 + (pointerNY - 0.5) * 20) * K;
     oscs.forEach(function(o) {
       o.detune.cancelScheduledValues(t);
       o.detune.setValueAtTime(o.detune.value, t);
       o.detune.linearRampToValueAtTime(detuneTarget, t + 0.12);
     });
-    // preGain headroom — divided down by (1 + entropy) so the chord/Shepherd
+    // preGain headroom — divided down by (1 + entropy*K) so the chord/Shepherd
     // stack auto-attenuates as the line accumulates damage.
     if (preGain) {
-      var preTarget = 1 / (1 + entropy);
+      var preTarget = 1 / (1 + entropy * K);
       preGain.gain.cancelScheduledValues(t);
       preGain.gain.setValueAtTime(preGain.gain.value, t);
       preGain.gain.linearRampToValueAtTime(preTarget, t + 0.12);
     }
     // Master gain swells with entropy so the drone audibly thickens.
-    var gainTarget = isOn ? 0.045 * level * (1 + entropy * 0.3) : 0;
+    var gainTarget = isOn ? 0.045 * level * (1 + entropy * 0.3 * K) : 0;
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(gain.gain.value, t);
     gain.gain.linearRampToValueAtTime(gainTarget, t + 0.12);
