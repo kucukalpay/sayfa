@@ -4140,7 +4140,9 @@ class Knob {
 
   function applyNeighborAttraction() {
     if (attractionMult <= 0) return;
-    var coef = ATTRACTION_BASE * attractionMult;
+    var now = (performance.now ? performance.now() : Date.now());
+    var settling = (now - lastInteractionTime) > IDLE_BEFORE_SETTLE;
+    var coef = ATTRACTION_BASE * attractionMult * (settling ? 4 : 1);
     for (var i = 0; i < nodes.length - 1; i++) {
       var a = nodes[i];
       var b = nodes[i + 1];
@@ -4163,11 +4165,17 @@ class Knob {
 
   function applySettle() {
     var now = (performance.now ? performance.now() : Date.now());
-    if (now - lastInteractionTime < IDLE_BEFORE_SETTLE) return;
+    var sinceIdle = now - lastInteractionTime - IDLE_BEFORE_SETTLE;
+    if (sinceIdle < 0) return;
+    // Soft ease-in: ramp the effective rate from 0 → full over first 5s of settle
+    var ramp = Math.min(1, sinceIdle / 5000);
+    ramp = ramp * ramp; // quadratic ease-in (slow start, faster end)
+    var rate = SETTLE_RATE * ramp;
+    if (rate <= 0) return;
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
-      n.bx += (n.hx - n.bx) * SETTLE_RATE;
-      n.by += (n.hy - n.by) * SETTLE_RATE;
+      n.bx += (n.hx - n.bx) * rate;
+      n.by += (n.hy - n.by) * rate;
     }
   }
 
