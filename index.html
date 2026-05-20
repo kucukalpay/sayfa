@@ -1678,7 +1678,7 @@
   /* ----- Return Home button — visible only when scroll lock is OFF ----- */
   .return-home {
     position: fixed;
-    bottom: 1rem;
+    bottom: 4.5rem;
     left: 1rem;
     z-index: 8000;
     background: rgba(17, 17, 20, 0.7);
@@ -1698,9 +1698,6 @@
   }
   .return-home:hover { background: rgba(17, 17, 20, 0.9); color: #fff; }
   body.lock-scroll .return-home { display: none; }
-  @media (max-width: 768px) {
-    .return-home { bottom: 4.5rem; }
-  }
 
   .hero {
     position: relative;
