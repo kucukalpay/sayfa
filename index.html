@@ -15,7 +15,7 @@
     --ink: #f4f4f5;
     --ink-dim: #a1a1aa;
     --ink-faint: #52525b;
-    --accent: #ff5722;
+    --accent: #b5b5ba;
     --accent-2: #00e5ff;
     --line: rgba(255,255,255,0.08);
   }
@@ -140,7 +140,7 @@
     transition: transform 0.4s ease, border-color 0.3s;
     aspect-ratio: 16/10;
   }
-  .tile:hover { border-color: rgba(255,87,34,0.5); }
+  .tile:hover { border-color: rgba(181,181,186,0.5); }
   .tile:hover .tile-media { transform: scale(1.04); }
   .tile-media {
     position: absolute; inset: 0;
@@ -291,7 +291,7 @@
   .synth-subcard.has-pcb {
     background:
       radial-gradient(ellipse at center, rgba(10,10,11,0.35) 0%, rgba(10,10,11,0.85) 100%),
-      url('assets/images/mkv-pcb.webp') center/cover no-repeat,
+      url('assets/images/mkv-pcb_soluk.jpg') center/cover no-repeat,
       rgba(17, 17, 20, 0.55);
   }
   .synth-subcard-head {
@@ -492,7 +492,7 @@
     touch-action: none;
     user-select: none;
   }
-  .knob:hover { border-color: rgba(255,87,34,0.4); }
+  .knob:hover { border-color: rgba(181,181,186,0.4); }
   .knob.modulated {
     border-color: rgba(0,229,255,0.6);
     box-shadow: 0 0 12px rgba(0,229,255,0.15), 0 2px 6px rgba(0,0,0,0.5);
@@ -509,7 +509,7 @@
     background: var(--accent);
     transform: translateX(-50%);
     border-radius: 1px;
-    box-shadow: 0 0 4px rgba(255,87,34,0.6);
+    box-shadow: 0 0 4px rgba(181,181,186,0.6);
   }
   .knob-ring {
     position: absolute; inset: -5px;
@@ -617,13 +617,13 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
     padding: 0;
   }
-  .drone-btn:hover { border-color: rgba(255,87,34,0.4); color: var(--ink); }
+  .drone-btn:hover { border-color: rgba(181,181,186,0.4); color: var(--ink); }
   .drone-btn .drone-ico { line-height: 1; display: inline-block; }
   .drone-btn.on {
     background: radial-gradient(circle at 30% 30%, #3a1a10 0%, #1e0a06 60%, #0a0302 100%);
     border-color: var(--accent);
     color: var(--accent);
-    box-shadow: 0 0 18px rgba(255,87,34,0.3), inset 0 0 12px rgba(255,87,34,0.2);
+    box-shadow: 0 0 18px rgba(181,181,186,0.3), inset 0 0 12px rgba(181,181,186,0.2);
   }
   .drone-btn.on .drone-ico { }
 
@@ -652,9 +652,9 @@
     display: block;
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, var(--accent-2) 0%, var(--accent) 70%, #ff8b3c 100%);
+    background: linear-gradient(90deg, var(--accent-2) 0%, var(--accent) 70%, #d4d4d8 100%);
     transition: width 0.08s ease;
-    box-shadow: 0 0 6px rgba(255,87,34,0.4);
+    box-shadow: 0 0 6px rgba(181,181,186,0.4);
   }
 
   /* pedals */
@@ -672,11 +672,11 @@
     user-select: none;
     display: flex; flex-direction: column;
   }
-  .pedal:hover { border-color: rgba(255,87,34,0.4); }
+  .pedal:hover { border-color: rgba(181,181,186,0.4); }
   .pedal.on {
     border-color: var(--accent);
-    background: rgba(255,87,34,0.06);
-    box-shadow: 0 0 18px rgba(255,87,34,0.12);
+    background: rgba(181,181,186,0.06);
+    box-shadow: 0 0 18px rgba(181,181,186,0.12);
   }
   .pedal-switch {
     width: 100%;
@@ -906,7 +906,7 @@
     background: rgba(0, 0, 0, 0.2);
     transition: border-color 0.2s, background 0.2s;
   }
-  .audio-row.playing { border-color: var(--accent); background: rgba(255, 87, 34, 0.08); }
+  .audio-row.playing { border-color: var(--accent); background: rgba(181, 181, 186, 0.08); }
   .audio-play {
     width: 26px; height: 26px;
     border-radius: 50%;
@@ -1244,7 +1244,7 @@
     .rig { backdrop-filter: none; -webkit-backdrop-filter: none;
            background:
              radial-gradient(ellipse at center, rgba(10,10,11,0.25) 0%, rgba(10,10,11,0.65) 100%),
-             url('assets/images/mkv-pcb.webp') center/cover no-repeat,
+             url('assets/images/mkv-pcb_soluk.jpg') center/cover no-repeat,
              #0a0a0b; }
   }
   @media (max-width: 640px) {
@@ -2029,7 +2029,7 @@
 <!-- 02 · SYNTHS (card) -->
 <section id="synths" class="section-shell reveal">
   <div class="section-card" data-modal-target="modal-synths">
-    <img class="card-hero" src="assets/images/mkv-pcb.webp" alt="Hand-built modular synth PCB" loading="lazy">
+    <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Synths &amp; Pedals</h2>
       <p class="card-desc">Modular synth experiments and effect pedals — patch some cables, tweak a knob, plug in a sensor. Click to play.</p>
@@ -3390,7 +3390,7 @@ class Knob {
       sum += v;
       const bar = vizBars[i];
       bar.style.height = `${Math.max(4, v * 100)}%`;
-      const color = v > 0.6 ? '#00e5ff' : '#ff5722';
+      const color = v > 0.6 ? '#00e5ff' : '#b5b5ba';
       if (_prevBarColor[i] !== color) { bar.style.background = color; _prevBarColor[i] = color; }
       bar.style.opacity = 0.25 + v * 0.75;
     }
@@ -3722,7 +3722,7 @@ class Knob {
   function getBarGradient(h) {
     if (_barGrad && _barGradH === h) return _barGrad;
     const g = ctx2d.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#ff5722');
+    g.addColorStop(0, '#b5b5ba');
     g.addColorStop(1, '#00e5ff');
     _barGrad = g; _barGradH = h;
     return g;
