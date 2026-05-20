@@ -2433,7 +2433,7 @@
     <h2>Photo</h2>
     <span class="tag">Older</span>
   </div>
-  <div class="photo-grid">
+  <div class="photo-grid" id="photo-grid" data-photo-folder="assets/images/pht">
     <div class="photo-tile wide"><img src="assets/images/pht/pornoma_dokunma.webp" alt="Pornoma dokunma" loading="lazy"></div>
     <div class="photo-tile"><img src="assets/images/pht/aylin.webp" alt="Aylin" loading="lazy"></div>
     <div class="photo-tile"><img src="assets/images/pht/nadia.webp" alt="Nadia" loading="lazy"></div>
@@ -2441,7 +2441,7 @@
     <div class="photo-tile"><img src="assets/images/pht/guyfawkes.webp" alt="Guy Fawkes" loading="lazy"></div>
     <div class="photo-tile wide"><img src="assets/images/pht/isyan_hatirasi.webp" alt="İsyan hatırası" loading="lazy"></div>
     <div class="photo-tile"><img src="assets/images/pht/DSC_1561.webp" alt="DSC_1561" loading="lazy"></div>
-    <div class="photo-tile"><img src="assets/images/pht/soguk_.gif" alt="Soğuk" loading="lazy"></div>
+    <div class="photo-tile wide"><img src="assets/images/pht/soguk_.gif" alt="Soğuk" loading="lazy"></div>
   </div>
   </div><!-- /.block -->
   </div><!-- /.modal-content -->
@@ -2468,6 +2468,88 @@
 /* Three.js is lazy-loaded by the hero bootstrapper below — moved out of the
    critical path so first paint isn't blocked by a ~600KB library request.
    Reduced-motion users never load it at all. */
+</script>
+
+<script>
+/* ================= PHOTO GRID: auto-list + orientation =================
+   The photo grid is the inline list above as a fallback. At runtime we try
+   to list files from the photos folder via the GitHub Contents API so new
+   uploads to assets/images/pht show up automatically on the published site.
+   Each tile is classified .wide (landscape) or default (portrait/square)
+   from the image's natural dimensions on load. If you fork the site, update
+   GH_OWNER / GH_REPO below. */
+(function () {
+  var grid = document.getElementById('photo-grid');
+  if (!grid) return;
+
+  var GH_OWNER = 'kucukalpay';
+  var GH_REPO  = 'sayfa';
+  var GH_BRANCH = 'main';
+  var GH_PATH  = grid.dataset.photoFolder || 'assets/images/pht';
+  var IMG_RE   = /\.(webp|jpe?g|png|gif|avif)$/i;
+  var LANDSCAPE_RATIO = 1.10; // width/height threshold to flip a tile to .wide
+
+  function classify(img, tile) {
+    if (!img.naturalWidth || !img.naturalHeight) return;
+    var ratio = img.naturalWidth / img.naturalHeight;
+    if (ratio >= LANDSCAPE_RATIO) tile.classList.add('wide');
+    else tile.classList.remove('wide');
+  }
+
+  function wireTile(tile) {
+    var img = tile.querySelector('img');
+    if (!img) return;
+    if (img.complete && img.naturalWidth) {
+      classify(img, tile);
+    } else {
+      img.addEventListener('load', function () { classify(img, tile); }, { once: true });
+    }
+  }
+
+  function rebalanceInline() {
+    grid.querySelectorAll('.photo-tile').forEach(wireTile);
+  }
+
+  function prettyAlt(name) {
+    return name.replace(IMG_RE, '').replace(/[_\-]+/g, ' ').trim();
+  }
+
+  function buildTile(src, alt) {
+    var tile = document.createElement('div');
+    tile.className = 'photo-tile';
+    var img = document.createElement('img');
+    img.loading = 'lazy';
+    img.alt = alt || '';
+    img.src = src;
+    tile.appendChild(img);
+    if (img.complete && img.naturalWidth) classify(img, tile);
+    else img.addEventListener('load', function () { classify(img, tile); }, { once: true });
+    return tile;
+  }
+
+  // Always classify the inline tiles immediately (covers local/file:// use
+  // and the moment before the network listing comes back).
+  rebalanceInline();
+
+  // Try to refresh the listing from the repo. Only meaningful on the public
+  // site; locally this 404s or CORS-fails and we keep the inline fallback.
+  var api = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO +
+            '/contents/' + GH_PATH + '?ref=' + GH_BRANCH;
+  fetch(api, { headers: { 'Accept': 'application/vnd.github+json' } })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function (items) {
+      if (!Array.isArray(items)) return;
+      var files = items
+        .filter(function (i) { return i.type === 'file' && IMG_RE.test(i.name); })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+      if (!files.length) return;
+      grid.innerHTML = '';
+      files.forEach(function (f) {
+        grid.appendChild(buildTile(GH_PATH + '/' + f.name, prettyAlt(f.name)));
+      });
+    })
+    .catch(function () { /* offline / private repo / wrong owner — inline list stays */ });
+})();
 </script>
 
 <script>
