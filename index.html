@@ -17,8 +17,11 @@
     --ink-faint: #52525b;
     --accent: #b5b5ba;
     --accent-2: #00e5ff;
-    --line: rgba(255,255,255,0.08);
+    --line: transparent;
   }
+  /* ANE keeps its 1px white frames — restore the original --line value
+     for everything scoped inside the synth section. */
+  .synth-section { --line: rgba(255,255,255,0.08); }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
@@ -1553,7 +1556,7 @@
     z-index: 9001;
     background: rgba(0, 0, 0, 0.6);
     color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 0;
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -1575,7 +1578,6 @@
     border-radius: 8px;
     overflow: hidden;
     background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
   }
   .work-tile img {
     width: 100%;
@@ -1623,19 +1625,18 @@
     padding: 10px 14px;
     background: rgba(255,255,255,0.04);
     color: inherit;
-    border: 1px solid rgba(255,255,255,0.12);
+    border: 0;
     border-radius: 8px;
     cursor: pointer;
     font: inherit;
     text-align: left;
-    transition: background 200ms, border-color 200ms;
+    transition: background 200ms;
   }
   .subcard-toggle:hover {
     background: rgba(255,255,255,0.08);
-    border-color: rgba(255,255,255,0.2);
   }
   .subcard-toggle:focus-visible {
-    outline: 2px solid rgba(255,255,255,0.4);
+    outline: 2px solid var(--ink-dim);
     outline-offset: 2px;
   }
   .subcard-toggle-label {
@@ -1998,24 +1999,24 @@
     <h2 style="margin-top: 0;">3D &amp; Procedural</h2>
     <p style="opacity: 0.75;">Showreel, selected works, generative scenes, and FX rigs.</p>
 
-    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 0 0 28px;">
-      <iframe data-src="https://www.youtube.com/embed/TzZFn1TwO70" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Main showreel"></iframe>
-    </div>
-
     <div class="subcard">
       <h3>3D</h3>
       <p class="subcard-desc">Current showreel, with earlier reels tucked underneath.</p>
       <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 16px 0;">
-        <iframe data-src="https://player.vimeo.com/video/172109439?h=24625824ba" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" allowfullscreen title="3D showreel"></iframe>
+        <iframe data-src="https://www.youtube.com/embed/TzZFn1TwO70" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="3D showreel — 2026"></iframe>
       </div>
       <button class="subcard-toggle" aria-expanded="false" type="button">
         <span class="subcard-toggle-label">Earlier showreels</span>
         <span class="subcard-chev" aria-hidden="true">▾</span>
       </button>
       <div class="subcard-body">
-        <p class="subcard-desc" style="margin: 8px 0 0;">Earlier showreel</p>
+        <p class="subcard-desc" style="margin: 8px 0 0;">2016 showreel</p>
         <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 8px 0 16px;">
-          <iframe data-src="https://player.vimeo.com/video/49562505" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="3D showreel — earlier"></iframe>
+          <iframe data-src="https://player.vimeo.com/video/172109439?h=24625824ba" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" allowfullscreen title="3D showreel — 2016"></iframe>
+        </div>
+        <p class="subcard-desc" style="margin: 8px 0 0;">2012 showreel</p>
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 8px 0 16px;">
+          <iframe data-src="https://player.vimeo.com/video/49562505" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="3D showreel — 2012"></iframe>
         </div>
       </div>
     </div>
