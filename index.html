@@ -1868,7 +1868,7 @@
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
 <section class="hero" id="hero" aria-label="Welcome">
-  <button class="hero-nav-toggle" type="button" aria-expanded="false" aria-controls="heroNav" aria-label="Toggle navigation"><span class="hero-nav-toggle-label">NAVIGATE</span><span class="hero-nav-toggle-chev" aria-hidden="true">▾</span></button>
+  <button class="hero-nav-toggle" type="button" aria-expanded="false" aria-controls="heroNav" aria-label="Toggle navigation"><span class="hero-nav-toggle-label">SHOWREEL</span><span class="hero-nav-toggle-chev" aria-hidden="true">▾</span></button>
   <nav class="hero-nav" id="heroNav" aria-label="Sections">
     <a href="#three-d" data-target="three-d">3D SHOWREEL</a>
     <a href="#synths" data-target="synths">Synths</a>
@@ -1883,15 +1883,14 @@
     <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
     <button class="hero-btn" id="resetSim" type="button">RESET</button>
     <button class="hero-btn" id="saveSim" type="button">SAVE</button>
-    <button class="hero-btn" id="resumeSim" type="button" hidden>RESUME</button>
-  </div>
-  <div class="hero-meta">
-    <div class="hero-meta-row">
-      <span class="hero-meta-label">ENTROPY</span>
-      <span class="hero-meta-value" id="entropyMeter">0.00</span>
-    </div>
   </div>
 </section>
+<div class="hero-meta">
+  <div class="hero-meta-row">
+    <span class="hero-meta-label">ENTROPY</span>
+    <span class="hero-meta-value" id="entropyMeter">0.00</span>
+  </div>
+</div>
 
 <!-- Return Home button: lives outside hero, always rendered, but the CSS rule
      `body.lock-scroll .return-home { display: none; }` keeps it invisible while
@@ -5117,12 +5116,11 @@ class Knob {
 })();
 
 (function heroControls() {
-  // Phase 4: wire the RESET and RESUME buttons to the polyline engine,
-  // and auto-pause that engine when the hero scrolls out of view.
+  // Phase 4: wire the RESET button to the polyline engine, and auto-pause/resume
+  // that engine when the hero scrolls out of / back into view.
   var resetBtn = document.getElementById('resetSim');
-  var resumeBtn = document.getElementById('resumeSim');
   var hero = document.getElementById('hero');
-  if (!resetBtn || !resumeBtn || !hero) return;
+  if (!resetBtn || !hero) return;
 
   var poly = function() { return (window.__hero && window.__hero.poly) || null; };
 
@@ -5135,14 +5133,7 @@ class Knob {
     }
   });
 
-  resumeBtn.addEventListener('click', function() {
-    var p = poly();
-    if (p && p.resume) p.resume();
-    resumeBtn.hidden = true;
-  });
-
-  // Auto-pause when hero leaves viewport. Resume is button-driven only —
-  // do NOT auto-resume on re-entry.
+  // Auto-pause when hero leaves viewport; auto-resume when it returns.
   if ('IntersectionObserver' in window) {
     var io = new IntersectionObserver(function(entries) {
       entries.forEach(function(e) {
@@ -5150,7 +5141,8 @@ class Knob {
         if (!p) return;
         if (!e.isIntersecting) {
           p.pause();
-          resumeBtn.hidden = false;
+        } else {
+          p.resume();
         }
       });
     }, { threshold: 0.3 });
