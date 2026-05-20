@@ -1061,6 +1061,7 @@
   .photo-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
+    grid-auto-flow: dense;
     gap: 0.5rem;
   }
   .photo-tile {
@@ -1086,7 +1087,19 @@
   .photo-tile.wide { aspect-ratio: 3/2; grid-column: span 2; }
 
   /* contact */
-  .contact { text-align: center; padding: 7rem 2rem; }
+  .contact {
+    text-align: center;
+    max-width: 720px;
+    margin: 7rem auto;
+    padding: 4rem 2rem;
+    background: rgba(17, 17, 20, 0.55);
+    border-radius: 14px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  @media (max-width: 760px) {
+    .contact { margin: 5rem 1rem; padding: 3rem 1.25rem; }
+  }
   .contact h2 {
     font-size: clamp(1.75rem, 4vw, 2.75rem);
     font-weight: 500;
@@ -2476,13 +2489,15 @@
 </script>
 
 <script>
-/* ================= PHOTO GRID: auto-list + orientation =================
+/* ================= PHOTO GRID: auto-list + orientation + pairing =========
    The photo grid is the inline list above as a fallback. At runtime we try
    to list files from the photos folder via the GitHub Contents API so new
    uploads to assets/images/pht show up automatically on the published site.
    Each tile is classified .wide (landscape) or default (portrait/square)
-   from the image's natural dimensions on load. If you fork the site, update
-   GH_OWNER / GH_REPO below. */
+   from the image's natural dimensions on load. After classification we also
+   reorder the tiles so portrait photos always appear in pairs — this keeps
+   the dense 4-col grid from leaving holes around landscape tiles. If you
+   fork the site, update GH_OWNER / GH_REPO below. */
 (function () {
   var grid = document.getElementById('photo-grid');
   if (!grid) return;
@@ -2494,25 +2509,63 @@
   var IMG_RE   = /\.(webp|jpe?g|png|gif|avif)$/i;
   var LANDSCAPE_RATIO = 1.10; // width/height threshold to flip a tile to .wide
 
-  function classify(img, tile) {
-    if (!img.naturalWidth || !img.naturalHeight) return;
-    var ratio = img.naturalWidth / img.naturalHeight;
-    if (ratio >= LANDSCAPE_RATIO) tile.classList.add('wide');
-    else tile.classList.remove('wide');
+  function isLandscape(img) {
+    return img.naturalWidth && img.naturalHeight &&
+      (img.naturalWidth / img.naturalHeight) >= LANDSCAPE_RATIO;
   }
 
-  function wireTile(tile) {
+  function classify(tile) {
     var img = tile.querySelector('img');
-    if (!img) return;
-    if (img.complete && img.naturalWidth) {
-      classify(img, tile);
-    } else {
-      img.addEventListener('load', function () { classify(img, tile); }, { once: true });
-    }
+    if (!img || !img.naturalWidth) return null;
+    var landscape = isLandscape(img);
+    if (landscape) tile.classList.add('wide');
+    else tile.classList.remove('wide');
+    return landscape;
   }
 
-  function rebalanceInline() {
-    grid.querySelectorAll('.photo-tile').forEach(wireTile);
+  // Reorder so portraits appear in pairs. Landscapes keep their relative
+  // order; portraits are buffered until two are collected, then emitted
+  // back-to-back. A trailing solo portrait is appended at the end (grid
+  // dense flow will pack it).
+  function pairPortraits(tiles) {
+    var out = [];
+    var buf = [];
+    tiles.forEach(function (entry) {
+      if (entry.landscape) {
+        out.push(entry.tile);
+      } else {
+        buf.push(entry.tile);
+        if (buf.length === 2) {
+          out.push(buf[0], buf[1]);
+          buf.length = 0;
+        }
+      }
+    });
+    if (buf.length) out.push(buf[0]);
+    return out;
+  }
+
+  // Wait for every image in `tiles` to know its natural dimensions, then
+  // classify, pair, and re-attach in pair-order.
+  function arrange(tiles) {
+    var waits = tiles.map(function (tile) {
+      var img = tile.querySelector('img');
+      if (!img) return Promise.resolve();
+      if (img.complete && img.naturalWidth) return Promise.resolve();
+      return new Promise(function (res) {
+        img.addEventListener('load',  res, { once: true });
+        img.addEventListener('error', res, { once: true });
+      });
+    });
+    Promise.all(waits).then(function () {
+      var entries = tiles.map(function (tile) {
+        return { tile: tile, landscape: classify(tile) === true };
+      });
+      var ordered = pairPortraits(entries);
+      // Re-attach in the new order. appendChild moves existing nodes, so this
+      // is a stable reordering without recreating elements.
+      ordered.forEach(function (t) { grid.appendChild(t); });
+    });
   }
 
   function prettyAlt(name) {
@@ -2527,14 +2580,12 @@
     img.alt = alt || '';
     img.src = src;
     tile.appendChild(img);
-    if (img.complete && img.naturalWidth) classify(img, tile);
-    else img.addEventListener('load', function () { classify(img, tile); }, { once: true });
     return tile;
   }
 
-  // Always classify the inline tiles immediately (covers local/file:// use
-  // and the moment before the network listing comes back).
-  rebalanceInline();
+  // Arrange the inline fallback tiles first (covers local/file:// use and
+  // the moment before the network listing comes back).
+  arrange(Array.prototype.slice.call(grid.querySelectorAll('.photo-tile')));
 
   // Try to refresh the listing from the repo. Only meaningful on the public
   // site; locally this 404s or CORS-fails and we keep the inline fallback.
@@ -2549,9 +2600,11 @@
         .sort(function (a, b) { return a.name.localeCompare(b.name); });
       if (!files.length) return;
       grid.innerHTML = '';
-      files.forEach(function (f) {
-        grid.appendChild(buildTile(GH_PATH + '/' + f.name, prettyAlt(f.name)));
+      var tiles = files.map(function (f) {
+        return buildTile(GH_PATH + '/' + f.name, prettyAlt(f.name));
       });
+      tiles.forEach(function (t) { grid.appendChild(t); });
+      arrange(tiles);
     })
     .catch(function () { /* offline / private repo / wrong owner — inline list stays */ });
 })();
