@@ -1739,7 +1739,7 @@
     position: absolute;
     top: 64px;
     left: 24px;
-    display: flex;
+    display: none;
     flex-direction: row;
     flex-wrap: wrap;
     gap: 18px;
@@ -4847,9 +4847,13 @@ class Knob {
   var nav = document.getElementById('heroNav');
   if (!btn || !nav) return;
   btn.addEventListener('click', function() {
-    var open = !nav.classList.contains('open');
-    nav.classList.toggle('open', open);
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.body.classList.remove('lock-scroll');
+    var target = document.getElementById('three-d');
+    if (target) {
+      requestAnimationFrame(function() {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
   });
   // Close after any link click
   nav.querySelectorAll('a').forEach(function(a) {
