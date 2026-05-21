@@ -970,12 +970,13 @@
   .keep-playing input { accent-color: var(--accent); cursor: pointer; }
   .keep-playing:hover { color: var(--ink-dim); }
 
-  /* Floating mini player — appears when modal closes with audio still on. */
+  /* Floating mini player — appears when modal closes with audio still on.
+     Anchored bottom-left so it slots cleanly into the DRONE→PLAYER→HOME stack. */
   .mini-player {
     position: fixed;
-    bottom: 1rem;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 80px;
+    left: 24px;
+    transform: none;
     z-index: 8000;
     display: none;
     align-items: center;
@@ -1027,17 +1028,13 @@
     transition: color 0.2s, border-color 0.2s;
   }
   .mini-close:hover { color: var(--ink); border-color: var(--ink-dim); }
+  @media (max-width: 768px) {
+    /* Stay anchored left, but tighten the offset to match the mobile DRONE. */
+    .mini-player { left: 16px; right: auto; bottom: 64px; transform: none; }
+    .mini-name { max-width: 180px; }
+  }
   @media (max-width: 480px) {
-    .mini-player { left: 0.5rem; right: 0.5rem; bottom: 0.5rem; transform: none; }
-    .mini-name { max-width: none; flex: 1; }
-    /* On the hero (lock-scroll), the bottom-left DRONE/RESET/SAVE buttons
-       are visible — shift the player right and down so they don't overlap. */
-    body.lock-scroll .mini-player {
-      left: 60%;
-      right: auto;
-      bottom: 0.25rem;
-      transform: translateX(-50%);
-    }
+    .mini-name { max-width: 140px; }
   }
 
   /* model-viewer cards */
@@ -1684,11 +1681,14 @@
     height: 100dvh;
   }
 
-  /* ----- Return Home button — visible only when scroll lock is OFF ----- */
+  /* ----- Return Home button — visible only when scroll lock is OFF -----
+     Sits at the top of the bottom-left DRONE→PLAYER→HOME stack. Default is
+     directly above DRONE (80px). When the mini-player is visible, it shifts
+     up another slot (144px) so all three respect each other. */
   .return-home {
     position: fixed;
-    bottom: 1rem;
-    left: 1rem;
+    bottom: 80px;
+    left: 24px;
     z-index: 8000;
     background: rgba(17, 17, 20, 0.7);
     color: rgba(255,255,255,0.85);
@@ -1707,10 +1707,13 @@
   }
   .return-home:hover { background: rgba(17, 17, 20, 0.9); color: #fff; }
   body.lock-scroll .return-home { display: none; }
-  /* Mobile lift: the mini-player can sit in the bottom band on phones, so
-     keep HOME above it. Desktop has room for both at 1rem. */
+  /* Stack-aware: when the mini-player is showing, lift HOME by one slot so it
+     sits above the player (which is itself above DRONE). */
+  body:has(.mini-player.show) .return-home { bottom: 144px; left: 24px; }
+  /* Mobile: scale the slot heights down proportionally. */
   @media (max-width: 768px) {
-    .return-home { bottom: 4.5rem; }
+    .return-home { bottom: 64px; left: 16px; }
+    body:has(.mini-player.show) .return-home { bottom: 116px; left: 16px; }
   }
 
   /* ----- Quick Showreel button + lightbox -------------------------------
@@ -1904,12 +1907,23 @@
   }
 
   .hero-controls {
-    position: absolute;
+    /* Fixed (not absolute) so DRONE survives past the hero — it lives at the
+       bottom of the DRONE→PLAYER→HOME stack and must stay clickable so the
+       user can shut the drone up from anywhere. RESET / SAVE are siblings
+       in this flex; they're hidden via CSS once we're off the hero (see
+       `body:not(.lock-scroll)` rule below), preserving their hero-only
+       visibility behaviour. */
+    position: fixed;
     bottom: 24px;
     display: flex;
     gap: 22px;
+    z-index: 7500;
   }
   .hero-controls-left { left: 24px; }
+  /* Off the hero: only DRONE remains in the stack. RESET / SAVE click & flex
+     behaviour is untouched — they're simply not painted when scrolled past. */
+  body:not(.lock-scroll) #resetSim,
+  body:not(.lock-scroll) #saveSim { display: none; }
   .hero-btn {
     background: transparent;
     color: rgba(255,255,255,0.95);
