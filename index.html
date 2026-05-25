@@ -1707,6 +1707,7 @@
   }
   .return-home:hover { background: rgba(17, 17, 20, 0.9); color: #fff; }
   body.lock-scroll .return-home { display: none; }
+  body.nav-locked-down .hero-nav-toggle { display: none; }
   /* Stack-aware: when the mini-player is showing, lift HOME by one slot so it
      sits above the player (which is itself above DRONE). */
   body:has(.mini-player.show) .return-home { bottom: 144px; left: 24px; }
@@ -2019,7 +2020,7 @@
      `body.lock-scroll .return-home { display: none; }` keeps it invisible while
      the page is in its initial hero-locked state. Click → smooth scroll back
      to the hero and re-apply the scroll lock. -->
-<button class="return-home" id="returnHome" type="button" aria-label="Return to hero">WORKS</button>
+<button class="return-home" id="returnHome" type="button" aria-label="Return to hero">HOME</button>
 
 <!-- Quick Showreel: single-click access to the latest reel. The iframe src
      is set on open (with autoplay) and cleared on close so audio stops.
@@ -5064,23 +5065,9 @@ class Knob {
   var homeBtn = document.getElementById('returnHome');
   if (homeBtn) {
     homeBtn.addEventListener('click', function() {
-      var hero = document.getElementById('hero');
-      if (hero && hero.scrollIntoView) {
-        hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      var startedAt = performance.now();
-      var settle = setInterval(function() {
-        var y = window.pageYOffset || document.documentElement.scrollTop || 0;
-        if (y <= 2) {
-          document.body.classList.add('lock-scroll');
-          clearInterval(settle);
-        } else if (performance.now() - startedAt > 2500) {
-          // User scrolled away mid-animation — abort re-locking.
-          clearInterval(settle);
-        }
-      }, 80);
+      document.body.classList.remove('nav-locked-down');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(function(){ document.body.classList.add('lock-scroll'); }, 700);
     });
   }
 })();
@@ -5147,6 +5134,7 @@ class Knob {
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     }
+    setTimeout(function(){ document.body.classList.add('nav-locked-down'); }, 700);
   });
   // Close after any link click
   nav.querySelectorAll('a').forEach(function(a) {
@@ -5155,6 +5143,18 @@ class Knob {
       btn.setAttribute('aria-expanded', 'false');
     });
   });
+})();
+
+(function navUpGuard() {
+  window.addEventListener('scroll', function() {
+    if (!document.body.classList.contains('nav-locked-down')) return;
+    var three = document.getElementById('three-d');
+    if (!three) return;
+    var minY = three.offsetTop;
+    if (window.scrollY < minY) {
+      window.scrollTo({ top: minY, behavior: 'auto' });
+    }
+  }, { passive: true });
 })();
 
 (function droneEngine() {
