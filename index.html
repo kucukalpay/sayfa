@@ -1681,10 +1681,11 @@
     height: 100dvh;
   }
 
-  /* ----- Return Home button — visible only when scroll lock is OFF -----
-     Sits at the same top-left position as the WORKS (hero-nav-toggle) button
-     so the two swap seamlessly: WORKS is shown on the hero, HOME everywhere
-     else. Typography matches hero-nav-toggle exactly. */
+  /* ----- Return Home button — cross-fades with WORKS (hero-nav-toggle) ----
+     Both buttons share the same top-left slot. WORKS is visible on the hero,
+     HOME is visible once the user has scrolled away. They swap via opacity so
+     the transition is smooth in both directions.
+     Default: hidden (opacity 0) so there's no flash before JS runs. */
   .return-home {
     position: fixed;
     top: 24px;
@@ -1701,14 +1702,22 @@
     text-transform: uppercase;
     line-height: 1;
     cursor: pointer;
-    opacity: 0.5;
+    opacity: 0;
+    pointer-events: none;
     display: inline-flex;
     align-items: center;
-    transition: opacity 200ms;
+    gap: 10px;
+    transition: opacity 300ms;
   }
-  .return-home:hover { opacity: 1; background: transparent; color: rgba(255,255,255,0.95); }
-  body.lock-scroll .return-home { display: none; }
-  body.nav-locked-down .hero-nav-toggle { display: none; }
+  .return-home-chev {
+    display: inline-block;
+    font-size: 0.9rem;
+  }
+  /* Fade HOME in once scroll lock is lifted */
+  body:not(.lock-scroll) .return-home { opacity: 0.5; pointer-events: auto; }
+  body:not(.lock-scroll) .return-home:hover { opacity: 1; }
+  /* Fade WORKS out when the user has scrolled into the sections */
+  body.nav-locked-down .hero-nav-toggle { opacity: 0; pointer-events: none; }
   @media (max-width: 640px) {
     .return-home { top: 16px; left: 16px; }
   }
@@ -2016,7 +2025,7 @@
      `body.lock-scroll .return-home { display: none; }` keeps it invisible while
      the page is in its initial hero-locked state. Click → smooth scroll back
      to the hero and re-apply the scroll lock. -->
-<button class="return-home" id="returnHome" type="button" aria-label="Return to hero">HOME</button>
+<button class="return-home" id="returnHome" type="button" aria-label="Return to hero">HOME<span class="return-home-chev" aria-hidden="true">▴</span></button>
 
 <!-- Quick Showreel: single-click access to the latest reel. The iframe src
      is set on open (with autoplay) and cleared on close so audio stops.
@@ -5142,21 +5151,48 @@ class Knob {
 })();
 
 (function navUpGuard() {
-  // Spring-snap: when the user scrolls above the first section while
-  // nav-locked-down is active, smoothly pull them back instead of
-  // instantly snapping. A `snapping` flag debounces the handler so
-  // repeated scroll events don't re-fire the animation mid-flight.
-  var snapping = false;
+  // Hard wall — no snap, no bounce. When nav-locked-down is active the
+  // top of #three-d is the absolute scroll ceiling. We intercept wheel
+  // and touchmove *before* the browser moves the page so the user feels
+  // a solid wall rather than a jitter/snap-back. A scroll listener
+  // covers keyboard (arrow-up, Home key) and programmatic scrolls.
+
+  function getMinY() {
+    if (!document.body.classList.contains('nav-locked-down')) return null;
+    var el = document.getElementById('three-d');
+    return el ? el.offsetTop : null;
+  }
+
+  // Mouse / trackpad wheel — block upward scrolls at the ceiling.
+  window.addEventListener('wheel', function(e) {
+    var minY = getMinY();
+    if (minY === null) return;
+    if (window.scrollY <= minY && e.deltaY < 0) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // Touch — block upward swipes (finger moves downward) at the ceiling.
+  var touchStartY = 0;
+  window.addEventListener('touchstart', function(e) {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  window.addEventListener('touchmove', function(e) {
+    var minY = getMinY();
+    if (minY === null) return;
+    if (window.scrollY <= minY && e.touches[0].clientY > touchStartY) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // Keyboard / programmatic safety net — correct silently if anything
+  // slips through (e.g. arrow-up, Home key, scrollTo calls).
   window.addEventListener('scroll', function() {
-    if (snapping) return;
-    if (!document.body.classList.contains('nav-locked-down')) return;
-    var three = document.getElementById('three-d');
-    if (!three) return;
-    var minY = three.offsetTop;
+    var minY = getMinY();
+    if (minY === null) return;
     if (window.scrollY < minY) {
-      snapping = true;
-      window.scrollTo({ top: minY, behavior: 'smooth' });
-      setTimeout(function() { snapping = false; }, 900);
+      window.scrollTo(0, minY);
     }
   }, { passive: true });
 })();
