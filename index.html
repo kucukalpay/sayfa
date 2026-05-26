@@ -1682,39 +1682,35 @@
   }
 
   /* ----- Return Home button — visible only when scroll lock is OFF -----
-     Sits at the top of the bottom-left DRONE→PLAYER→HOME stack. Default is
-     directly above DRONE (80px). When the mini-player is visible, it shifts
-     up another slot (144px) so all three respect each other. */
+     Sits at the same top-left position as the WORKS (hero-nav-toggle) button
+     so the two swap seamlessly: WORKS is shown on the hero, HOME everywhere
+     else. Typography matches hero-nav-toggle exactly. */
   .return-home {
     position: fixed;
-    bottom: 80px;
+    top: 24px;
     left: 24px;
     z-index: 8000;
-    background: rgba(17, 17, 20, 0.7);
-    color: rgba(255,255,255,0.85);
+    background: transparent;
+    color: rgba(255,255,255,0.95);
     border: 0;
-    padding: 8px 14px;
+    height: 32px;
+    padding: 0;
     font: inherit;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
+    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+    letter-spacing: 0.3em;
     text-transform: uppercase;
+    line-height: 1;
     cursor: pointer;
-    border-radius: 6px;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    transition: background 200ms, color 200ms, opacity 200ms;
+    opacity: 0.5;
+    display: inline-flex;
+    align-items: center;
+    transition: opacity 200ms;
   }
-  .return-home:hover { background: rgba(17, 17, 20, 0.9); color: #fff; }
+  .return-home:hover { opacity: 1; background: transparent; color: rgba(255,255,255,0.95); }
   body.lock-scroll .return-home { display: none; }
   body.nav-locked-down .hero-nav-toggle { display: none; }
-  /* Stack-aware: when the mini-player is showing, lift HOME by one slot so it
-     sits above the player (which is itself above DRONE). */
-  body:has(.mini-player.show) .return-home { bottom: 144px; left: 24px; }
-  /* Mobile: scale the slot heights down proportionally. */
-  @media (max-width: 768px) {
-    .return-home { bottom: 64px; left: 16px; }
-    body:has(.mini-player.show) .return-home { bottom: 116px; left: 16px; }
+  @media (max-width: 640px) {
+    .return-home { top: 16px; left: 16px; }
   }
 
   /* ----- Quick Showreel button + lightbox -------------------------------
@@ -5146,13 +5142,21 @@ class Knob {
 })();
 
 (function navUpGuard() {
+  // Spring-snap: when the user scrolls above the first section while
+  // nav-locked-down is active, smoothly pull them back instead of
+  // instantly snapping. A `snapping` flag debounces the handler so
+  // repeated scroll events don't re-fire the animation mid-flight.
+  var snapping = false;
   window.addEventListener('scroll', function() {
+    if (snapping) return;
     if (!document.body.classList.contains('nav-locked-down')) return;
     var three = document.getElementById('three-d');
     if (!three) return;
     var minY = three.offsetTop;
     if (window.scrollY < minY) {
-      window.scrollTo({ top: minY, behavior: 'auto' });
+      snapping = true;
+      window.scrollTo({ top: minY, behavior: 'smooth' });
+      setTimeout(function() { snapping = false; }, 900);
     }
   }, { passive: true });
 })();
