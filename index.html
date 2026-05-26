@@ -5180,40 +5180,15 @@ class Knob {
     }
   }, { passive: false });
 
-  // Spring correction: if momentum / keyboard / programmatic scroll slips
-  // above the ceiling, ease back with a damped spring.
-  // IMPORTANT: uses scrollTop (not window.scrollTo) to bypass
-  // `html { scroll-behavior: smooth }` — each window.scrollTo call
-  // on a smooth-scroll page starts a fresh browser animation, so calling
-  // it 60×/sec from rAF cascades into rapid-fire canceled animations = jitter.
-  // Direct scrollTop assignment is always instant in all major browsers.
-  var rafId = null;
-  var vel = 0;
-
-  function springToMin() {
-    if (rafId) return;
-    function tick() {
-      var curMin = getMinY();
-      if (curMin === null) { rafId = null; vel = 0; return; }
-      var dist = curMin - window.scrollY;
-      if (dist <= 0) { rafId = null; vel = 0; return; }
-      vel = (vel + dist * 0.25) * 0.68;
-      var next = window.scrollY + vel;
-      if (next >= curMin || vel < 0.4) {
-        document.documentElement.scrollTop = curMin;
-        rafId = null; vel = 0;
-        return;
-      }
-      document.documentElement.scrollTop = next;
-      rafId = requestAnimationFrame(tick);
-    }
-    rafId = requestAnimationFrame(tick);
-  }
-
+  // Keyboard / programmatic safety net — if anything slips through, pin
+  // instantly via scrollTop (not window.scrollTo, which would trigger
+  // the css smooth-scroll animation and cascade into jitter).
   window.addEventListener('scroll', function() {
     var minY = getMinY();
     if (minY === null) return;
-    if (window.scrollY < minY) springToMin();
+    if (window.scrollY < minY) {
+      document.documentElement.scrollTop = minY;
+    }
   }, { passive: true });
 })();
 
