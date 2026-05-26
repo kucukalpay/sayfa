@@ -5181,11 +5181,16 @@ class Knob {
   }, { passive: false });
 
   // Spring correction: if momentum / keyboard / programmatic scroll slips
-  // above the ceiling, ease back with a damped spring instead of a hard snap.
+  // above the ceiling, ease back with a damped spring.
+  // IMPORTANT: uses scrollTop (not window.scrollTo) to bypass
+  // `html { scroll-behavior: smooth }` — each window.scrollTo call
+  // on a smooth-scroll page starts a fresh browser animation, so calling
+  // it 60×/sec from rAF cascades into rapid-fire canceled animations = jitter.
+  // Direct scrollTop assignment is always instant in all major browsers.
   var rafId = null;
   var vel = 0;
 
-  function springToMin(minY) {
+  function springToMin() {
     if (rafId) return;
     function tick() {
       var curMin = getMinY();
@@ -5195,11 +5200,11 @@ class Knob {
       vel = (vel + dist * 0.25) * 0.68;
       var next = window.scrollY + vel;
       if (next >= curMin || vel < 0.4) {
-        window.scrollTo(0, curMin);
+        document.documentElement.scrollTop = curMin;
         rafId = null; vel = 0;
         return;
       }
-      window.scrollTo(0, next);
+      document.documentElement.scrollTop = next;
       rafId = requestAnimationFrame(tick);
     }
     rafId = requestAnimationFrame(tick);
@@ -5208,7 +5213,7 @@ class Knob {
   window.addEventListener('scroll', function() {
     var minY = getMinY();
     if (minY === null) return;
-    if (window.scrollY < minY) springToMin(minY);
+    if (window.scrollY < minY) springToMin();
   }, { passive: true });
 })();
 
