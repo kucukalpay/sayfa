@@ -5151,12 +5151,6 @@ class Knob {
 })();
 
 (function navUpGuard() {
-  // Hard wall — no snap, no bounce. When nav-locked-down is active the
-  // top of #three-d is the absolute scroll ceiling. We intercept wheel
-  // and touchmove *before* the browser moves the page so the user feels
-  // a solid wall rather than a jitter/snap-back. A scroll listener
-  // covers keyboard (arrow-up, Home key) and programmatic scrolls.
-
   function getMinY() {
     if (!document.body.classList.contains('nav-locked-down')) return null;
     var el = document.getElementById('three-d');
@@ -5186,14 +5180,35 @@ class Knob {
     }
   }, { passive: false });
 
-  // Keyboard / programmatic safety net — correct silently if anything
-  // slips through (e.g. arrow-up, Home key, scrollTo calls).
+  // Spring correction: if momentum / keyboard / programmatic scroll slips
+  // above the ceiling, ease back with a damped spring instead of a hard snap.
+  var rafId = null;
+  var vel = 0;
+
+  function springToMin(minY) {
+    if (rafId) return;
+    function tick() {
+      var curMin = getMinY();
+      if (curMin === null) { rafId = null; vel = 0; return; }
+      var dist = curMin - window.scrollY;
+      if (dist <= 0) { rafId = null; vel = 0; return; }
+      vel = (vel + dist * 0.25) * 0.68;
+      var next = window.scrollY + vel;
+      if (next >= curMin || vel < 0.4) {
+        window.scrollTo(0, curMin);
+        rafId = null; vel = 0;
+        return;
+      }
+      window.scrollTo(0, next);
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
   window.addEventListener('scroll', function() {
     var minY = getMinY();
     if (minY === null) return;
-    if (window.scrollY < minY) {
-      window.scrollTo(0, minY);
-    }
+    if (window.scrollY < minY) springToMin(minY);
   }, { passive: true });
 })();
 
