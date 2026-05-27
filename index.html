@@ -5150,47 +5150,6 @@ class Knob {
   });
 })();
 
-(function navUpGuard() {
-  function getMinY() {
-    if (!document.body.classList.contains('nav-locked-down')) return null;
-    var el = document.getElementById('three-d');
-    return el ? el.offsetTop : null;
-  }
-
-  // Mouse / trackpad wheel — block upward scrolls at the ceiling.
-  window.addEventListener('wheel', function(e) {
-    var minY = getMinY();
-    if (minY === null) return;
-    if (window.scrollY <= minY && e.deltaY < 0) {
-      e.preventDefault();
-    }
-  }, { passive: false });
-
-  // Touch — block upward swipes (finger moves downward) at the ceiling.
-  var touchStartY = 0;
-  window.addEventListener('touchstart', function(e) {
-    touchStartY = e.touches[0].clientY;
-  }, { passive: true });
-
-  window.addEventListener('touchmove', function(e) {
-    var minY = getMinY();
-    if (minY === null) return;
-    if (window.scrollY <= minY && e.touches[0].clientY > touchStartY) {
-      e.preventDefault();
-    }
-  }, { passive: false });
-
-  // Keyboard / programmatic safety net — if anything slips through, pin
-  // instantly via scrollTop (not window.scrollTo, which would trigger
-  // the css smooth-scroll animation and cascade into jitter).
-  window.addEventListener('scroll', function() {
-    var minY = getMinY();
-    if (minY === null) return;
-    if (window.scrollY < minY) {
-      document.documentElement.scrollTop = minY;
-    }
-  }, { passive: true });
-})();
 
 (function droneEngine() {
   var ac = null;
