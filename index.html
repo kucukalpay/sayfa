@@ -4372,7 +4372,21 @@ class Knob {
   var linkProb = 0.5, linkRange = 200;
   var lastPx = null, lastPy = null;
 
+  // Tip dragging
+  var dragTip = null;      // null | node-index — which endpoint is being dragged
+  var dragConsumed = false; // suppresses the click impulse that follows mouseup
+
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+  function nearTip(cx, cy) {
+    if (nodes.length < 2) return null;
+    var last = nodes.length - 1, dx, dy;
+    dx = cx - nodes[0].x; dy = cy - nodes[0].y;
+    if (dx * dx + dy * dy < 900) return 0;        // 30 px radius
+    dx = cx - nodes[last].x; dy = cy - nodes[last].y;
+    if (dx * dx + dy * dy < 900) return last;
+    return null;
+  }
 
   function initRope() {
     nodes = [];
@@ -4471,6 +4485,14 @@ class Knob {
         nd.x += (dx / d) * f;
         nd.y += (dy / d) * f;
       }
+    }
+
+    // 2.5. Tip drag — lock the dragged endpoint to the pointer position
+    if (dragTip !== null) {
+      var dnd = nodes[dragTip];
+      dnd.hx = pointer.x; dnd.hy = pointer.y;
+      dnd.x  = pointer.x; dnd.y  = pointer.y;
+      dnd.px = pointer.x; dnd.py = pointer.y;
     }
 
     // 3. Distance constraints — maintain rope segment length
@@ -4584,6 +4606,7 @@ class Knob {
       }
     }, { passive: true });
     window.addEventListener('touchend', function() {
+      dragTip = null;
       pointer.active = false; lastPx = null; lastPy = null;
     }, { passive: true });
 
@@ -4606,11 +4629,24 @@ class Knob {
       }
     }
 
+    window.addEventListener('mousedown', function(e) {
+      var idx = nearTip(e.clientX, e.clientY);
+      if (idx !== null) dragTip = idx;
+    }, { passive: true });
+    window.addEventListener('mouseup', function() {
+      if (dragTip !== null) { dragConsumed = true; dragTip = null; }
+    }, { passive: true });
     window.addEventListener('click', function(e) {
+      if (dragConsumed) { dragConsumed = false; return; }
       clickImpulse(e.clientX, e.clientY);
     }, { passive: true });
     window.addEventListener('touchstart', function(e) {
-      if (e.touches && e.touches[0]) clickImpulse(e.touches[0].clientX, e.touches[0].clientY);
+      if (e.touches && e.touches[0]) {
+        var tx = e.touches[0].clientX, ty = e.touches[0].clientY;
+        var idx = nearTip(tx, ty);
+        if (idx !== null) { dragTip = idx; return; }
+        clickImpulse(tx, ty);
+      }
     }, { passive: true });
 
     // Device tilt — leans gravity direction on mobile
