@@ -4398,7 +4398,7 @@ class Knob {
       var t = n > 1 ? i / (n - 1) : 0;
       var x = x0 + t * (x1 - x0);
       var envelope = Math.sin(t * Math.PI); // taper amplitude to 0 at both ends
-      var y = lineY + envelope * Math.sin(t * Math.PI * 2 * cycles) * H * 0.08;
+      var y = lineY + envelope * Math.sin(t * Math.PI * 2 * cycles) * H * 0.16;
       nodes.push({ x: x, y: y, px: x, py: y,
                    pinned: (i === 0 || i === n - 1),
                    hx: x, hy: y,   // home = initial sine wave position
@@ -4502,7 +4502,7 @@ class Knob {
         var dx = b.x - a.x, dy = b.y - a.y;
         var dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < 0.001) continue;
-        var diff = (dist - restLen) / dist * 0.5;
+        var diff = (dist - restLen) / dist * 0.25;
         var cx = dx * diff, cy = dy * diff;
         if (!a.pinned) { a.x += cx; a.y += cy; }
         if (!b.pinned) { b.x -= cx; b.y -= cy; }
