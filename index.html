@@ -4349,11 +4349,11 @@ class Knob {
   var lastMeterUpdate = 0;
 
   // Rope physics
-  var SEG_COUNT      = 60;    // number of segments (nodes = SEG_COUNT + 1)
-  var GRAVITY        = 0.22;  // downward acceleration per frame (pixels/frame²)
-  var DAMPING        = 0.992; // velocity retention per frame
-  var CONSTRAINT_ITERS = 12;  // constraint solver passes per step
-  var restLen        = 0;     // computed in initRope()
+  var SEG_COUNT        = 60;    // number of segments (nodes = SEG_COUNT + 1)
+  var DAMP_TAN         = 0.988; // velocity retention along rope tangent (low drag — rope slips through fluid)
+  var DAMP_NOR         = 0.78;  // velocity retention perpendicular to rope (high drag — resists sideways motion)
+  var CONSTRAINT_ITERS = 12;    // constraint solver passes per step
+  var restLen          = 0;     // computed in initRope()
 
   // Interaction knobs (settable via sliders / __hero.poly API)
   var POINTER_STRENGTH = 1.0;
@@ -4376,26 +4376,29 @@ class Knob {
 
   function initRope() {
     nodes = [];
-    var n   = SEG_COUNT + 1;
-    var x0  = W * 0.04,  y0 = H * 0.38;
-    var x1  = W * 0.96,  y1 = H * 0.38;
-    var span = x1 - x0;
-    // Extra length beyond horizontal span determines equilibrium sag.
-    // H*0.03 keeps sag at ~13-15% of viewport height across common sizes.
-    var extra = H * 0.03;
-    restLen = (span + extra) / SEG_COUNT;
-    // Start nodes on the approximate catenary (parabola) so the rope
-    // doesn't have to "fall" dramatically from a flat line on init.
-    var sag = Math.sqrt(3 * span * extra / 8);
+    var n      = SEG_COUNT + 1;
+    var x0     = W * 0.04, x1 = W * 0.96;
+    var lineY  = H * 0.5;
+    var cycles = 5;
     for (var i = 0; i < n; i++) {
       var t = n > 1 ? i / (n - 1) : 0;
       var x = x0 + t * (x1 - x0);
-      var y = y0 + 4 * sag * t * (1 - t); // parabola, peak at centre
+      var envelope = Math.sin(t * Math.PI); // taper amplitude to 0 at both ends
+      var y = lineY + envelope * Math.sin(t * Math.PI * 2 * cycles) * H * 0.08;
       nodes.push({ x: x, y: y, px: x, py: y,
                    pinned: (i === 0 || i === n - 1),
-                   hx: x, hy: y0,   // home = straight horizontal line
+                   hx: x, hy: y,   // home = initial sine wave position
                    line: 0 });
     }
+    // restLen = actual arc-length between adjacent nodes on the sine wave,
+    // so the rope naturally rests at its initial shape with no tension.
+    var totalArc = 0;
+    for (var i = 0; i < n - 1; i++) {
+      var dx = nodes[i + 1].x - nodes[i].x;
+      var dy = nodes[i + 1].y - nodes[i].y;
+      totalArc += Math.sqrt(dx * dx + dy * dy);
+    }
+    restLen = totalArc / SEG_COUNT;
     entropy = 0; parting = 0; moved = 0; totalMoved = 0;
   }
 
@@ -4417,20 +4420,41 @@ class Knob {
 
   function step(dt) {
     var n  = nodes.length;
-    // Tilt leans gravity sideways on mobile
-    var gx = tilt.x * tiltStrengthX * tiltMult * 0.12;
-    var gy = GRAVITY;
+    // Tilt nudge replaces gravity on mobile (no constant downward pull).
+    var tiltGx = tilt.x * tiltStrengthX * tiltMult * 0.08;
 
-    // 1. Verlet integrate — advance each free node
+    // 1. Verlet integrate with anisotropic fluid drag.
+    //    Decompose each node's velocity into tangential (along rope) and
+    //    normal (across rope) components, then damp them independently:
+    //    low drag along the rope, high drag perpendicular to it.
     for (var i = 0; i < n; i++) {
       var nd = nodes[i];
       if (nd.pinned) continue;
-      var vx = (nd.x - nd.px) * DAMPING;
-      var vy = (nd.y - nd.py) * DAMPING;
+
+      var vx = nd.x - nd.px;
+      var vy = nd.y - nd.py;
+
+      // Central-difference tangent: direction from previous to next node.
+      var prevNd = nodes[i - 1]; // always exists — i >= 1 for free nodes
+      var nextNd = nodes[i + 1]; // always exists — i <= n-2 for free nodes
+      var tx = nextNd.x - prevNd.x;
+      var ty = nextNd.y - prevNd.y;
+      var tLen = Math.sqrt(tx * tx + ty * ty);
+      if (tLen > 0.001) { tx /= tLen; ty /= tLen; } else { tx = 1; ty = 0; }
+
+      // Decompose velocity into tangential and normal components.
+      var vDotT = vx * tx + vy * ty;
+      var vtx = vDotT * tx,  vty = vDotT * ty;   // tangential vector
+      var vnx = vx - vtx,    vny = vy - vty;      // normal vector
+
+      // Apply damping: tangential survives longer, normal dies quickly.
+      var dvx = vtx * DAMP_TAN + vnx * DAMP_NOR;
+      var dvy = vty * DAMP_TAN + vny * DAMP_NOR;
+
       nd.px = nd.x;
       nd.py = nd.y;
-      nd.x += vx + gx;
-      nd.y += vy + gy;
+      nd.x += dvx + tiltGx;
+      nd.y += dvy;
     }
 
     // 2. Mouse / touch attraction — pull nearby nodes toward the pointer
