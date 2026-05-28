@@ -4326,12 +4326,11 @@ class Knob {
 </script>
 
 <script>
-/* ================= POLYLINE BG =================
-   Code-generated canvas background. A single ordered chain of nodes
-   evenly spaced across the viewport at vertical center, with a gentle
-   sine wave along the line. Nodes spring back to their base positions;
-   hover gives a subtle push, click/tap emits a ripple, deviceorientation
-   drifts the chain. Pauses on tab blur; respects prefers-reduced-motion. */
+/* ================= ROPE BG =================
+   Verlet-integration rope simulation. A chain of nodes connected by
+   distance constraints hangs under gravity between two pinned endpoints.
+   Mouse/touch attracts nearby nodes; clicks flick the rope; device tilt
+   leans gravity sideways. Pauses on tab blur / hero off-screen. */
 (function bgCanvasEngine() {
   var canvas = document.getElementById('bg-canvas');
   if (!canvas) return;
@@ -4341,101 +4340,74 @@ class Knob {
   var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.25);
   var W = 0, H = 0;
   var nodes = [];
-  var pointer = { x: -9999, y: -9999, active: false };
-  var tilt = { x: 0, y: 0 };
-  var progress = 0;
   var rafId = 0;
   var lastT = 0;
-  // Phase 4: entropy accumulates with each ripple, drives the visible
-  // ENTROPY meter, and persists base-position drift so the line never
-  // fully recovers. `paused` is a manual pause flag (separate from the
-  // existing visibility-pause); set true when hero scrolls offscreen.
-  var entropy = 0;
-  var parting = 0;
-  var totalMoved = 0;
-  var moved = 0;
-  var lastMeterUpdate = 0;
   var paused = false;
-  // Legacy slider-controlled vars. The polyline doesn't use connectivity
-  // gates or distance thresholds anymore, but the slider input handlers
-  // below still write to these — leaving them defined keeps that harmless.
-  var linkProb = 0.5;
-  var linkRange = 200;
-  var nodeCount = 90;
-  // interaction: multiplier on hover-repel + ripple-kick forces. Lowered
-  // from 2 → 1 since chain distortion reads more loudly than scattered dots.
-  var interaction = 1;
-  // Per-axis tilt drift strength (mobile only — desktop has no orientation
-  // sensor so the sliders for these are hidden via CSS).
-  var tiltStrengthX = 4;
-  var tiltStrengthY = 4;
-  // Phase 1: plastic-pointer state. POINTER_PLASTICITY scales how much the
-  // pointer drags base positions per move event (with 1/d falloff). lastPx/
-  // lastPy hold the previous pointer location so we can compute a delta.
-  // tiltMult / clickMult are global multipliers on the existing tilt and
-  // click forces, exposed via setters for the settings menu sliders.
-  var POINTER_PLASTICITY = 1.0;
-  var tiltMult = 0.5;
-  var clickMult = 1.0;
-  var ATTRACTION_BASE = 0.0006;
-  var attractionMult = 0.5;
-  var splatterMult = 0.6;
-  var lastPx = null, lastPy = null;
-  var pullActive = false;
-  var pullTimer = null;
-  var pullX = -9999;
-  var pullY = -9999;
+  var progress = 0;
+  var tilt = { x: 0, y: 0 };
+  var pointer = { x: -9999, y: -9999, active: false };
+  var lastMeterUpdate = 0;
 
-  // Idle-settle: when the user stops interacting, drift each node's base
-  // position back toward its original "home" (hx, hy) over ~30s of soft
-  // exponential decay. Neighbor attraction continues to apply during the
-  // migration so the chain still self-organizes while it relaxes home.
-  var lastInteractionTime = performance.now ? performance.now() : Date.now();
-  var IDLE_BEFORE_SETTLE = 3000; // ms
-  var SETTLE_HALF_LIFE = 30000;   // ms — full ~99% recovery in this window
-  // Per-frame decay rate for exponential approach. At 60fps, 1800 frames in 30s.
-  var SETTLE_RATE = 1 - Math.pow(0.01, 1 / (SETTLE_HALF_LIFE * 60 / 1000));
-  // Animated reset: ease bx/by from current positions back to home (hx/hy)
-  // over RESET_DURATION ms with an ease-out cubic so it starts fast and
-  // softly arrives — replaces the old snap-to-home behavior.
-  var resetting = false;
-  var resetStart = 0;
-  var resetSnapshot = [];
-  var RESET_DURATION = 250; // ms
-  function bumpInteraction() {
-    lastInteractionTime = (performance.now ? performance.now() : Date.now());
-  }
+  // Rope physics
+  var SEG_COUNT      = 60;    // number of segments (nodes = SEG_COUNT + 1)
+  var GRAVITY        = 0.22;  // downward acceleration per frame (pixels/frame²)
+  var DAMPING        = 0.992; // velocity retention per frame
+  var CONSTRAINT_ITERS = 12;  // constraint solver passes per step
+  var restLen        = 0;     // computed in initRope()
+
+  // Interaction knobs (settable via sliders / __hero.poly API)
+  var POINTER_STRENGTH = 1.0;
+  var tiltMult         = 0.5;
+  var clickMult        = 1.0;
+  var splatterMult     = 0.6;
+  var attractionMult   = 0.5; // retained for API compat; maps to sag tightness
+  var interaction      = 1;
+  var tiltStrengthX    = 4;
+  var tiltStrengthY    = 4;
+
+  // Metrics
+  var entropy = 0, parting = 0, moved = 0, totalMoved = 0;
+
+  // Legacy vars kept so slider hookups below don't error
+  var linkProb = 0.5, linkRange = 200;
+  var lastPx = null, lastPy = null;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+  function initRope() {
+    nodes = [];
+    var n   = SEG_COUNT + 1;
+    var x0  = W * 0.04,  y0 = H * 0.38;
+    var x1  = W * 0.96,  y1 = H * 0.38;
+    var span = x1 - x0;
+    // Extra length beyond horizontal span determines equilibrium sag.
+    // H*0.03 keeps sag at ~13-15% of viewport height across common sizes.
+    var extra = H * 0.03;
+    restLen = (span + extra) / SEG_COUNT;
+    // Start nodes on the approximate catenary (parabola) so the rope
+    // doesn't have to "fall" dramatically from a flat line on init.
+    var sag = Math.sqrt(3 * span * extra / 8);
+    for (var i = 0; i < n; i++) {
+      var t = n > 1 ? i / (n - 1) : 0;
+      var x = x0 + t * (x1 - x0);
+      var y = y0 + 4 * sag * t * (1 - t); // parabola, peak at centre
+      nodes.push({ x: x, y: y, px: x, py: y,
+                   pinned: (i === 0 || i === n - 1),
+                   hx: x, hy: y0,   // home = straight horizontal line
+                   line: 0 });
+    }
+    entropy = 0; parting = 0; moved = 0; totalMoved = 0;
+  }
 
   function resize() {
     W = window.innerWidth;
     H = window.innerHeight;
-    canvas.width = Math.floor(W * dpr);
+    canvas.width  = Math.floor(W * dpr);
     canvas.height = Math.floor(H * dpr);
-    canvas.style.width = W + 'px';
+    canvas.style.width  = W + 'px';
     canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (!nodes.length) sprinkle();
-  }
-
-  function sprinkle() {
-    // Single horizontal polyline at vertical center: 5 sine cycles across the
-    // width, ~5x denser than the old per-line count, with a sin(πt) envelope
-    // that tapers amplitude smoothly to zero at the left/right edges.
-    nodes = [];
-    var isMobile = W <= 768;
-    var perLine = Math.round(Math.max(180, Math.min(420, (W / 22) * 6)));
-    if (isMobile) perLine = Math.max(140, Math.min(260, Math.floor(perLine)));
-    var lineY = H * 0.5;
-    var cycles = 5;
-    for (var i = 0; i < perLine; i++) {
-      var t = perLine > 1 ? i / (perLine - 1) : 0.5;
-      var bx = W * 0.04 + t * W * 0.92;
-      var envelope = Math.sin(t * Math.PI); // 0 at t=0, 1 at t=0.5, 0 at t=1 — smooth taper
-      var by = lineY + envelope * Math.sin(t * Math.PI * 2 * cycles) * H * 0.08;
-      nodes.push({ bx: bx, by: by, x: bx, y: by, vx: 0, vy: 0, idx: i, line: 0, hx: bx, hy: by, prevX: bx, prevY: by });
-    }
+    initRope();
   }
 
   function updateProgress() {
@@ -4443,182 +4415,87 @@ class Knob {
     progress = max > 0 ? clamp((window.scrollY || window.pageYOffset) / max, 0, 1) : 0;
   }
 
-  function applyNeighborAttraction() {
-    if (attractionMult <= 0) return;
-    var now = (performance.now ? performance.now() : Date.now());
-    var settling = (now - lastInteractionTime) > IDLE_BEFORE_SETTLE;
-    var coef = ATTRACTION_BASE * attractionMult * (settling ? 4 : 1);
-    for (var i = 0; i < nodes.length - 1; i++) {
-      var a = nodes[i];
-      var b = nodes[i + 1];
-      if (a.line !== b.line) continue;
-      var dx = b.x - a.x;
-      var dy = b.y - a.y;
-      var dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 4) continue;
-      var inv = 1 / dist;
-      var nx = dx * inv;
-      var ny = dy * inv;
-      var delta = dist - 4;
-      var F = coef * delta * delta;
-      a.vx += nx * F;
-      a.vy += ny * F;
-      b.vx -= nx * F;
-      b.vy -= ny * F;
-    }
-  }
-
-  function applySettle() {
-    var now = (performance.now ? performance.now() : Date.now());
-    var sinceIdle = now - lastInteractionTime - IDLE_BEFORE_SETTLE;
-    if (sinceIdle < 0) return;
-    // Soft ease-in: ramp the effective rate from 0 → full over first 5s of settle
-    var ramp = Math.min(1, sinceIdle / 5000);
-    ramp = ramp * ramp; // quadratic ease-in (slow start, faster end)
-    var rate = SETTLE_RATE * ramp;
-    if (rate <= 0) return;
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i];
-      n.bx += (n.hx - n.bx) * rate;
-      n.by += (n.hy - n.by) * rate;
-    }
-  }
-
-  function applyResetAnimation() {
-    if (!resetting) return;
-    var now = (performance.now ? performance.now() : Date.now());
-    var p = (now - resetStart) / RESET_DURATION;
-    if (p > 1) p = 1;
-    // Ease-out cubic: fast start, soft finish
-    var eased = 1 - Math.pow(1 - p, 3);
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i];
-      var snap = resetSnapshot[i];
-      if (!snap) continue;
-      n.bx = snap.bx + (n.hx - snap.bx) * eased;
-      n.by = snap.by + (n.hy - snap.by) * eased;
-    }
-    if (p >= 1) {
-      resetting = false;
-      for (var j = 0; j < nodes.length; j++) {
-        var nn = nodes[j];
-        nn.bx = nn.hx; nn.by = nn.hy;
-        nn.x = nn.hx;  nn.y = nn.hy;
-        nn.vx = 0;     nn.vy = 0;
-        nn.prevX = nn.hx; nn.prevY = nn.hy;
-      }
-      entropy = 0; parting = 0; moved = 0; totalMoved = 0;
-      var em = document.getElementById('entropyMeter');  if (em) em.textContent = '0.00';
-    }
-  }
-
-  function applyHoldPull() {
-    if (!pullActive) return;
-    if (pullX < 0 || pullY < 0) return;
-    var R = 220;
-    var STRENGTH = 0.6;
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i];
-      var dx = pullX - n.x;
-      var dy = pullY - n.y;
-      var d2 = dx * dx + dy * dy;
-      if (d2 > R * R) continue;
-      var d = Math.sqrt(d2);
-      if (d < 0.5) continue;
-      var falloff = 1 - d / R;
-      var f = STRENGTH * falloff;
-      n.vx += (dx / d) * f;
-      n.vy += (dy / d) * f;
-    }
-  }
-
-  // Live-computed metrics. DISLOCATION (entropy) is the summed distance of
-  // every node from its home position — it climbs as interactions push the
-  // line around and falls as applySettle drifts nodes back. PARTING is the
-  // summed length of all polyline segments — it climbs when neighbors get
-  // stretched apart and shrinks as the chain settles. Both are scaled so a
-  // single human-readable digit ≈ 100 px of total drift / length.
-  function computeMetrics() {
-    var totalDist = 0;
-    var totalLen = 0;
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i];
-      var dx = n.x - n.hx;
-      var dy = n.y - n.hy;
-      totalDist += Math.sqrt(dx * dx + dy * dy);
-      var mdx = n.x - n.prevX;
-      var mdy = n.y - n.prevY;
-      totalMoved += Math.sqrt(mdx * mdx + mdy * mdy);
-      n.prevX = n.x;
-      n.prevY = n.y;
-      if (i < nodes.length - 1) {
-        var b = nodes[i + 1];
-        if (n.line === b.line) {
-          var ldx = b.x - n.x;
-          var ldy = b.y - n.y;
-          totalLen += Math.sqrt(ldx * ldx + ldy * ldy);
-        }
-      }
-    }
-    entropy = totalDist * 0.001;
-    parting = totalLen * 0.001;
-    moved = totalMoved * 0.001;
-  }
-
   function step(dt) {
-    var stiff = 0.06, damp = 0.62;
-    var hoverR = 140, hoverR2 = hoverR * hoverR;
-    applyResetAnimation();
-    applySettle();
-    computeMetrics();
-    applyNeighborAttraction();
-    applyHoldPull();
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i];
-      n.vx += (n.bx - n.x) * stiff;
-      n.vy += (n.by - n.y) * stiff;
-      if (pointer.active) {
-        var dx = n.x - pointer.x, dy = n.y - pointer.y;
-        var d2 = dx * dx + dy * dy;
-        if (d2 < hoverR2 && d2 > 0.5) {
-          var d = Math.sqrt(d2);
-          var f = (1 - d / hoverR) * 0.6 * interaction;
-          n.vx += (dx / d) * f;
-          n.vy += (dy / d) * f;
-        }
-      }
-      // Tilt drift, scaled by distance to the nearest screen edge so nodes near
-      // the center swing freely while edge nodes barely move — gives the page a
-      // depth/parallax feel when the phone tilts. Per-axis edge distance is
-      // normalized to [0..1] (0 at the edge, 1 at the centerline). The 0.5
-      // baseline replaces the old 0.05 — that was too subtle to notice.
-      var edgeFx = W > 0 ? Math.min(n.x, W - n.x) / (W * 0.5) : 0;
-      var edgeFy = H > 0 ? Math.min(n.y, H - n.y) / (H * 0.5) : 0;
-      n.vx += tilt.x * 0.5 * tiltStrengthX * edgeFx * tiltMult;
-      n.vy += tilt.y * 0.5 * tiltStrengthY * edgeFy * tiltMult;
-      n.vx *= damp; n.vy *= damp;
-      n.x += n.vx; n.y += n.vy;
+    var n  = nodes.length;
+    // Tilt leans gravity sideways on mobile
+    var gx = tilt.x * tiltStrengthX * tiltMult * 0.12;
+    var gy = GRAVITY;
+
+    // 1. Verlet integrate — advance each free node
+    for (var i = 0; i < n; i++) {
+      var nd = nodes[i];
+      if (nd.pinned) continue;
+      var vx = (nd.x - nd.px) * DAMPING;
+      var vy = (nd.y - nd.py) * DAMPING;
+      nd.px = nd.x;
+      nd.py = nd.y;
+      nd.x += vx + gx;
+      nd.y += vy + gy;
     }
+
+    // 2. Mouse / touch attraction — pull nearby nodes toward the pointer
+    if (pointer.active) {
+      var R = 160, R2 = R * R;
+      for (var i = 0; i < n; i++) {
+        var nd = nodes[i];
+        if (nd.pinned) continue;
+        var dx = pointer.x - nd.x, dy = pointer.y - nd.y;
+        var d2 = dx * dx + dy * dy;
+        if (d2 > R2 || d2 < 0.01) continue;
+        var d = Math.sqrt(d2);
+        var f = (1 - d / R) * 0.35 * POINTER_STRENGTH * interaction;
+        nd.x += (dx / d) * f;
+        nd.y += (dy / d) * f;
+      }
+    }
+
+    // 3. Distance constraints — maintain rope segment length
+    for (var iter = 0; iter < CONSTRAINT_ITERS; iter++) {
+      for (var i = 0; i < n - 1; i++) {
+        var a = nodes[i], b = nodes[i + 1];
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 0.001) continue;
+        var diff = (dist - restLen) / dist * 0.5;
+        var cx = dx * diff, cy = dy * diff;
+        if (!a.pinned) { a.x += cx; a.y += cy; }
+        if (!b.pinned) { b.x -= cx; b.y -= cy; }
+      }
+      // Re-pin endpoints after each pass
+      nodes[0].x = nodes[0].hx; nodes[0].y = nodes[0].hy;
+      nodes[n - 1].x = nodes[n - 1].hx; nodes[n - 1].y = nodes[n - 1].hy;
+    }
+
+    // 4. Metrics (used by entropy meter and drone modulation)
+    var totalDist = 0, totalLen = 0, frameMoved = 0;
+    for (var i = 0; i < n; i++) {
+      var nd = nodes[i];
+      var dhx = nd.x - nd.hx, dhy = nd.y - nd.hy;
+      totalDist += Math.sqrt(dhx * dhx + dhy * dhy);
+      var vdx = nd.x - nd.px, vdy = nd.y - nd.py;
+      frameMoved += Math.sqrt(vdx * vdx + vdy * vdy);
+      if (i < n - 1) {
+        var b2 = nodes[i + 1];
+        var ldx = b2.x - nd.x, ldy = b2.y - nd.y;
+        totalLen += Math.sqrt(ldx * ldx + ldy * ldy);
+      }
+    }
+    totalMoved += frameMoved;
+    entropy = totalDist  * 0.001;
+    parting = totalLen   * 0.001;
+    moved   = totalMoved * 0.001;
   }
 
   function render() {
     ctx.clearRect(0, 0, W, H);
-
-    // Single connected polyline: pairwise segments along the chain, no
-    // distance threshold and no per-pair gating. Each segment is its own
-    // moveTo/lineTo so any future per-segment styling stays trivial.
     ctx.strokeStyle = 'rgba(220, 226, 232, 0.8)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     if (nodes.length > 0) {
       ctx.moveTo(nodes[0].x, nodes[0].y);
       for (var i = 0; i < nodes.length - 1; i++) {
-        var p1 = nodes[i];
-        var p2 = nodes[i + 1];
-        if (p1.line !== p2.line) {
-          ctx.moveTo(p2.x, p2.y);
-          continue;
-        }
+        var p1 = nodes[i], p2 = nodes[i + 1];
+        if (p1.line !== p2.line) { ctx.moveTo(p2.x, p2.y); continue; }
         var p0 = (i > 0 && nodes[i - 1].line === p1.line) ? nodes[i - 1] : p1;
         var p3 = (i + 2 < nodes.length && nodes[i + 2].line === p2.line) ? nodes[i + 2] : p2;
         var c1x = p1.x + (p2.x - p0.x) / 6;
@@ -4629,19 +4506,11 @@ class Knob {
       }
       ctx.stroke();
     }
-
-    // Per-node dots removed — only the bezier curve renders.
   }
 
   function loop(t) {
     if (document.visibilityState !== 'visible') { rafId = 0; return; }
-    if (paused) {
-      // Keep the rAF chain alive so resume() just flips the flag — no
-      // restart needed. lastT advances so we don't get a giant dt jump.
-      lastT = t;
-      rafId = requestAnimationFrame(loop);
-      return;
-    }
+    if (paused) { lastT = t; rafId = requestAnimationFrame(loop); return; }
     var dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
     lastT = t;
     step(dt);
@@ -4661,159 +4530,71 @@ class Knob {
     rafId = requestAnimationFrame(loop);
   }
 
-  // listeners
+  // ---- Event listeners ----
+
   var resizeTimer = null;
-  window.addEventListener('resize', function () {
+  window.addEventListener('resize', function() {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () {
+    resizeTimer = setTimeout(function() {
       isMobile = window.innerWidth <= 768;
-      resize();
-      render();
+      resize(); render();
     }, 150);
   }, { passive: true });
 
-  window.addEventListener('scroll', function () {
+  window.addEventListener('scroll', function() {
     updateProgress();
     if (reduced) render();
   }, { passive: true });
 
   if (!reduced) {
-    // Phase 1: pointer motion plastically drags nearby base positions in
-    // the direction of travel. Spring physics still pulls toward bx/by, but
-    // bx/by themselves drift, so the line stays deformed instead of
-    // snapping back. Repulsion-on-vx/vy is preserved (composes nicely).
-    function applyPlasticDrag(px, py) {
-      if (lastPx !== null && lastPy !== null) {
-        var pdx = px - lastPx, pdy = py - lastPy;
-        // Guard against giant deltas after a long gap (e.g. tab switch).
-        if (pdx*pdx + pdy*pdy > 40000) { lastPx = px; lastPy = py; return; }
-        var motion = Math.sqrt(pdx * pdx + pdy * pdy);
-        var R = 120, R2 = R * R;
-        for (var i = 0; i < nodes.length; i++) {
-          var n = nodes[i];
-          var dx = n.x - px, dy = n.y - py;
-          var d2 = dx*dx + dy*dy;
-          if (d2 > R2) continue;
-          var d = Math.sqrt(d2);
-          var falloff = 1 - d / R;
-          n.bx += pdx * falloff * POINTER_PLASTICITY * 1.0;
-          n.by += pdy * falloff * POINTER_PLASTICITY * 1.0;
-        }
-      }
-      lastPx = px; lastPy = py;
-    }
-    window.addEventListener('mousemove', function (e) {
-      bumpInteraction();
+    window.addEventListener('mousemove', function(e) {
       pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true;
-      applyPlasticDrag(e.clientX, e.clientY);
     }, { passive: true });
-    window.addEventListener('mouseout', function () {
+    window.addEventListener('mouseout', function() {
       pointer.active = false; lastPx = null; lastPy = null;
     }, { passive: true });
-    window.addEventListener('touchmove', function (e) {
-      bumpInteraction();
+    window.addEventListener('touchmove', function(e) {
       if (e.touches && e.touches[0]) {
-        pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY; pointer.active = true;
-        applyPlasticDrag(e.touches[0].clientX, e.touches[0].clientY);
+        pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY;
+        pointer.active = true;
       }
     }, { passive: true });
-    window.addEventListener('touchend', function () { bumpInteraction(); lastPx = null; lastPy = null; }, { passive: true });
+    window.addEventListener('touchend', function() {
+      pointer.active = false; lastPx = null; lastPy = null;
+    }, { passive: true });
 
     function clickImpulse(rx, ry) {
-      // One-shot radial impulse: outward velocity applied once, falling off
-      // with distance from the click point. Replaces the old expanding-ring
-      // band-force ripple. Entropy + permanent base-position jitter on
-      // nearby nodes is preserved so the line still drifts over time.
-      var R = 280; // radius of effect, generous
-      var STRENGTH = 42 * clickMult; // tunable; multiplied by clickMult slider value
+      // Radial outward impulse — shift current positions without touching
+      // previous positions, so Verlet treats the delta as velocity.
+      var R = 280, STRENGTH = 10 * clickMult;
       for (var i = 0; i < nodes.length; i++) {
-        var n = nodes[i];
-        var dx = n.x - rx;
-        var dy = n.y - ry;
+        var nd = nodes[i];
+        if (nd.pinned) continue;
+        var dx = nd.x - rx, dy = nd.y - ry;
         var d2 = dx * dx + dy * dy;
-        if (d2 > R * R) continue;
+        if (d2 > R * R || d2 < 0.001) continue;
         var d = Math.sqrt(d2);
-        if (d < 0.001) continue;
-        var falloff = 1 - d / R; // 1 at center, 0 at edge
-        // smooth squared falloff so the kick stays mostly local
-        falloff = falloff * falloff;
-        var nx = dx / d;
-        var ny = dy / d;
-        // Smooth base + log-distributed splatter spike
-        // Math.random() is uniform 0..1; -log(u) is exp-distributed (mean 1, heavy tail)
-        var splat = -Math.log(Math.random() + 1e-6); // small epsilon prevents Math.log(0)
-        // Combine: base smooth force + splatter contribution that scales with proximity
+        var falloff = (1 - d / R); falloff *= falloff;
+        var splat = -Math.log(Math.random() + 1e-6);
         var F = STRENGTH * (falloff + splatterMult * splat * falloff);
-        n.vx += nx * F;
-        n.vy += ny * F;
-        // Permanent base-position shift outward, proportional to kick magnitude (with splat)
-        var retainAmount = 18 * falloff * (1 + splatterMult * splat);
-        n.bx += nx * retainAmount;
-        n.by += ny * retainAmount;
+        nd.x += (dx / d) * F;
+        nd.y += (dy / d) * F;
       }
-      // Phase 4: base positions are retained outward in the velocity-kick
-      // loop above — the spring pulls each node toward its newly scattered
-      // location instead of the original baseline. The DISLOCATION metric
-      // (computed live in computeMetrics) reflects this drift automatically.
     }
-    window.addEventListener('click', function (e) { bumpInteraction(); clickImpulse(e.clientX, e.clientY); }, { passive: true });
-    window.addEventListener('touchstart', function (e) {
-      bumpInteraction();
+
+    window.addEventListener('click', function(e) {
+      clickImpulse(e.clientX, e.clientY);
+    }, { passive: true });
+    window.addEventListener('touchstart', function(e) {
       if (e.touches && e.touches[0]) clickImpulse(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
 
-    function startPressHold(x, y) {
-      pullX = x;
-      pullY = y;
-      if (pullTimer) clearTimeout(pullTimer);
-      pullTimer = setTimeout(function() {
-        pullActive = true;
-      }, 500);
-    }
-    function updatePressHold(x, y) {
-      pullX = x;
-      pullY = y;
-    }
-    function endPressHold() {
-      if (pullTimer) clearTimeout(pullTimer);
-      pullTimer = null;
-      pullActive = false;
-    }
-
-    window.addEventListener('mousedown', function(e) {
-      bumpInteraction();
-      startPressHold(e.clientX, e.clientY);
-    });
-    window.addEventListener('mousemove', function(e) {
-      if (pullActive || pullTimer) updatePressHold(e.clientX, e.clientY);
-    }, { passive: true });
-    window.addEventListener('mouseup', endPressHold);
-    window.addEventListener('mouseleave', endPressHold);
-    window.addEventListener('touchstart', function(e) {
-      if (e.touches && e.touches[0]) startPressHold(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: true });
-    window.addEventListener('touchmove', function(e) {
-      if ((pullActive || pullTimer) && e.touches && e.touches[0]) updatePressHold(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: true });
-    window.addEventListener('touchend', endPressHold);
-    window.addEventListener('touchcancel', endPressHold);
-
-    // Tilt: iOS Safari requires DeviceOrientationEvent.requestPermission() to be
-    // called from inside a user gesture, otherwise the listener never fires.
-    // We attach immediately on Android; on iOS we defer until the first
-    // touch/click and ask for permission then.
+    // Device tilt — leans gravity direction on mobile
     var bgTiltAttached = false;
-    var prevTiltX = 0, prevTiltY = 0;
     function onBgTilt(ev) {
-      bumpInteraction();
       if (ev.gamma == null || ev.beta == null) return;
-      // Tighter saturation (30° instead of 45°) so a small wrist flick already
-      // pushes |tilt| toward 1 — the bg now responds at typical handheld angles.
       tilt.x = clamp(ev.gamma / 60, -1, 1);
-      tilt.y = clamp(ev.beta / 60, -1, 1);
-      var tiltX = tilt.x, tiltY = tilt.y;
-      prevTiltX = tiltX;
-      prevTiltY = tiltY;
+      tilt.y = clamp(ev.beta  / 60, -1, 1);
     }
     function attachBgTilt() {
       if (bgTiltAttached || !window.DeviceOrientationEvent) return;
@@ -4822,20 +4603,19 @@ class Knob {
         bgTiltAttached = true;
         window.addEventListener('deviceorientation', onBgTilt, { passive: true });
       } else {
-        DeviceOrientationEvent.requestPermission().then(function (r) {
+        DeviceOrientationEvent.requestPermission().then(function(r) {
           if (r === 'granted') {
             bgTiltAttached = true;
             window.addEventListener('deviceorientation', onBgTilt, { passive: true });
           }
-        }).catch(function () {});
+        }).catch(function() {});
       }
     }
     if (window.DeviceOrientationEvent) {
-      var iOSPerm = typeof DeviceOrientationEvent.requestPermission === 'function';
-      if (!iOSPerm) {
+      if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
         attachBgTilt();
       } else {
-        var bgTiltOneShot = function () {
+        var bgTiltOneShot = function() {
           document.removeEventListener('touchstart', bgTiltOneShot, true);
           document.removeEventListener('pointerdown', bgTiltOneShot, true);
           attachBgTilt();
@@ -4845,27 +4625,26 @@ class Knob {
       }
     }
 
-    document.addEventListener('visibilitychange', function () {
+    document.addEventListener('visibilitychange', function() {
       if (document.visibilityState === 'visible') start();
     });
   }
 
-  // Slider hookups for the floating bg-controls panel.
-  var bgControls    = document.getElementById('bgControls');
-  var probSlider    = document.getElementById('bgLinkProb');
-  var distSlider    = document.getElementById('bgLinkDist');
-  var probValEl     = document.getElementById('bgLinkProbVal');
-  var distValEl     = document.getElementById('bgLinkDistVal');
+  // ---- Slider hookups (unchanged IDs — wired to rope params where meaningful) ----
+
+  var bgControls = document.getElementById('bgControls');
+  var probSlider = document.getElementById('bgLinkProb');
+  var distSlider = document.getElementById('bgLinkDist');
+  var probValEl  = document.getElementById('bgLinkProbVal');
+  var distValEl  = document.getElementById('bgLinkDistVal');
   if (bgControls) {
     var toggle = bgControls.querySelector('.bg-controls-toggle');
-    if (toggle) toggle.addEventListener('click', function () {
-      bgControls.classList.toggle('open');
-    });
+    if (toggle) toggle.addEventListener('click', function() { bgControls.classList.toggle('open'); });
   }
   if (probSlider) {
     linkProb = parseFloat(probSlider.value);
     if (probValEl) probValEl.textContent = linkProb.toFixed(2);
-    probSlider.addEventListener('input', function () {
+    probSlider.addEventListener('input', function() {
       linkProb = parseFloat(probSlider.value);
       if (probValEl) probValEl.textContent = linkProb.toFixed(2);
       if (reduced) render();
@@ -4874,7 +4653,7 @@ class Knob {
   if (distSlider) {
     linkRange = parseFloat(distSlider.value);
     if (distValEl) distValEl.textContent = String(linkRange | 0);
-    distSlider.addEventListener('input', function () {
+    distSlider.addEventListener('input', function() {
       linkRange = parseFloat(distSlider.value);
       if (distValEl) distValEl.textContent = String(linkRange | 0);
       if (reduced) render();
@@ -4886,14 +4665,12 @@ class Knob {
   if (forceSlider) {
     interaction = parseFloat(forceSlider.value);
     if (forceValEl) forceValEl.textContent = interaction.toFixed(2);
-    forceSlider.addEventListener('input', function () {
+    forceSlider.addEventListener('input', function() {
       interaction = parseFloat(forceSlider.value);
       if (forceValEl) forceValEl.textContent = interaction.toFixed(2);
     });
   }
 
-  // Tilt sliders are CSS-hidden on desktop but the JS hookup is harmless if
-  // the elements happen to exist (e.g. devtools mobile emulation).
   var tiltXSlider = document.getElementById('bgTiltX');
   var tiltXValEl  = document.getElementById('bgTiltXVal');
   var tiltYSlider = document.getElementById('bgTiltY');
@@ -4901,7 +4678,7 @@ class Knob {
   if (tiltXSlider) {
     tiltStrengthX = parseFloat(tiltXSlider.value);
     if (tiltXValEl) tiltXValEl.textContent = tiltStrengthX.toFixed(2);
-    tiltXSlider.addEventListener('input', function () {
+    tiltXSlider.addEventListener('input', function() {
       tiltStrengthX = parseFloat(tiltXSlider.value);
       if (tiltXValEl) tiltXValEl.textContent = tiltStrengthX.toFixed(2);
     });
@@ -4909,25 +4686,22 @@ class Knob {
   if (tiltYSlider) {
     tiltStrengthY = parseFloat(tiltYSlider.value);
     if (tiltYValEl) tiltYValEl.textContent = tiltStrengthY.toFixed(2);
-    tiltYSlider.addEventListener('input', function () {
+    tiltYSlider.addEventListener('input', function() {
       tiltStrengthY = parseFloat(tiltYSlider.value);
       if (tiltYValEl) tiltYValEl.textContent = tiltStrengthY.toFixed(2);
     });
   }
 
-  // Phase 3: new settings-menu sliders. POINTER controls plastic drag
-  // strength, TILT multiplies the existing tilt force, CLICK multiplies
-  // entropy + jitter range, DRONE scales the drone gain via its setLevel.
   var pointerSlider = document.getElementById('bgPointer');
   var pointerValEl  = document.getElementById('bgPointerVal');
   if (pointerSlider) {
-    POINTER_PLASTICITY = parseFloat(pointerSlider.value);
-    if (pointerValEl) pointerValEl.textContent = POINTER_PLASTICITY.toFixed(2);
-    pointerSlider.addEventListener('input', function () {
+    POINTER_STRENGTH = parseFloat(pointerSlider.value);
+    if (pointerValEl) pointerValEl.textContent = POINTER_STRENGTH.toFixed(2);
+    pointerSlider.addEventListener('input', function() {
       var v = parseFloat(pointerSlider.value);
       if (window.__hero && window.__hero.poly && window.__hero.poly.setPointer) {
         window.__hero.poly.setPointer(v);
-      } else { POINTER_PLASTICITY = v; }
+      } else { POINTER_STRENGTH = v; }
       if (pointerValEl) pointerValEl.textContent = v.toFixed(2);
     });
   }
@@ -4937,7 +4711,7 @@ class Knob {
   if (tiltMultSlider) {
     tiltMult = parseFloat(tiltMultSlider.value);
     if (tiltMultValEl) tiltMultValEl.textContent = tiltMult.toFixed(2);
-    tiltMultSlider.addEventListener('input', function () {
+    tiltMultSlider.addEventListener('input', function() {
       var v = parseFloat(tiltMultSlider.value);
       if (window.__hero && window.__hero.poly && window.__hero.poly.setTilt) {
         window.__hero.poly.setTilt(v);
@@ -4951,7 +4725,7 @@ class Knob {
   if (clickSlider) {
     clickMult = parseFloat(clickSlider.value);
     if (clickValEl) clickValEl.textContent = clickMult.toFixed(2);
-    clickSlider.addEventListener('input', function () {
+    clickSlider.addEventListener('input', function() {
       var v = parseFloat(clickSlider.value);
       if (window.__hero && window.__hero.poly && window.__hero.poly.setClick) {
         window.__hero.poly.setClick(v);
@@ -4964,7 +4738,7 @@ class Knob {
   var droneValEl  = document.getElementById('bgDroneVal');
   if (droneSlider) {
     if (droneValEl) droneValEl.textContent = parseFloat(droneSlider.value).toFixed(2);
-    droneSlider.addEventListener('input', function () {
+    droneSlider.addEventListener('input', function() {
       var v = parseFloat(droneSlider.value);
       if (window.__hero && window.__hero.drone && window.__hero.drone.setLevel) {
         window.__hero.drone.setLevel(v);
@@ -4997,38 +4771,26 @@ class Knob {
     });
   }
 
-  // Phase 4: expose engine controls so the hero's RESET / RESUME buttons
-  // and the IntersectionObserver auto-pause can drive the polyline.
+  // ---- External API (same surface as before) ----
   window.__hero = window.__hero || {};
   window.__hero.poly = {
     reset: function() {
-      // Animated reset: snapshot each node's current base position and
-      // ease bx/by toward its home (hx/hy) over RESET_DURATION ms. The
-      // existing spring physics drags x/y along, so the line glides home
-      // instead of snapping. Finalization (zeroing meters, snapping x=hx,
-      // clearing velocities) happens at p>=1 inside applyResetAnimation.
-      // Also clear plastic-drag pointer history so the first move
-      // post-reset starts clean.
-      resetSnapshot = nodes.map(function(n) { return { bx: n.bx, by: n.by }; });
-      resetStart = (performance.now ? performance.now() : Date.now());
-      resetting = true;
+      initRope();
       lastPx = null; lastPy = null;
-      lastInteractionTime = resetStart; // restart idle timer so settle doesn't fight
+      var em = document.getElementById('entropyMeter');
+      if (em) em.textContent = '0.00';
     },
-    pause: function() { paused = true; },
-    resume: function() { paused = false; },
+    pause:    function() { paused = true; },
+    resume:   function() { paused = false; },
     isPaused: function() { return paused; },
-    // Phase 3: settings-menu setters. Each slider input updates one of
-    // the closure-scoped multipliers above without the menu code needing
-    // to live inside the IIFE.
-    setPointer: function(v) { POINTER_PLASTICITY = +v; },
-    setTilt: function(v) { tiltMult = +v; },
-    setClick: function(v) { clickMult = +v; },
+    setPointer:    function(v) { POINTER_STRENGTH = +v; },
+    setTilt:       function(v) { tiltMult = +v; },
+    setClick:      function(v) { clickMult = +v; },
     setAttraction: function(v) { attractionMult = Math.max(0, Math.min(1, +v) || 0); },
-    setSplatter: function(v) { splatterMult = Math.max(0, Math.min(2, +v) || 0); },
+    setSplatter:   function(v) { splatterMult = Math.max(0, Math.min(2, +v) || 0); },
     getEntropy: function() { return entropy; },
     getParting: function() { return parting; },
-    getMoved: function() { return moved; }
+    getMoved:   function() { return moved; }
   };
 
   resize();
