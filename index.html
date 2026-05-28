@@ -1688,7 +1688,7 @@
      Default: hidden (opacity 0) so there's no flash before JS runs. */
   .return-home {
     position: fixed;
-    top: 24px;
+    top: 68px;
     left: 24px;
     z-index: 8000;
     background: transparent;
@@ -1719,7 +1719,7 @@
   /* Fade WORKS out when the user has scrolled into the sections */
   body.nav-locked-down .hero-nav-toggle { opacity: 0; pointer-events: none; }
   @media (max-width: 640px) {
-    .return-home { top: 16px; left: 16px; }
+    .return-home { top: 60px; left: 16px; }
   }
 
   /* ----- Quick Showreel button + lightbox -------------------------------
@@ -5150,6 +5150,39 @@ class Knob {
   });
 })();
 
+(function navUpGuard() {
+  // When nav-locked-down is active, clamp scroll to the top of #three-d.
+  // Uses scrollTop (not window.scrollTo) to bypass html{scroll-behavior:smooth}
+  // — window.scrollTo triggers a smooth animation that cascades into jitter
+  // when called from a scroll listener. scrollTop is always instant.
+  function getMinY() {
+    if (!document.body.classList.contains('nav-locked-down')) return null;
+    var el = document.getElementById('three-d');
+    return el ? el.offsetTop : null;
+  }
+
+  window.addEventListener('wheel', function(e) {
+    var minY = getMinY();
+    if (minY === null) return;
+    if (window.scrollY <= minY && e.deltaY < 0) e.preventDefault();
+  }, { passive: false });
+
+  var touchStartY = 0;
+  window.addEventListener('touchstart', function(e) {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  window.addEventListener('touchmove', function(e) {
+    var minY = getMinY();
+    if (minY === null) return;
+    if (window.scrollY <= minY && e.touches[0].clientY > touchStartY) e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener('scroll', function() {
+    var minY = getMinY();
+    if (minY === null) return;
+    if (window.scrollY < minY) document.documentElement.scrollTop = minY;
+  }, { passive: true });
+})();
 
 (function droneEngine() {
   var ac = null;
