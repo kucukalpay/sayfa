@@ -4394,25 +4394,43 @@ class Knob {
     var x0     = W * 0.04, x1 = W * 0.96;
     var lineY  = H * 0.5;
     var cycles = 5;
+
+    function sineAt(t) {
+      return {
+        x: x0 + t * (x1 - x0),
+        y: lineY + Math.sin(t * Math.PI) * Math.sin(t * Math.PI * 2 * cycles) * H * 0.32
+      };
+    }
+
+    // 1. Sample the curve at high resolution to build a cumulative arc-length table.
+    var SAMPLES = 2000;
+    var cumArc  = new Array(SAMPLES + 1);
+    var spts    = new Array(SAMPLES + 1);
+    cumArc[0] = 0;
+    spts[0]   = sineAt(0);
+    for (var s = 1; s <= SAMPLES; s++) {
+      spts[s] = sineAt(s / SAMPLES);
+      var ddx = spts[s].x - spts[s - 1].x;
+      var ddy = spts[s].y - spts[s - 1].y;
+      cumArc[s] = cumArc[s - 1] + Math.sqrt(ddx * ddx + ddy * ddy);
+    }
+    var totalArc = cumArc[SAMPLES];
+    restLen = totalArc / SEG_COUNT;
+
+    // 2. Place each node at equal arc-length steps by walking the table.
+    var si = 0;
     for (var i = 0; i < n; i++) {
-      var t = n > 1 ? i / (n - 1) : 0;
-      var x = x0 + t * (x1 - x0);
-      var envelope = Math.sin(t * Math.PI); // taper amplitude to 0 at both ends
-      var y = lineY + envelope * Math.sin(t * Math.PI * 2 * cycles) * H * 0.32;
-      nodes.push({ x: x, y: y, px: x, py: y,
+      var target = i * restLen;
+      while (si < SAMPLES - 1 && cumArc[si + 1] < target) si++;
+      var span = cumArc[si + 1] - cumArc[si];
+      var frac = span > 0 ? (target - cumArc[si]) / span : 0;
+      var nx = spts[si].x + frac * (spts[si + 1].x - spts[si].x);
+      var ny = spts[si].y + frac * (spts[si + 1].y - spts[si].y);
+      nodes.push({ x: nx, y: ny, px: nx, py: ny,
                    pinned: (i === 0 || i === n - 1),
-                   hx: x, hy: y,   // home = initial sine wave position
+                   hx: nx, hy: ny,
                    line: 0 });
     }
-    // restLen = actual arc-length between adjacent nodes on the sine wave,
-    // so the rope naturally rests at its initial shape with no tension.
-    var totalArc = 0;
-    for (var i = 0; i < n - 1; i++) {
-      var dx = nodes[i + 1].x - nodes[i].x;
-      var dy = nodes[i + 1].y - nodes[i].y;
-      totalArc += Math.sqrt(dx * dx + dy * dy);
-    }
-    restLen = totalArc / SEG_COUNT;
     entropy = 0; parting = 0; moved = 0; totalMoved = 0;
   }
 
