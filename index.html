@@ -2062,8 +2062,8 @@
       <input type="range" id="bgLinkDist" min="50" max="450" step="5" value="200">
     </label>
     <label>
-      <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">3.50</span></span>
-      <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="3.5">
+      <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">2.00</span></span>
+      <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="2">
     </label>
     <label>
       <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">1.00</span></span>
@@ -5081,9 +5081,9 @@ class Knob {
     if (!isOn) return;
     var t = ac.currentTime;
     var poly = window.__hero && window.__hero.poly;
-    var entropy = poly && poly.getEntropy ? poly.getEntropy() : 0;
-    var parting = poly && poly.getParting ? poly.getParting() : 0;
-    var moved = poly && poly.getMoved ? poly.getMoved() : 0;
+    var entropy = (poly && poly.getEntropy ? poly.getEntropy() : 0) * 0.1;
+    var parting = (poly && poly.getParting ? poly.getParting() : 0) * 0.1;
+    var moved   = (poly && poly.getMoved   ? poly.getMoved()   : 0) * 0.1;
     // Overall interaction strength — halves the response of every parameter
     // (pointer / tilt / entropy) so the drone modulates more subtly.
     var K = 0.5;
@@ -5091,11 +5091,11 @@ class Knob {
     var cutoff = 280 + (pointerNX * 800 * K) + (entropy * 60 * K);
     filter.frequency.cancelScheduledValues(t);
     filter.frequency.setValueAtTime(filter.frequency.value, t);
-    filter.frequency.linearRampToValueAtTime(cutoff, t + 0.12);
+    filter.frequency.linearRampToValueAtTime(cutoff, t + 0.5);
     var q = 2 + pointerNY * 6 + parting * 0.05;
     filter.Q.cancelScheduledValues(t);
     filter.Q.setValueAtTime(filter.Q.value, t);
-    filter.Q.linearRampToValueAtTime(q, t + 0.12);
+    filter.Q.linearRampToValueAtTime(q, t + 0.5);
     // Detune (cents) — applied uniformly across the chord. All four
     // parameters (pointerX/Y, tilt, entropy) now nudge pitch so every note
     // in the chord breathes with the interaction, not just tilt+entropy.
@@ -5103,7 +5103,7 @@ class Knob {
     oscs.forEach(function(o) {
       o.detune.cancelScheduledValues(t);
       o.detune.setValueAtTime(o.detune.value, t);
-      o.detune.linearRampToValueAtTime(detuneTarget, t + 0.12);
+      o.detune.linearRampToValueAtTime(detuneTarget, t + 0.5);
     });
     // preGain headroom — divided down by (1 + entropy*K) so the chord/Shepherd
     // stack auto-attenuates as the line accumulates damage.
@@ -5111,13 +5111,13 @@ class Knob {
       var preTarget = 1 / (1 + entropy * K);
       preGain.gain.cancelScheduledValues(t);
       preGain.gain.setValueAtTime(preGain.gain.value, t);
-      preGain.gain.linearRampToValueAtTime(preTarget, t + 0.12);
+      preGain.gain.linearRampToValueAtTime(preTarget, t + 0.5);
     }
     // Master gain swells with entropy so the drone audibly thickens.
     var gainTarget = isOn ? 0.045 * level * (1 + Math.min(moved * 0.002, 0.15)) : 0;
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(gain.gain.value, t);
-    gain.gain.linearRampToValueAtTime(gainTarget, t + 0.12);
+    gain.gain.linearRampToValueAtTime(gainTarget, t + 0.5);
     // Subtle "breathing" on recent pointer motion.
     var since = performance.now() - lastMoveTime;
     if (since < 200) {
