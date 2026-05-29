@@ -4497,6 +4497,8 @@ class Knob {
     //    Raw velocity is low-pass filtered so the force ramps up/down smoothly.
     var pvx = pointer.active ? (pointer.x - pointer.px) : 0;
     var pvy = pointer.active ? (pointer.y - pointer.py) : 0;
+    if (pvx > 50) pvx = 50; else if (pvx < -50) pvx = -50;
+    if (pvy > 50) pvy = 50; else if (pvy < -50) pvy = -50;
     windVx += (pvx - windVx) * 0.08;
     windVy += (pvy - windVy) * 0.08;
     pointer.px = pointer.x;
@@ -4636,6 +4638,7 @@ class Knob {
     }, { passive: true });
     window.addEventListener('touchend', function() {
       dragTip = null;
+      windVx = 0; windVy = 0;
       pointer.active = false; lastPx = null; lastPy = null;
     }, { passive: true });
 
@@ -4676,6 +4679,9 @@ class Knob {
     window.addEventListener('touchstart', function(e) {
       if (e.touches && e.touches[0]) {
         var tx = e.touches[0].clientX, ty = e.touches[0].clientY;
+        // Sync previous pointer position to touch start so first-frame delta is 0
+        pointer.x = tx; pointer.y = ty;
+        pointer.px = tx; pointer.py = ty;
         var idx = nearTip(tx, ty);
         if (idx !== null) {
           dragTip = idx;
