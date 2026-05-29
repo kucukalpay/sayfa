@@ -2066,8 +2066,8 @@
       <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="2">
     </label>
     <label>
-      <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">1.00</span></span>
-      <input type="range" id="bgPointer" min="0" max="1" step="0.01" value="1.0">
+      <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">0.20</span></span>
+      <input type="range" id="bgPointer" min="0" max="1" step="0.01" value="0.2">
     </label>
     <label>
       <span class="row"><span>TILT</span><span class="val" id="bgTiltMultVal">0.50</span></span>
@@ -4345,6 +4345,7 @@ class Knob {
   var paused = false;
   var progress = 0;
   var tilt = { x: 0, y: 0 };
+  var tiltYBaseline = null; // beta value recorded on first event; null = uncalibrated
   var pointer = { x: -9999, y: -9999, px: -9999, py: -9999, active: false };
   var lastMeterUpdate = 0;
 
@@ -4458,6 +4459,7 @@ class Knob {
     var n  = nodes.length;
     // Tilt nudge replaces gravity on mobile (no constant downward pull).
     var tiltGx = tilt.x * tiltStrengthX * tiltMult * 0.08;
+    var tiltGy = tilt.y * tiltStrengthY * tiltMult * 0.08;
 
     // 1. Verlet integrate with anisotropic fluid drag.
     //    Decompose each node's velocity into tangential (along rope) and
@@ -4490,7 +4492,7 @@ class Knob {
       nd.px = nd.x;
       nd.py = nd.y;
       nd.x += dvx + tiltGx;
-      nd.y += dvy;
+      nd.y += dvy + tiltGy;
     }
 
     // 2. Pointer wind — push nodes in the direction of pointer travel.
@@ -4697,8 +4699,9 @@ class Knob {
     var bgTiltAttached = false;
     function onBgTilt(ev) {
       if (ev.gamma == null || ev.beta == null) return;
+      if (tiltYBaseline === null) tiltYBaseline = ev.beta;
       tilt.x = clamp(ev.gamma / 60, -1, 1);
-      tilt.y = clamp(ev.beta  / 60, -1, 1);
+      tilt.y = clamp((ev.beta - tiltYBaseline) / 60, -1, 1);
     }
     function attachBgTilt() {
       if (bgTiltAttached || !window.DeviceOrientationEvent) return;
@@ -4881,6 +4884,7 @@ class Knob {
     reset: function() {
       initRope();
       lastPx = null; lastPy = null;
+      tiltYBaseline = null;
       var em = document.getElementById('entropyMeter');
       if (em) em.textContent = '0.00';
     },
