@@ -4372,6 +4372,9 @@ class Knob {
   var linkProb = 0.5, linkRange = 200;
   var lastPx = null, lastPy = null;
 
+  // Pointer wind
+  var windVx = 0, windVy = 0; // low-pass-filtered pointer velocity
+
   // Tip dragging
   var dragTip = null;      // null | node-index — which endpoint is being dragged
   var dragConsumed = false; // suppresses the click impulse that follows mouseup
@@ -4490,31 +4493,27 @@ class Knob {
       nd.y += dvy;
     }
 
-    // 2. Mouse / touch attraction + velocity impulse
-    if (pointer.active) {
-      var pvx = pointer.x - pointer.px;
-      var pvy = pointer.y - pointer.py;
-      var R = 160, R2 = R * R;
-      var VEL_SCALE = 0.12;
+    // 2. Pointer wind — push nodes in the direction of pointer travel.
+    //    Raw velocity is low-pass filtered so the force ramps up/down smoothly.
+    var pvx = pointer.active ? (pointer.x - pointer.px) : 0;
+    var pvy = pointer.active ? (pointer.y - pointer.py) : 0;
+    windVx += (pvx - windVx) * 0.08;
+    windVy += (pvy - windVy) * 0.08;
+    pointer.px = pointer.x;
+    pointer.py = pointer.y;
+
+    if (windVx * windVx + windVy * windVy > 0.0001) {
+      var R = 160, R2 = R * R, WIND_SCALE = 0.25 * POINTER_STRENGTH * interaction;
       for (var i = 0; i < n; i++) {
         var nd = nodes[i];
         if (nd.pinned) continue;
-        var dx = pointer.x - nd.x, dy = pointer.y - nd.y;
-        var d2 = dx * dx + dy * dy;
-        if (d2 > R2 || d2 < 0.01) continue;
-        var d = Math.sqrt(d2);
-        var proximity = 1 - d / R;
-        // Position attraction at 0.05× of original strength
-        var f = proximity * 0.35 * 0.05 * POINTER_STRENGTH * interaction;
-        nd.x += (dx / d) * f;
-        nd.y += (dy / d) * f;
-        // Velocity impulse — fast swipes push the rope
-        nd.x += pvx * proximity * VEL_SCALE;
-        nd.y += pvy * proximity * VEL_SCALE;
+        var ddx = pointer.x - nd.x, ddy = pointer.y - nd.y;
+        if (ddx * ddx + ddy * ddy > R2) continue;
+        var proximity = 1 - Math.sqrt(ddx * ddx + ddy * ddy) / R;
+        nd.x += windVx * proximity * WIND_SCALE;
+        nd.y += windVy * proximity * WIND_SCALE;
       }
     }
-    pointer.px = pointer.x;
-    pointer.py = pointer.y;
 
     // 2.5. Tip drag — lock the dragged endpoint to pointer + recorded offset
     if (dragTip !== null) {
