@@ -4356,7 +4356,7 @@ class Knob {
   var restLen          = 0;     // computed in initRope()
 
   // Interaction knobs (settable via sliders / __hero.poly API)
-  var POINTER_STRENGTH = 1.0;
+  var POINTER_STRENGTH = ('ontouchstart' in window || navigator.maxTouchPoints > 1) ? 0.25 : 1.0;
   var tiltMult         = 0.5;
   var clickMult        = 1.0;
   var splatterMult     = 0.6;
