@@ -4545,6 +4545,17 @@ class Knob {
       nodes[n - 1].x = nodes[n - 1].hx; nodes[n - 1].y = nodes[n - 1].hy;
     }
 
+    // 3.5. Soft edge repulsion — springy push away from canvas boundaries
+    var EDGE_MARGIN = 40, EDGE_K = 0.15;
+    for (var i = 0; i < n; i++) {
+      var nd = nodes[i];
+      if (nd.pinned) continue;
+      if (nd.x < EDGE_MARGIN)     nd.x += (EDGE_MARGIN - nd.x) * EDGE_K;
+      if (nd.x > W - EDGE_MARGIN) nd.x -= (nd.x - (W - EDGE_MARGIN)) * EDGE_K;
+      if (nd.y < EDGE_MARGIN)     nd.y += (EDGE_MARGIN - nd.y) * EDGE_K;
+      if (nd.y > H - EDGE_MARGIN) nd.y -= (nd.y - (H - EDGE_MARGIN)) * EDGE_K;
+    }
+
     // 4. Metrics (used by entropy meter and drone modulation)
     var totalDist = 0, totalLen = 0, frameMoved = 0;
     for (var i = 0; i < n; i++) {
