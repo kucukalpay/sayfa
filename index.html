@@ -4357,7 +4357,7 @@ class Knob {
   var restLen          = 0;     // computed in initRope()
 
   // Interaction knobs (settable via sliders / __hero.poly API)
-  var POINTER_STRENGTH = ('ontouchstart' in window || navigator.maxTouchPoints > 1) ? 0.25 : 1.0;
+  var POINTER_STRENGTH = ('ontouchstart' in window || navigator.maxTouchPoints > 1) ? 0.5 : 1.0;
   var tiltMult         = 0.5;
   var clickMult        = 1.0;
   var splatterMult     = 0.6;
@@ -4499,15 +4499,17 @@ class Knob {
     //    Raw velocity is low-pass filtered so the force ramps up/down smoothly.
     var pvx = pointer.active ? (pointer.x - pointer.px) : 0;
     var pvy = pointer.active ? (pointer.y - pointer.py) : 0;
-    if (pvx > 50) pvx = 50; else if (pvx < -50) pvx = -50;
-    if (pvy > 50) pvy = 50; else if (pvy < -50) pvy = -50;
-    windVx += (pvx - windVx) * 0.08;
-    windVy += (pvy - windVy) * 0.08;
+    var velCap = isMobile ? 120 : 50;
+    if (pvx > velCap) pvx = velCap; else if (pvx < -velCap) pvx = -velCap;
+    if (pvy > velCap) pvy = velCap; else if (pvy < -velCap) pvy = -velCap;
+    var windLerp = isMobile ? 0.18 : 0.08;
+    windVx += (pvx - windVx) * windLerp;
+    windVy += (pvy - windVy) * windLerp;
     pointer.px = pointer.x;
     pointer.py = pointer.y;
 
     if (windVx * windVx + windVy * windVy > 0.0001) {
-      var R = 160, R2 = R * R, WIND_SCALE = 0.25 * POINTER_STRENGTH * interaction;
+      var R = 160, R2 = R * R, WIND_SCALE = (isMobile ? 0.5 : 0.25) * POINTER_STRENGTH * interaction;
       for (var i = 0; i < n; i++) {
         var nd = nodes[i];
         if (nd.pinned) continue;
@@ -4546,7 +4548,7 @@ class Knob {
     }
 
     // 3.5. Soft edge repulsion — springy push away from canvas boundaries
-    var EDGE_MARGIN = 40, EDGE_K = 0.15;
+    var EDGE_MARGIN = 20, EDGE_K = 0.04;
     for (var i = 0; i < n; i++) {
       var nd = nodes[i];
       if (nd.pinned) continue;
