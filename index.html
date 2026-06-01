@@ -4337,9 +4337,14 @@ class Knob {
   var ctx = canvas.getContext('2d');
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isMobile = window.innerWidth <= 768;
+  var isIOSSafari = /iPhone|iPad|iPod/.test(navigator.userAgent) &&
+                    !/(CriOS|FxiOS|OPiOS)/.test(navigator.userAgent);
   var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.25);
   var W = 0, H = 0;
-  var nodes = [];
+  // Flat typed arrays for node data — JIT-friendly, avoids per-property lookup overhead
+  var nX, nY, nPX, nPY, nHX, nHY; // Float32Array — positions (current, previous, home)
+  var nPin;  // Uint8Array  — 1 = pinned endpoint
+  var nLen = 0; // live node count
   var rafId = 0;
   var lastT = 0;
   var paused = false;
@@ -4350,10 +4355,10 @@ class Knob {
   var lastMeterUpdate = 0;
 
   // Rope physics
-  var SEG_COUNT        = 540;   // number of segments (nodes = SEG_COUNT + 1)
+  var SEG_COUNT        = isIOSSafari ? 120 : isMobile ? 180 : 360;
   var DAMP_TAN         = 0.988; // velocity retention along rope tangent (low drag — rope slips through fluid)
   var DAMP_NOR         = 0.78;  // velocity retention perpendicular to rope (high drag — resists sideways motion)
-  var CONSTRAINT_ITERS = 12;    // constraint solver passes per step
+  var CONSTRAINT_ITERS = 6;     // arc-length init means rope starts stress-free; fewer passes sufficient
   var restLen          = 0;     // computed in initRope()
 
   // Interaction knobs (settable via sliders / __hero.poly API)
@@ -4384,21 +4389,23 @@ class Knob {
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
   function nearTip(cx, cy) {
-    if (nodes.length < 2) return null;
-    var last = nodes.length - 1, dx, dy;
-    dx = cx - nodes[0].x; dy = cy - nodes[0].y;
-    if (dx * dx + dy * dy < 900) return 0;        // 30 px radius
-    dx = cx - nodes[last].x; dy = cy - nodes[last].y;
+    if (nLen < 2) return null;
+    var last = nLen - 1, dx, dy;
+    dx = cx - nX[0];    dy = cy - nY[0];
+    if (dx * dx + dy * dy < 900) return 0;
+    dx = cx - nX[last]; dy = cy - nY[last];
     if (dx * dx + dy * dy < 900) return last;
     return null;
   }
 
   function initRope() {
-    nodes = [];
-    var n      = SEG_COUNT + 1;
-    var x0     = W * 0.04, x1 = W * 0.96;
-    var lineY  = H * 0.5;
-    var cycles = 5;
+    nLen = SEG_COUNT + 1;
+    nX   = new Float32Array(nLen); nY   = new Float32Array(nLen);
+    nPX  = new Float32Array(nLen); nPY  = new Float32Array(nLen);
+    nHX  = new Float32Array(nLen); nHY  = new Float32Array(nLen);
+    nPin = new Uint8Array(nLen);
+
+    var x0 = W * 0.04, x1 = W * 0.96, lineY = H * 0.5, cycles = 5;
 
     function sineAt(t) {
       return {
@@ -4409,14 +4416,12 @@ class Knob {
 
     // 1. Sample the curve at high resolution to build a cumulative arc-length table.
     var SAMPLES = 2000;
-    var cumArc  = new Array(SAMPLES + 1);
-    var spts    = new Array(SAMPLES + 1);
-    cumArc[0] = 0;
-    spts[0]   = sineAt(0);
+    var cumArc = new Float32Array(SAMPLES + 1);
+    var spts   = new Array(SAMPLES + 1);
+    cumArc[0] = 0; spts[0] = sineAt(0);
     for (var s = 1; s <= SAMPLES; s++) {
       spts[s] = sineAt(s / SAMPLES);
-      var ddx = spts[s].x - spts[s - 1].x;
-      var ddy = spts[s].y - spts[s - 1].y;
+      var ddx = spts[s].x - spts[s - 1].x, ddy = spts[s].y - spts[s - 1].y;
       cumArc[s] = cumArc[s - 1] + Math.sqrt(ddx * ddx + ddy * ddy);
     }
     var totalArc = cumArc[SAMPLES];
@@ -4424,17 +4429,16 @@ class Knob {
 
     // 2. Place each node at equal arc-length steps by walking the table.
     var si = 0;
-    for (var i = 0; i < n; i++) {
+    for (var i = 0; i < nLen; i++) {
       var target = i * restLen;
       while (si < SAMPLES - 1 && cumArc[si + 1] < target) si++;
       var span = cumArc[si + 1] - cumArc[si];
       var frac = span > 0 ? (target - cumArc[si]) / span : 0;
       var nx = spts[si].x + frac * (spts[si + 1].x - spts[si].x);
       var ny = spts[si].y + frac * (spts[si + 1].y - spts[si].y);
-      nodes.push({ x: nx, y: ny, px: nx, py: ny,
-                   pinned: (i === 0 || i === n - 1),
-                   hx: nx, hy: ny,
-                   line: 0 });
+      nX[i] = nPX[i] = nHX[i] = nx;
+      nY[i] = nPY[i] = nHY[i] = ny;
+      nPin[i] = (i === 0 || i === nLen - 1) ? 1 : 0;
     }
     entropy = 0; parting = 0; moved = 0; totalMoved = 0;
   }
@@ -4456,47 +4460,30 @@ class Knob {
   }
 
   function step(dt) {
-    var n  = nodes.length;
-    // Tilt nudge replaces gravity on mobile (no constant downward pull).
+    var n = nLen;
     var tiltGx = tilt.x * tiltStrengthX * tiltMult * 0.08;
     var tiltGy = tilt.y * tiltStrengthY * tiltMult * 0.08;
 
     // 1. Verlet integrate with anisotropic fluid drag.
-    //    Decompose each node's velocity into tangential (along rope) and
-    //    normal (across rope) components, then damp them independently:
-    //    low drag along the rope, high drag perpendicular to it.
-    for (var i = 0; i < n; i++) {
-      var nd = nodes[i];
-      if (nd.pinned) continue;
-
-      var vx = nd.x - nd.px;
-      var vy = nd.y - nd.py;
-
-      // Central-difference tangent: direction from previous to next node.
-      var prevNd = nodes[i - 1]; // always exists — i >= 1 for free nodes
-      var nextNd = nodes[i + 1]; // always exists — i <= n-2 for free nodes
-      var tx = nextNd.x - prevNd.x;
-      var ty = nextNd.y - prevNd.y;
-      var tLen = Math.sqrt(tx * tx + ty * ty);
-      if (tLen > 0.001) { tx /= tLen; ty /= tLen; } else { tx = 1; ty = 0; }
-
-      // Decompose velocity into tangential and normal components.
-      var vDotT = vx * tx + vy * ty;
-      var vtx = vDotT * tx,  vty = vDotT * ty;   // tangential vector
-      var vnx = vx - vtx,    vny = vy - vty;      // normal vector
-
-      // Apply damping: tangential survives longer, normal dies quickly.
-      var dvx = vtx * DAMP_TAN + vnx * DAMP_NOR;
-      var dvy = vty * DAMP_TAN + vny * DAMP_NOR;
-
-      nd.px = nd.x;
-      nd.py = nd.y;
-      nd.x += dvx + tiltGx;
-      nd.y += dvy + tiltGy;
+    //    Endpoints (i=0, i=n-1) are always pinned — skip them directly.
+    for (var i = 1; i < n - 1; i++) {
+      if (nPin[i]) continue;
+      var vx = nX[i] - nPX[i];
+      var vy = nY[i] - nPY[i];
+      var tanX = nX[i + 1] - nX[i - 1];
+      var tanY = nY[i + 1] - nY[i - 1];
+      var tLen = Math.sqrt(tanX * tanX + tanY * tanY);
+      if (tLen > 0.001) { tanX /= tLen; tanY /= tLen; } else { tanX = 1; tanY = 0; }
+      var vDotT = vx * tanX + vy * tanY;
+      var vtx = vDotT * tanX, vty = vDotT * tanY;
+      var dvx = vtx * DAMP_TAN + (vx - vtx) * DAMP_NOR;
+      var dvy = vty * DAMP_TAN + (vy - vty) * DAMP_NOR;
+      nPX[i] = nX[i]; nPY[i] = nY[i];
+      nX[i] += dvx + tiltGx;
+      nY[i] += dvy + tiltGy;
     }
 
     // 2. Pointer wind — push nodes in the direction of pointer travel.
-    //    Raw velocity is low-pass filtered so the force ramps up/down smoothly.
     var pvx = pointer.active ? (pointer.x - pointer.px) : 0;
     var pvy = pointer.active ? (pointer.y - pointer.py) : 0;
     var velCap = isMobile ? 120 : 50;
@@ -4511,64 +4498,58 @@ class Knob {
     if (windVx * windVx + windVy * windVy > 0.0001) {
       var R = 160, R2 = R * R, WIND_SCALE = (isMobile ? 0.5 : 0.25) * POINTER_STRENGTH * interaction;
       for (var i = 0; i < n; i++) {
-        var nd = nodes[i];
-        if (nd.pinned) continue;
-        var ddx = pointer.x - nd.x, ddy = pointer.y - nd.y;
-        if (ddx * ddx + ddy * ddy > R2) continue;
-        var proximity = 1 - Math.sqrt(ddx * ddx + ddy * ddy) / R;
-        nd.x += windVx * proximity * WIND_SCALE;
-        nd.y += windVy * proximity * WIND_SCALE;
+        if (nPin[i]) continue;
+        var ddx = pointer.x - nX[i], ddy = pointer.y - nY[i];
+        var d2 = ddx * ddx + ddy * ddy;
+        if (d2 > R2) continue;
+        var proximity = 1 - Math.sqrt(d2) / R;
+        nX[i] += windVx * proximity * WIND_SCALE;
+        nY[i] += windVy * proximity * WIND_SCALE;
       }
     }
 
     // 2.5. Tip drag — lock the dragged endpoint to pointer + recorded offset
     if (dragTip !== null) {
-      var dnd = nodes[dragTip];
-      var tx = pointer.x + dragOffsetX, ty = pointer.y + dragOffsetY;
-      dnd.hx = tx; dnd.hy = ty;
-      dnd.x  = tx; dnd.y  = ty;
-      dnd.px = tx; dnd.py = ty;
+      var dtx = pointer.x + dragOffsetX, dty = pointer.y + dragOffsetY;
+      nHX[dragTip] = dtx; nHY[dragTip] = dty;
+      nX[dragTip]  = dtx; nY[dragTip]  = dty;
+      nPX[dragTip] = dtx; nPY[dragTip] = dty;
     }
 
     // 3. Distance constraints — maintain rope segment length
     for (var iter = 0; iter < CONSTRAINT_ITERS; iter++) {
       for (var i = 0; i < n - 1; i++) {
-        var a = nodes[i], b = nodes[i + 1];
-        var dx = b.x - a.x, dy = b.y - a.y;
+        var dx = nX[i + 1] - nX[i], dy = nY[i + 1] - nY[i];
         var dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < 0.001) continue;
         var diff = (dist - restLen) / dist * 0.25;
         var cx = dx * diff, cy = dy * diff;
-        if (!a.pinned) { a.x += cx; a.y += cy; }
-        if (!b.pinned) { b.x -= cx; b.y -= cy; }
+        if (!nPin[i])     { nX[i]     += cx; nY[i]     += cy; }
+        if (!nPin[i + 1]) { nX[i + 1] -= cx; nY[i + 1] -= cy; }
       }
-      // Re-pin endpoints after each pass
-      nodes[0].x = nodes[0].hx; nodes[0].y = nodes[0].hy;
-      nodes[n - 1].x = nodes[n - 1].hx; nodes[n - 1].y = nodes[n - 1].hy;
+      nX[0] = nHX[0]; nY[0] = nHY[0];
+      nX[n - 1] = nHX[n - 1]; nY[n - 1] = nHY[n - 1];
     }
 
-    // 3.5. Soft edge repulsion — springy push away from canvas boundaries
+    // 3.5. Soft edge repulsion
     var EDGE_MARGIN = 20, EDGE_K = 0.04;
     for (var i = 0; i < n; i++) {
-      var nd = nodes[i];
-      if (nd.pinned) continue;
-      if (nd.x < EDGE_MARGIN)     nd.x += (EDGE_MARGIN - nd.x) * EDGE_K;
-      if (nd.x > W - EDGE_MARGIN) nd.x -= (nd.x - (W - EDGE_MARGIN)) * EDGE_K;
-      if (nd.y < EDGE_MARGIN)     nd.y += (EDGE_MARGIN - nd.y) * EDGE_K;
-      if (nd.y > H - EDGE_MARGIN) nd.y -= (nd.y - (H - EDGE_MARGIN)) * EDGE_K;
+      if (nPin[i]) continue;
+      if (nX[i] < EDGE_MARGIN)     nX[i] += (EDGE_MARGIN - nX[i]) * EDGE_K;
+      if (nX[i] > W - EDGE_MARGIN) nX[i] -= (nX[i] - (W - EDGE_MARGIN)) * EDGE_K;
+      if (nY[i] < EDGE_MARGIN)     nY[i] += (EDGE_MARGIN - nY[i]) * EDGE_K;
+      if (nY[i] > H - EDGE_MARGIN) nY[i] -= (nY[i] - (H - EDGE_MARGIN)) * EDGE_K;
     }
 
-    // 4. Metrics (used by entropy meter and drone modulation)
+    // 4. Metrics
     var totalDist = 0, totalLen = 0, frameMoved = 0;
     for (var i = 0; i < n; i++) {
-      var nd = nodes[i];
-      var dhx = nd.x - nd.hx, dhy = nd.y - nd.hy;
+      var dhx = nX[i] - nHX[i], dhy = nY[i] - nHY[i];
       totalDist += Math.sqrt(dhx * dhx + dhy * dhy);
-      var vdx = nd.x - nd.px, vdy = nd.y - nd.py;
+      var vdx = nX[i] - nPX[i], vdy = nY[i] - nPY[i];
       frameMoved += Math.sqrt(vdx * vdx + vdy * vdy);
       if (i < n - 1) {
-        var b2 = nodes[i + 1];
-        var ldx = b2.x - nd.x, ldy = b2.y - nd.y;
+        var ldx = nX[i + 1] - nX[i], ldy = nY[i + 1] - nY[i];
         totalLen += Math.sqrt(ldx * ldx + ldy * ldy);
       }
     }
@@ -4578,23 +4559,28 @@ class Knob {
     moved   = totalMoved * 0.001;
   }
 
+  var CR = 1 / 6; // Catmull-Rom control-point factor
+
   function render() {
+    ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, W, H);
     ctx.strokeStyle = 'rgba(220, 226, 232, 0.8)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    if (nodes.length > 0) {
-      ctx.moveTo(nodes[0].x, nodes[0].y);
-      for (var i = 0; i < nodes.length - 1; i++) {
-        var p1 = nodes[i], p2 = nodes[i + 1];
-        if (p1.line !== p2.line) { ctx.moveTo(p2.x, p2.y); continue; }
-        var p0 = (i > 0 && nodes[i - 1].line === p1.line) ? nodes[i - 1] : p1;
-        var p3 = (i + 2 < nodes.length && nodes[i + 2].line === p2.line) ? nodes[i + 2] : p2;
-        var c1x = p1.x + (p2.x - p0.x) / 6;
-        var c1y = p1.y + (p2.y - p0.y) / 6;
-        var c2x = p2.x - (p3.x - p1.x) / 6;
-        var c2y = p2.y - (p3.y - p1.y) / 6;
-        ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
+    if (nLen > 0) {
+      ctx.moveTo(nX[0], nY[0]);
+      for (var i = 0; i < nLen - 1; i++) {
+        var p0x = i > 0         ? nX[i - 1] : nX[i];
+        var p0y = i > 0         ? nY[i - 1] : nY[i];
+        var p3x = i + 2 < nLen  ? nX[i + 2] : nX[i + 1];
+        var p3y = i + 2 < nLen  ? nY[i + 2] : nY[i + 1];
+        ctx.bezierCurveTo(
+          nX[i]     + (nX[i + 1] - p0x)    * CR,
+          nY[i]     + (nY[i + 1] - p0y)    * CR,
+          nX[i + 1] - (p3x       - nX[i])  * CR,
+          nY[i + 1] - (p3y       - nY[i])  * CR,
+          nX[i + 1], nY[i + 1]
+        );
       }
       ctx.stroke();
     }
@@ -4605,7 +4591,7 @@ class Knob {
     if (paused) { lastT = t; rafId = requestAnimationFrame(loop); return; }
     var dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
     lastT = t;
-    step(dt);
+    if (dt <= 0.024) step(dt); // skip physics when below ~40fps to prevent spiral-of-death
     render();
     if (t - lastMeterUpdate > 200) {
       lastMeterUpdate = t;
@@ -4658,21 +4644,17 @@ class Knob {
     }, { passive: true });
 
     function clickImpulse(rx, ry) {
-      // Radial outward impulse — shift current positions without touching
-      // previous positions, so Verlet treats the delta as velocity.
-      var R = 280, STRENGTH = 10 * clickMult;
-      for (var i = 0; i < nodes.length; i++) {
-        var nd = nodes[i];
-        if (nd.pinned) continue;
-        var dx = nd.x - rx, dy = nd.y - ry;
+      var R = 280, R2 = R * R, STRENGTH = 10 * clickMult;
+      for (var i = 0; i < nLen; i++) {
+        if (nPin[i]) continue;
+        var dx = nX[i] - rx, dy = nY[i] - ry;
         var d2 = dx * dx + dy * dy;
-        if (d2 > R * R || d2 < 0.001) continue;
+        if (d2 > R2 || d2 < 0.001) continue;
         var d = Math.sqrt(d2);
         var falloff = (1 - d / R); falloff *= falloff;
-        var splat = -Math.log(Math.random() + 1e-6);
-        var F = STRENGTH * (falloff + splatterMult * splat * falloff);
-        nd.x += (dx / d) * F;
-        nd.y += (dy / d) * F;
+        var F = STRENGTH * (falloff + splatterMult * (-Math.log(Math.random() + 1e-6)) * falloff);
+        nX[i] += (dx / d) * F;
+        nY[i] += (dy / d) * F;
       }
     }
 
@@ -4680,8 +4662,8 @@ class Knob {
       var idx = nearTip(e.clientX, e.clientY);
       if (idx !== null) {
         dragTip = idx;
-        dragOffsetX = nodes[idx].x - e.clientX;
-        dragOffsetY = nodes[idx].y - e.clientY;
+        dragOffsetX = nX[idx] - e.clientX;
+        dragOffsetY = nY[idx] - e.clientY;
       }
     }, { passive: true });
     window.addEventListener('mouseup', function() {
@@ -4700,8 +4682,8 @@ class Knob {
         var idx = nearTip(tx, ty);
         if (idx !== null) {
           dragTip = idx;
-          dragOffsetX = nodes[idx].x - tx;
-          dragOffsetY = nodes[idx].y - ty;
+          dragOffsetX = nX[idx] - tx;
+          dragOffsetY = nY[idx] - ty;
           return;
         }
         clickImpulse(tx, ty);
