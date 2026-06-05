@@ -4336,9 +4336,11 @@ class Knob {
   if (!canvas) return;
   var ctx = canvas.getContext('2d');
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var isMobile = window.innerWidth <= 768;
-  var isIOSSafari = /iPhone|iPad|iPod/.test(navigator.userAgent) &&
-                    !/(CriOS|FxiOS|OPiOS)/.test(navigator.userAgent);
+  var isMobile       = window.innerWidth <= 768;
+  var ua             = navigator.userAgent;
+  var isIOSSafari    = /iPhone|iPad|iPod/.test(ua) && !/(CriOS|FxiOS|OPiOS)/.test(ua);
+  var isFirefox      = /Firefox\//.test(ua);
+  var isSafariDesktop = !isMobile && /AppleWebKit/.test(ua) && !/Chrome/.test(ua) && !isIOSSafari;
   var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.25);
   var W = 0, H = 0;
   // Flat typed arrays for node data — JIT-friendly, avoids per-property lookup overhead
@@ -4355,7 +4357,7 @@ class Knob {
   var lastMeterUpdate = 0;
 
   // Rope physics
-  var SEG_COUNT        = isIOSSafari ? 120 : isMobile ? 180 : 360;
+  var SEG_COUNT        = isIOSSafari ? 120 : isFirefox ? 180 : isSafariDesktop ? 180 : isMobile ? 360 : 540;
   var DAMP_TAN         = 0.988; // velocity retention along rope tangent (low drag — rope slips through fluid)
   var DAMP_NOR         = 0.78;  // velocity retention perpendicular to rope (high drag — resists sideways motion)
   var CONSTRAINT_ITERS = 6;     // arc-length init means rope starts stress-free; fewer passes sufficient
