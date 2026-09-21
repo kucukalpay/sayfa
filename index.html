@@ -1397,16 +1397,13 @@
     inset: 0;
     width: 100%;
     height: 100%;
-    z-index: 1;
+    z-index: 0;
     pointer-events: none;
   }
   @media (prefers-reduced-motion: reduce) { #field-canvas { display: none; } }
 
 
-  /* Lift all primary content above the fixed z-index:0 parallax layer.
-     nav (z-100), .section-3d-content (z-2), .synth-inner (z-1) are already lifted;
-     these rules cover the remaining wrapper elements whose default static/relative
-     would otherwise paint under a positioned z-0 fixed layer. */
+  /* Lift primary content above the fixed z-index:0 field-canvas layer. */
   .section-3d,
   section.block,
   .synth-section,
