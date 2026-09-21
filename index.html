@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -15,8 +15,8 @@
     --ink: #f4f4f5;
     --ink-dim: #a1a1aa;
     --ink-faint: #52525b;
-    --accent: #b5b5ba;
-    --accent-2: #00e5ff;
+    --accent: #c49a47;
+    --accent-2: #52a882;
     --line: transparent;
   }
   /* ANE keeps its 1px white frames — restore the original --line value
@@ -114,7 +114,7 @@
   }
   .section-head h2 {
     font-size: clamp(1.75rem, 4.5vw, 3rem);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: -0.03em;
     line-height: 1;
   }
@@ -143,7 +143,7 @@
     transition: transform 0.4s ease, border-color 0.3s;
     aspect-ratio: 16/10;
   }
-  .tile:hover { border-color: rgba(181,181,186,0.5); }
+  .tile:hover { border-color: rgba(196,154,71,0.45); }
   .tile:hover .tile-media { transform: scale(1.04); }
   .tile-media {
     position: absolute; inset: 0;
@@ -405,12 +405,12 @@
   }
   .mod-select:hover { color: var(--ink-dim); border-color: var(--ink-dim); }
   .mod-select.on {
-    color: #d6a8ff;
-    border-color: #a06cff;
-    background-color: rgba(160,108,255,0.08);
-    box-shadow: 0 0 8px rgba(160,108,255,0.2);
-    background-image: linear-gradient(45deg, transparent 46%, #d6a8ff 50%, transparent 54%),
-                      linear-gradient(-45deg, transparent 46%, #d6a8ff 50%, transparent 54%);
+    color: #e8a070;
+    border-color: #b8673a;
+    background-color: rgba(184,103,58,0.08);
+    box-shadow: 0 0 8px rgba(184,103,58,0.2);
+    background-image: linear-gradient(45deg, transparent 46%, #e8a070 50%, transparent 54%),
+                      linear-gradient(-45deg, transparent 46%, #e8a070 50%, transparent 54%);
   }
   .mod-select option {
     background: #111114;
@@ -418,10 +418,10 @@
     font-family: inherit;
   }
   .knob.sensor-modulated {
-    border-color: rgba(160,108,255,0.7);
-    box-shadow: 0 0 14px rgba(160,108,255,0.25), 0 2px 6px rgba(0,0,0,0.5);
+    border-color: rgba(184,103,58,0.7);
+    box-shadow: 0 0 14px rgba(184,103,58,0.25), 0 2px 6px rgba(0,0,0,0.5);
   }
-  .knob.sensor-modulated .knob-dial::after { background: #d6a8ff; box-shadow: 0 0 5px #a06cff; }
+  .knob.sensor-modulated .knob-dial::after { background: #e8a070; box-shadow: 0 0 5px #b8673a; }
   .pedal-knobs .mod-select {
     padding: 1px 12px 1px 4px;
     font-size: 0.5rem;
@@ -495,10 +495,10 @@
     touch-action: none;
     user-select: none;
   }
-  .knob:hover { border-color: rgba(181,181,186,0.4); }
+  .knob:hover { border-color: rgba(196,154,71,0.4); }
   .knob.modulated {
-    border-color: rgba(0,229,255,0.6);
-    box-shadow: 0 0 12px rgba(0,229,255,0.15), 0 2px 6px rgba(0,0,0,0.5);
+    border-color: rgba(82,168,130,0.6);
+    box-shadow: 0 0 12px rgba(82,168,130,0.15), 0 2px 6px rgba(0,0,0,0.5);
   }
   .knob-dial {
     position: absolute; inset: 0; border-radius: 50%;
@@ -577,14 +577,14 @@
     position: absolute; inset: 3px; border-radius: 50%; background: #000;
   }
   .jack.cv-out .port { border-color: var(--accent-2); }
-  .jack.cv-out .port::after { background: #001b22; }
+  .jack.cv-out .port::after { background: #001409; }
   .jack.cv-in.pending .port {
-    border-color: rgba(0,229,255,0.6);
+    border-color: rgba(82,168,130,0.6);
     animation: jackPulse 1.2s ease infinite;
   }
   .jack.cv-in.connected .port {
     border-color: var(--accent-2);
-    box-shadow: 0 0 8px rgba(0,229,255,0.5);
+    box-shadow: 0 0 8px rgba(82,168,130,0.5);
   }
   .jack.cv-in.connected .port::after { background: var(--accent-2); }
   .jack.cv-out.armed .port {
@@ -749,7 +749,7 @@
     overflow: hidden;
     transition: all 0.3s;
   }
-  .build-card:hover { border-color: rgba(0,229,255,0.4); transform: translateY(-3px); }
+  .build-card:hover { border-color: rgba(82,168,130,0.4); transform: translateY(-3px); }
   .build-media {
     aspect-ratio: 4/3;
     background: radial-gradient(circle at 30% 30%, #1e1e25, #0a0a0b);
@@ -763,8 +763,8 @@
     content: ''; position: absolute;
     width: 200%; height: 200%; top: -50%; left: -50%;
     background-image:
-      linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+      linear-gradient(rgba(82,168,130,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(82,168,130,0.04) 1px, transparent 1px);
     background-size: 30px 30px;
   }
   .build-media span { position: relative; z-index: 1; }
@@ -1102,7 +1102,7 @@
     margin: 7rem auto;
     padding: 4rem 2rem;
     background: rgba(17, 17, 20, 0.55);
-    border-radius: 14px;
+    border-radius: 2px;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
   }
@@ -1111,10 +1111,19 @@
   }
   .contact h2 {
     font-size: clamp(1.75rem, 4vw, 2.75rem);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: -0.03em;
     line-height: 1;
     margin-bottom: 1.5rem;
+  }
+  .contact-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin: 0 0 0.75rem;
+    opacity: 0.8;
   }
   .contact-email {
     font-family: 'JetBrains Mono', monospace;
@@ -1383,106 +1392,16 @@
     padding: 0.2rem 0.5rem; font-size: 0.9rem;
   }
 
-  /* ================= EVOLVING NETWORK BG =================
-     Code-generated canvas painted behind all content. JS engine lives in a
-     self-contained IIFE near the bottom of <body>. */
-  body { position: relative; }           /* anchor for the canvas layer */
-  #bg-canvas {
+  #field-canvas {
     position: fixed;
     inset: 0;
     width: 100%;
     height: 100%;
-    z-index: 0;
+    z-index: 1;
     pointer-events: none;
-    opacity: 0.55;
   }
-  @media (prefers-reduced-motion: reduce) { #bg-canvas { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) { #field-canvas { display: none; } }
 
-  /* ----- Background network controls (link probability + range sliders) ----- */
-  .bg-controls {
-    position: fixed;
-    bottom: 1rem;
-    right: 1rem;
-    z-index: 8000;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .bg-controls-toggle {
-    background: rgba(10, 10, 11, 0.85);
-    border: 1px solid var(--line);
-    color: var(--ink-dim);
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1;
-    display: flex; align-items: center; justify-content: center;
-    transition: color 0.2s, border-color 0.2s;
-  }
-  .bg-controls-toggle:hover { color: var(--ink); border-color: var(--ink-dim); }
-  .bg-controls-panel {
-    display: none;
-    position: absolute;
-    bottom: 44px;
-    right: 0;
-    background: rgba(10, 10, 11, 0.92);
-    border: 1px solid var(--line);
-    padding: 0.85rem 1rem;
-    border-radius: 8px;
-    min-width: 210px;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-  }
-  .bg-controls.open .bg-controls-panel { display: block; }
-  .bg-controls-panel label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    margin-bottom: 0.85rem;
-    font-size: 0.6rem;
-    color: var(--ink-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-  }
-  .bg-controls-panel label:last-child { margin-bottom: 0; }
-  /* Tilt rows hidden on devices without an orientation sensor (desktop). */
-  .bg-controls-panel .mobile-only { display: none; }
-  @media (pointer: coarse) {
-    .bg-controls-panel .mobile-only { display: flex; }
-  }
-  .bg-controls-panel .row {
-    display: flex; justify-content: space-between; align-items: baseline;
-  }
-  .bg-controls-panel .val { color: var(--accent); font-size: 0.6rem; }
-  .bg-controls-panel input[type="range"] {
-    width: 100%;
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    margin: 0;
-    height: 14px;
-  }
-  .bg-controls-panel input[type="range"]::-webkit-slider-runnable-track {
-    height: 2px; background: var(--line); border-radius: 1px;
-  }
-  .bg-controls-panel input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 12px; height: 12px;
-    background: var(--accent);
-    border-radius: 50%;
-    margin-top: -5px;
-    cursor: pointer;
-    border: none;
-  }
-  .bg-controls-panel input[type="range"]::-moz-range-track {
-    height: 2px; background: var(--line); border-radius: 1px;
-  }
-  .bg-controls-panel input[type="range"]::-moz-range-thumb {
-    width: 12px; height: 12px;
-    background: var(--accent);
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-  }
 
   /* Lift all primary content above the fixed z-index:0 parallax layer.
      nav (z-100), .section-3d-content (z-2), .synth-inner (z-1) are already lifted;
@@ -1513,8 +1432,10 @@
   .section-card {
     max-width: 720px;
     margin: 0 auto;
+    position: relative;
     background: rgba(17, 17, 20, 0.55);
-    border-radius: 14px;
+    border-radius: 2px;
+    border: 1px solid rgba(196,154,71,0.12);
     padding: 24px;
     cursor: pointer;
     transition: border-color 200ms, transform 200ms, background 200ms;
@@ -1524,16 +1445,46 @@
   .section-card:hover,
   .section-card:focus-visible {
     background: rgba(17, 17, 20, 0.7);
+    border-color: rgba(196,154,71,0.35);
     transform: translateY(-2px);
+  }
+  .section-card::before,
+  .section-card::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+  }
+  .section-card::before {
+    top: -1px;
+    left: -1px;
+    border-top: 1.5px solid rgba(196,154,71,0.7);
+    border-left: 1.5px solid rgba(196,154,71,0.7);
+  }
+  .section-card::after {
+    bottom: -1px;
+    right: -1px;
+    border-bottom: 1.5px solid rgba(196,154,71,0.7);
+    border-right: 1.5px solid rgba(196,154,71,0.7);
   }
   .section-card .card-hero {
     width: 100%;
     height: auto;
     display: block;
-    border-radius: 8px;
+    border-radius: 2px;
     margin-bottom: 16px;
+    filter: grayscale(0.2) brightness(0.85) contrast(1.08) saturate(0.75);
+    transition: filter 0.4s ease;
   }
-  .section-card .card-title { margin: 0 0 8px; font-size: 1.5rem; }
+  .section-card:hover .card-hero,
+  .section-card:focus-visible .card-hero { filter: none; }
+  .section-card .card-title {
+    margin: 0 0 8px;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
   .section-card .card-desc { margin: 0 0 16px; opacity: 0.7; line-height: 1.5; }
   .section-card .card-cta { font-size: 0.85rem; opacity: 0.6; }
 
@@ -1552,7 +1503,7 @@
     max-width: 1200px;
     margin: 0 auto;
     background: rgba(17, 17, 20, 0.92);
-    border-radius: 14px;
+    border-radius: 2px;
     padding: 32px;
   }
   .modal-close {
@@ -1926,10 +1877,6 @@
     z-index: 7500;
   }
   .hero-controls-left { left: 24px; }
-  /* Off the hero: only DRONE remains in the stack. RESET / SAVE click & flex
-     behaviour is untouched — they're simply not painted when scrolled past. */
-  body:not(.lock-scroll) #resetSim,
-  body:not(.lock-scroll) #saveSim { display: none; }
   .hero-btn {
     background: transparent;
     color: rgba(255,255,255,0.95);
@@ -1952,49 +1899,19 @@
   }
   .hero-btn[hidden] { display: none; }
 
-  .hero-meta {
-    position: fixed;
-    top: 75%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 0.72rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    opacity: 0.55;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    text-align: center;
-    z-index: 0;
-  }
-  .hero-meta-row {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-  }
-  .hero-meta-value {
-    font-size: 1.1rem;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.05em;
-    opacity: 1;
-  }
 
   @media (max-width: 640px) {
     .hero-nav-toggle { top: 16px; left: 16px; }
     .hero-nav { top: 56px; left: 16px; gap: 10px; font-size: 0.7rem; }
     .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
-    .hero-meta { font-size: 0.65rem; }
     .hero-center { top: 110px; left: 16px; max-width: 240px; }
   }
 </style>
 </head>
 <body>
 
-<!-- Code-generated evolving network background. Painted behind all content. -->
-<canvas id="bg-canvas" aria-hidden="true"></canvas>
+<canvas id="field-canvas" aria-hidden="true"></canvas>
 
 <section class="hero" id="hero" aria-label="Welcome">
   <button class="hero-nav-toggle" type="button" aria-expanded="false" aria-controls="heroNav" aria-label="Toggle navigation"><span class="hero-nav-toggle-label">WORKS</span><span class="hero-nav-toggle-chev" aria-hidden="true">▾</span></button>
@@ -2010,16 +1927,8 @@
   </div>
   <div class="hero-controls hero-controls-left">
     <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
-    <button class="hero-btn" id="resetSim" type="button">RESET</button>
-    <button class="hero-btn" id="saveSim" type="button">SAVE</button>
   </div>
 </section>
-<div class="hero-meta">
-  <div class="hero-meta-row">
-    <span class="hero-meta-label">ENTROPY</span>
-    <span class="hero-meta-value" id="entropyMeter">0.00</span>
-  </div>
-</div>
 
 <!-- Return Home button: lives outside hero, always rendered, but the CSS rule
      `body.lock-scroll .return-home { display: none; }` keeps it invisible while
@@ -2049,56 +1958,6 @@
   <button class="mini-close" id="miniClose" type="button" aria-label="Close player">×</button>
 </div>
 
-<!-- Background network controls (link probability + range). -->
-<div class="bg-controls" id="bgControls">
-  <button class="bg-controls-toggle" type="button" aria-label="Background controls" title="Background controls">⚙</button>
-  <div class="bg-controls-panel">
-    <label style="display:none">
-      <span class="row"><span>LINKS</span><span class="val" id="bgLinkProbVal">0.50</span></span>
-      <input type="range" id="bgLinkProb" min="0" max="1" step="0.01" value="0.5">
-    </label>
-    <label style="display:none">
-      <span class="row"><span>RANGE</span><span class="val" id="bgLinkDistVal">200</span></span>
-      <input type="range" id="bgLinkDist" min="50" max="450" step="5" value="200">
-    </label>
-    <label>
-      <span class="row"><span>FORCE</span><span class="val" id="bgInteractionVal">2.00</span></span>
-      <input type="range" id="bgInteraction" min="0" max="4" step="0.05" value="2">
-    </label>
-    <label>
-      <span class="row"><span>POINTER</span><span class="val" id="bgPointerVal">0.20</span></span>
-      <input type="range" id="bgPointer" min="0" max="1" step="0.01" value="0.2">
-    </label>
-    <label>
-      <span class="row"><span>TILT</span><span class="val" id="bgTiltMultVal">0.50</span></span>
-      <input type="range" id="bgTiltMult" min="0" max="1" step="0.01" value="0.5">
-    </label>
-    <label>
-      <span class="row"><span>CLICK</span><span class="val" id="bgClickVal">0.10</span></span>
-      <input type="range" id="bgClick" min="0" max="1" step="0.01" value="0.1">
-    </label>
-    <label>
-      <span class="row"><span>DRONE</span><span class="val" id="bgDroneVal">1.00</span></span>
-      <input type="range" id="bgDrone" min="0" max="1" step="0.01" value="1">
-    </label>
-    <label>
-      <span class="row"><span>ATTRACTION</span><span class="val" id="bgAttractionVal">0.50</span></span>
-      <input type="range" id="bgAttraction" min="0" max="1" step="0.01" value="0.5">
-    </label>
-    <label>
-      <span class="row"><span>SPLATTER</span><span class="val" id="bgSplatterVal">0.60</span></span>
-      <input type="range" id="bgSplatter" min="0" max="2" step="0.05" value="0.6">
-    </label>
-    <label class="mobile-only">
-      <span class="row"><span>TILT X</span><span class="val" id="bgTiltXVal">4.00</span></span>
-      <input type="range" id="bgTiltX" min="0" max="8" step="0.05" value="4">
-    </label>
-    <label class="mobile-only">
-      <span class="row"><span>TILT Y</span><span class="val" id="bgTiltYVal">4.00</span></span>
-      <input type="range" id="bgTiltY" min="0" max="8" step="0.05" value="4">
-    </label>
-  </div>
-</div>
 
 <nav>
   <div class="logo">AL<span>/</span>BAY</div>
@@ -2206,7 +2065,7 @@
     <div class="rig">
       <div class="rig-header">
         <h3>Annoying Noise Emulator</h3>
-        <div class="rig-hint"><span class="dot"></span>CLICK LFO <span style="color:var(--accent-2)">OUT</span> · THEN ANY <span style="color:var(--accent-2)">CV</span> IN · EACH KNOB HAS A <span style="color:#d6a8ff">SENSOR</span> DROPDOWN</div>
+        <div class="rig-hint"><span class="dot"></span>CLICK LFO <span style="color:var(--accent-2)">OUT</span> · THEN ANY <span style="color:var(--accent-2)">CV</span> IN · EACH KNOB HAS A <span style="color:#e8a070">SENSOR</span> DROPDOWN</div>
       </div>
 
       <div class="modules" id="modules">
@@ -2596,7 +2455,8 @@
 
 <!-- CONTACT -->
 <section class="contact reveal" id="contact">
-  <h2>Find me.</h2>
+  <p class="contact-eyebrow">// COMM LINK</p>
+  <h2>Outgoing signal.</h2>
   <a class="contact-email" href="mailto:kucukalpay@gmail.com">kucukalpay@gmail.com</a>
   <div class="socials">
     <a href="#">Instagram</a>
@@ -4325,584 +4185,6 @@ class Knob {
 })();
 </script>
 
-<script>
-/* ================= ROPE BG =================
-   Verlet-integration rope simulation. A chain of nodes connected by
-   distance constraints hangs under gravity between two pinned endpoints.
-   Mouse/touch attracts nearby nodes; clicks flick the rope; device tilt
-   leans gravity sideways. Pauses on tab blur / hero off-screen. */
-(function bgCanvasEngine() {
-  var canvas = document.getElementById('bg-canvas');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var isMobile       = window.innerWidth <= 768;
-  var ua             = navigator.userAgent;
-  var isIOSSafari    = /iPhone|iPad|iPod/.test(ua) && !/(CriOS|FxiOS|OPiOS)/.test(ua);
-  var isFirefox      = /Firefox\//.test(ua);
-  var isSafariDesktop = !isMobile && /AppleWebKit/.test(ua) && !/Chrome/.test(ua) && !isIOSSafari;
-  var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.25);
-  var W = 0, H = 0;
-  // Flat typed arrays for node data — JIT-friendly, avoids per-property lookup overhead
-  var nX, nY, nPX, nPY, nHX, nHY; // Float32Array — positions (current, previous, home)
-  var nPin;  // Uint8Array  — 1 = pinned endpoint
-  var nLen = 0; // live node count
-  var rafId = 0;
-  var lastT = 0;
-  var paused = false;
-  var progress = 0;
-  var tilt = { x: 0, y: 0 };
-  var tiltYBaseline = null; // beta value recorded on first event; null = uncalibrated
-  var pointer = { x: -9999, y: -9999, px: -9999, py: -9999, active: false };
-  var lastMeterUpdate = 0;
-
-  // Rope physics
-  var SEG_COUNT        = isIOSSafari ? 120 : isFirefox ? 180 : isSafariDesktop ? 180 : isMobile ? 360 : 540;
-  var DAMP_TAN         = 0.988; // velocity retention along rope tangent (low drag — rope slips through fluid)
-  var DAMP_NOR         = 0.78;  // velocity retention perpendicular to rope (high drag — resists sideways motion)
-  var CONSTRAINT_ITERS = 6;     // arc-length init means rope starts stress-free; fewer passes sufficient
-  var restLen          = 0;     // computed in initRope()
-
-  // Interaction knobs (settable via sliders / __hero.poly API)
-  var POINTER_STRENGTH = ('ontouchstart' in window || navigator.maxTouchPoints > 1) ? 0.5 : 1.0;
-  var tiltMult         = 0.5;
-  var clickMult        = 1.0;
-  var splatterMult     = 0.6;
-  var attractionMult   = 0.5; // retained for API compat; maps to sag tightness
-  var interaction      = 1;
-  var tiltStrengthX    = 4;
-  var tiltStrengthY    = 4;
-
-  // Metrics
-  var entropy = 0, parting = 0, moved = 0, totalMoved = 0;
-
-  // Legacy vars kept so slider hookups below don't error
-  var linkProb = 0.5, linkRange = 200;
-  var lastPx = null, lastPy = null;
-
-  // Pointer wind
-  var windVx = 0, windVy = 0; // low-pass-filtered pointer velocity
-
-  // Tip dragging
-  var dragTip = null;      // null | node-index — which endpoint is being dragged
-  var dragConsumed = false; // suppresses the click impulse that follows mouseup
-  var dragOffsetX = 0, dragOffsetY = 0; // tip position relative to pointer at drag start
-
-  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
-
-  function nearTip(cx, cy) {
-    if (nLen < 2) return null;
-    var last = nLen - 1, dx, dy;
-    dx = cx - nX[0];    dy = cy - nY[0];
-    if (dx * dx + dy * dy < 900) return 0;
-    dx = cx - nX[last]; dy = cy - nY[last];
-    if (dx * dx + dy * dy < 900) return last;
-    return null;
-  }
-
-  function initRope() {
-    nLen = SEG_COUNT + 1;
-    nX   = new Float32Array(nLen); nY   = new Float32Array(nLen);
-    nPX  = new Float32Array(nLen); nPY  = new Float32Array(nLen);
-    nHX  = new Float32Array(nLen); nHY  = new Float32Array(nLen);
-    nPin = new Uint8Array(nLen);
-
-    var x0 = W * 0.04, x1 = W * 0.96, lineY = H * 0.5, cycles = 5;
-
-    function sineAt(t) {
-      return {
-        x: x0 + t * (x1 - x0),
-        y: lineY + Math.sin(t * Math.PI) * Math.sin(t * Math.PI * 2 * cycles) * H * 0.32
-      };
-    }
-
-    // 1. Sample the curve at high resolution to build a cumulative arc-length table.
-    var SAMPLES = 2000;
-    var cumArc = new Float32Array(SAMPLES + 1);
-    var spts   = new Array(SAMPLES + 1);
-    cumArc[0] = 0; spts[0] = sineAt(0);
-    for (var s = 1; s <= SAMPLES; s++) {
-      spts[s] = sineAt(s / SAMPLES);
-      var ddx = spts[s].x - spts[s - 1].x, ddy = spts[s].y - spts[s - 1].y;
-      cumArc[s] = cumArc[s - 1] + Math.sqrt(ddx * ddx + ddy * ddy);
-    }
-    var totalArc = cumArc[SAMPLES];
-    restLen = totalArc / SEG_COUNT;
-
-    // 2. Place each node at equal arc-length steps by walking the table.
-    var si = 0;
-    for (var i = 0; i < nLen; i++) {
-      var target = i * restLen;
-      while (si < SAMPLES - 1 && cumArc[si + 1] < target) si++;
-      var span = cumArc[si + 1] - cumArc[si];
-      var frac = span > 0 ? (target - cumArc[si]) / span : 0;
-      var nx = spts[si].x + frac * (spts[si + 1].x - spts[si].x);
-      var ny = spts[si].y + frac * (spts[si + 1].y - spts[si].y);
-      nX[i] = nPX[i] = nHX[i] = nx;
-      nY[i] = nPY[i] = nHY[i] = ny;
-      nPin[i] = (i === 0 || i === nLen - 1) ? 1 : 0;
-    }
-    entropy = 0; parting = 0; moved = 0; totalMoved = 0;
-  }
-
-  function resize() {
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width  = Math.floor(W * dpr);
-    canvas.height = Math.floor(H * dpr);
-    canvas.style.width  = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    initRope();
-  }
-
-  function updateProgress() {
-    var max = document.documentElement.scrollHeight - window.innerHeight;
-    progress = max > 0 ? clamp((window.scrollY || window.pageYOffset) / max, 0, 1) : 0;
-  }
-
-  function step(dt) {
-    var n = nLen;
-    var tiltGx = tilt.x * tiltStrengthX * tiltMult * 0.08;
-    var tiltGy = tilt.y * tiltStrengthY * tiltMult * 0.08;
-
-    // 1. Verlet integrate with anisotropic fluid drag.
-    //    Endpoints (i=0, i=n-1) are always pinned — skip them directly.
-    for (var i = 1; i < n - 1; i++) {
-      if (nPin[i]) continue;
-      var vx = nX[i] - nPX[i];
-      var vy = nY[i] - nPY[i];
-      var tanX = nX[i + 1] - nX[i - 1];
-      var tanY = nY[i + 1] - nY[i - 1];
-      var tLen = Math.sqrt(tanX * tanX + tanY * tanY);
-      if (tLen > 0.001) { tanX /= tLen; tanY /= tLen; } else { tanX = 1; tanY = 0; }
-      var vDotT = vx * tanX + vy * tanY;
-      var vtx = vDotT * tanX, vty = vDotT * tanY;
-      var dvx = vtx * DAMP_TAN + (vx - vtx) * DAMP_NOR;
-      var dvy = vty * DAMP_TAN + (vy - vty) * DAMP_NOR;
-      nPX[i] = nX[i]; nPY[i] = nY[i];
-      nX[i] += dvx + tiltGx;
-      nY[i] += dvy + tiltGy;
-    }
-
-    // 2. Pointer wind — push nodes in the direction of pointer travel.
-    var pvx = pointer.active ? (pointer.x - pointer.px) : 0;
-    var pvy = pointer.active ? (pointer.y - pointer.py) : 0;
-    var velCap = isMobile ? 120 : 50;
-    if (pvx > velCap) pvx = velCap; else if (pvx < -velCap) pvx = -velCap;
-    if (pvy > velCap) pvy = velCap; else if (pvy < -velCap) pvy = -velCap;
-    var windLerp = isMobile ? 0.18 : 0.08;
-    windVx += (pvx - windVx) * windLerp;
-    windVy += (pvy - windVy) * windLerp;
-    pointer.px = pointer.x;
-    pointer.py = pointer.y;
-
-    if (windVx * windVx + windVy * windVy > 0.0001) {
-      var R = 160, R2 = R * R, WIND_SCALE = (isMobile ? 0.5 : 0.25) * POINTER_STRENGTH * interaction;
-      for (var i = 0; i < n; i++) {
-        if (nPin[i]) continue;
-        var ddx = pointer.x - nX[i], ddy = pointer.y - nY[i];
-        var d2 = ddx * ddx + ddy * ddy;
-        if (d2 > R2) continue;
-        var proximity = 1 - Math.sqrt(d2) / R;
-        nX[i] += windVx * proximity * WIND_SCALE;
-        nY[i] += windVy * proximity * WIND_SCALE;
-      }
-    }
-
-    // 2.5. Tip drag — lock the dragged endpoint to pointer + recorded offset
-    if (dragTip !== null) {
-      var dtx = pointer.x + dragOffsetX, dty = pointer.y + dragOffsetY;
-      nHX[dragTip] = dtx; nHY[dragTip] = dty;
-      nX[dragTip]  = dtx; nY[dragTip]  = dty;
-      nPX[dragTip] = dtx; nPY[dragTip] = dty;
-    }
-
-    // 3. Distance constraints — maintain rope segment length
-    for (var iter = 0; iter < CONSTRAINT_ITERS; iter++) {
-      for (var i = 0; i < n - 1; i++) {
-        var dx = nX[i + 1] - nX[i], dy = nY[i + 1] - nY[i];
-        var dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 0.001) continue;
-        var diff = (dist - restLen) / dist * 0.25;
-        var cx = dx * diff, cy = dy * diff;
-        if (!nPin[i])     { nX[i]     += cx; nY[i]     += cy; }
-        if (!nPin[i + 1]) { nX[i + 1] -= cx; nY[i + 1] -= cy; }
-      }
-      nX[0] = nHX[0]; nY[0] = nHY[0];
-      nX[n - 1] = nHX[n - 1]; nY[n - 1] = nHY[n - 1];
-    }
-
-    // 3.5. Soft edge repulsion
-    var EDGE_MARGIN = 20, EDGE_K = 0.04;
-    for (var i = 0; i < n; i++) {
-      if (nPin[i]) continue;
-      if (nX[i] < EDGE_MARGIN)     nX[i] += (EDGE_MARGIN - nX[i]) * EDGE_K;
-      if (nX[i] > W - EDGE_MARGIN) nX[i] -= (nX[i] - (W - EDGE_MARGIN)) * EDGE_K;
-      if (nY[i] < EDGE_MARGIN)     nY[i] += (EDGE_MARGIN - nY[i]) * EDGE_K;
-      if (nY[i] > H - EDGE_MARGIN) nY[i] -= (nY[i] - (H - EDGE_MARGIN)) * EDGE_K;
-    }
-
-    // 4. Metrics
-    var totalDist = 0, totalLen = 0, frameMoved = 0;
-    for (var i = 0; i < n; i++) {
-      var dhx = nX[i] - nHX[i], dhy = nY[i] - nHY[i];
-      totalDist += Math.sqrt(dhx * dhx + dhy * dhy);
-      var vdx = nX[i] - nPX[i], vdy = nY[i] - nPY[i];
-      frameMoved += Math.sqrt(vdx * vdx + vdy * vdy);
-      if (i < n - 1) {
-        var ldx = nX[i + 1] - nX[i], ldy = nY[i + 1] - nY[i];
-        totalLen += Math.sqrt(ldx * ldx + ldy * ldy);
-      }
-    }
-    totalMoved += frameMoved;
-    entropy = totalDist  * 0.001;
-    parting = totalLen   * 0.001;
-    moved   = totalMoved * 0.001;
-  }
-
-  var CR = 1 / 6; // Catmull-Rom control-point factor
-
-  function render() {
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.clearRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(220, 226, 232, 0.8)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    if (nLen > 0) {
-      ctx.moveTo(nX[0], nY[0]);
-      for (var i = 0; i < nLen - 1; i++) {
-        var p0x = i > 0         ? nX[i - 1] : nX[i];
-        var p0y = i > 0         ? nY[i - 1] : nY[i];
-        var p3x = i + 2 < nLen  ? nX[i + 2] : nX[i + 1];
-        var p3y = i + 2 < nLen  ? nY[i + 2] : nY[i + 1];
-        ctx.bezierCurveTo(
-          nX[i]     + (nX[i + 1] - p0x)    * CR,
-          nY[i]     + (nY[i + 1] - p0y)    * CR,
-          nX[i + 1] - (p3x       - nX[i])  * CR,
-          nY[i + 1] - (p3y       - nY[i])  * CR,
-          nX[i + 1], nY[i + 1]
-        );
-      }
-      ctx.stroke();
-    }
-  }
-
-  function loop(t) {
-    if (document.visibilityState !== 'visible') { rafId = 0; return; }
-    if (paused) { lastT = t; rafId = requestAnimationFrame(loop); return; }
-    var dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
-    lastT = t;
-    if (dt <= 0.024) step(dt); // skip physics when below ~40fps to prevent spiral-of-death
-    render();
-    if (t - lastMeterUpdate > 200) {
-      lastMeterUpdate = t;
-      var meter = document.getElementById('entropyMeter');
-      if (meter) meter.textContent = (entropy + parting + moved).toFixed(2);
-    }
-    rafId = requestAnimationFrame(loop);
-  }
-
-  function start() {
-    if (reduced) { render(); return; }
-    if (rafId) return;
-    lastT = performance.now();
-    rafId = requestAnimationFrame(loop);
-  }
-
-  // ---- Event listeners ----
-
-  var resizeTimer = null;
-  window.addEventListener('resize', function() {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function() {
-      isMobile = window.innerWidth <= 768;
-      resize(); render();
-    }, 150);
-  }, { passive: true });
-
-  window.addEventListener('scroll', function() {
-    updateProgress();
-    if (reduced) render();
-  }, { passive: true });
-
-  if (!reduced) {
-    window.addEventListener('mousemove', function(e) {
-      pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true;
-    }, { passive: true });
-    window.addEventListener('mouseout', function() {
-      pointer.active = false; lastPx = null; lastPy = null;
-    }, { passive: true });
-    window.addEventListener('touchmove', function(e) {
-      if (e.touches && e.touches[0]) {
-        pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY;
-        pointer.active = true;
-      }
-    }, { passive: true });
-    window.addEventListener('touchend', function() {
-      dragTip = null;
-      windVx = 0; windVy = 0;
-      pointer.active = false; lastPx = null; lastPy = null;
-    }, { passive: true });
-
-    function clickImpulse(rx, ry) {
-      var R = 280, R2 = R * R, STRENGTH = 10 * clickMult;
-      for (var i = 0; i < nLen; i++) {
-        if (nPin[i]) continue;
-        var dx = nX[i] - rx, dy = nY[i] - ry;
-        var d2 = dx * dx + dy * dy;
-        if (d2 > R2 || d2 < 0.001) continue;
-        var d = Math.sqrt(d2);
-        var falloff = (1 - d / R); falloff *= falloff;
-        var F = STRENGTH * (falloff + splatterMult * (-Math.log(Math.random() + 1e-6)) * falloff);
-        nX[i] += (dx / d) * F;
-        nY[i] += (dy / d) * F;
-      }
-    }
-
-    window.addEventListener('mousedown', function(e) {
-      var idx = nearTip(e.clientX, e.clientY);
-      if (idx !== null) {
-        dragTip = idx;
-        dragOffsetX = nX[idx] - e.clientX;
-        dragOffsetY = nY[idx] - e.clientY;
-      }
-    }, { passive: true });
-    window.addEventListener('mouseup', function() {
-      if (dragTip !== null) { dragConsumed = true; dragTip = null; }
-    }, { passive: true });
-    window.addEventListener('click', function(e) {
-      if (dragConsumed) { dragConsumed = false; return; }
-      clickImpulse(e.clientX, e.clientY);
-    }, { passive: true });
-    window.addEventListener('touchstart', function(e) {
-      if (e.touches && e.touches[0]) {
-        var tx = e.touches[0].clientX, ty = e.touches[0].clientY;
-        // Sync previous pointer position to touch start so first-frame delta is 0
-        pointer.x = tx; pointer.y = ty;
-        pointer.px = tx; pointer.py = ty;
-        var idx = nearTip(tx, ty);
-        if (idx !== null) {
-          dragTip = idx;
-          dragOffsetX = nX[idx] - tx;
-          dragOffsetY = nY[idx] - ty;
-          return;
-        }
-        clickImpulse(tx, ty);
-      }
-    }, { passive: true });
-
-    // Device tilt — leans gravity direction on mobile
-    var bgTiltAttached = false;
-    function onBgTilt(ev) {
-      if (ev.gamma == null || ev.beta == null) return;
-      if (tiltYBaseline === null) tiltYBaseline = ev.beta;
-      tilt.x = clamp(ev.gamma / 60, -1, 1);
-      tilt.y = clamp((ev.beta - tiltYBaseline) / 60, -1, 1);
-    }
-    function attachBgTilt() {
-      if (bgTiltAttached || !window.DeviceOrientationEvent) return;
-      var needsPerm = typeof DeviceOrientationEvent.requestPermission === 'function';
-      if (!needsPerm) {
-        bgTiltAttached = true;
-        window.addEventListener('deviceorientation', onBgTilt, { passive: true });
-      } else {
-        DeviceOrientationEvent.requestPermission().then(function(r) {
-          if (r === 'granted') {
-            bgTiltAttached = true;
-            window.addEventListener('deviceorientation', onBgTilt, { passive: true });
-          }
-        }).catch(function() {});
-      }
-    }
-    if (window.DeviceOrientationEvent) {
-      if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
-        attachBgTilt();
-      } else {
-        var bgTiltOneShot = function() {
-          document.removeEventListener('touchstart', bgTiltOneShot, true);
-          document.removeEventListener('pointerdown', bgTiltOneShot, true);
-          attachBgTilt();
-        };
-        document.addEventListener('touchstart', bgTiltOneShot, { capture: true, once: true });
-        document.addEventListener('pointerdown', bgTiltOneShot, { capture: true, once: true });
-      }
-    }
-
-    document.addEventListener('visibilitychange', function() {
-      if (document.visibilityState === 'visible') start();
-    });
-  }
-
-  // ---- Slider hookups (unchanged IDs — wired to rope params where meaningful) ----
-
-  var bgControls = document.getElementById('bgControls');
-  var probSlider = document.getElementById('bgLinkProb');
-  var distSlider = document.getElementById('bgLinkDist');
-  var probValEl  = document.getElementById('bgLinkProbVal');
-  var distValEl  = document.getElementById('bgLinkDistVal');
-  if (bgControls) {
-    var toggle = bgControls.querySelector('.bg-controls-toggle');
-    if (toggle) toggle.addEventListener('click', function() { bgControls.classList.toggle('open'); });
-  }
-  if (probSlider) {
-    linkProb = parseFloat(probSlider.value);
-    if (probValEl) probValEl.textContent = linkProb.toFixed(2);
-    probSlider.addEventListener('input', function() {
-      linkProb = parseFloat(probSlider.value);
-      if (probValEl) probValEl.textContent = linkProb.toFixed(2);
-      if (reduced) render();
-    });
-  }
-  if (distSlider) {
-    linkRange = parseFloat(distSlider.value);
-    if (distValEl) distValEl.textContent = String(linkRange | 0);
-    distSlider.addEventListener('input', function() {
-      linkRange = parseFloat(distSlider.value);
-      if (distValEl) distValEl.textContent = String(linkRange | 0);
-      if (reduced) render();
-    });
-  }
-
-  var forceSlider = document.getElementById('bgInteraction');
-  var forceValEl  = document.getElementById('bgInteractionVal');
-  if (forceSlider) {
-    interaction = parseFloat(forceSlider.value);
-    if (forceValEl) forceValEl.textContent = interaction.toFixed(2);
-    forceSlider.addEventListener('input', function() {
-      interaction = parseFloat(forceSlider.value);
-      if (forceValEl) forceValEl.textContent = interaction.toFixed(2);
-    });
-  }
-
-  var tiltXSlider = document.getElementById('bgTiltX');
-  var tiltXValEl  = document.getElementById('bgTiltXVal');
-  var tiltYSlider = document.getElementById('bgTiltY');
-  var tiltYValEl  = document.getElementById('bgTiltYVal');
-  if (tiltXSlider) {
-    tiltStrengthX = parseFloat(tiltXSlider.value);
-    if (tiltXValEl) tiltXValEl.textContent = tiltStrengthX.toFixed(2);
-    tiltXSlider.addEventListener('input', function() {
-      tiltStrengthX = parseFloat(tiltXSlider.value);
-      if (tiltXValEl) tiltXValEl.textContent = tiltStrengthX.toFixed(2);
-    });
-  }
-  if (tiltYSlider) {
-    tiltStrengthY = parseFloat(tiltYSlider.value);
-    if (tiltYValEl) tiltYValEl.textContent = tiltStrengthY.toFixed(2);
-    tiltYSlider.addEventListener('input', function() {
-      tiltStrengthY = parseFloat(tiltYSlider.value);
-      if (tiltYValEl) tiltYValEl.textContent = tiltStrengthY.toFixed(2);
-    });
-  }
-
-  var pointerSlider = document.getElementById('bgPointer');
-  var pointerValEl  = document.getElementById('bgPointerVal');
-  if (pointerSlider) {
-    POINTER_STRENGTH = parseFloat(pointerSlider.value);
-    if (pointerValEl) pointerValEl.textContent = POINTER_STRENGTH.toFixed(2);
-    pointerSlider.addEventListener('input', function() {
-      var v = parseFloat(pointerSlider.value);
-      if (window.__hero && window.__hero.poly && window.__hero.poly.setPointer) {
-        window.__hero.poly.setPointer(v);
-      } else { POINTER_STRENGTH = v; }
-      if (pointerValEl) pointerValEl.textContent = v.toFixed(2);
-    });
-  }
-
-  var tiltMultSlider = document.getElementById('bgTiltMult');
-  var tiltMultValEl  = document.getElementById('bgTiltMultVal');
-  if (tiltMultSlider) {
-    tiltMult = parseFloat(tiltMultSlider.value);
-    if (tiltMultValEl) tiltMultValEl.textContent = tiltMult.toFixed(2);
-    tiltMultSlider.addEventListener('input', function() {
-      var v = parseFloat(tiltMultSlider.value);
-      if (window.__hero && window.__hero.poly && window.__hero.poly.setTilt) {
-        window.__hero.poly.setTilt(v);
-      } else { tiltMult = v; }
-      if (tiltMultValEl) tiltMultValEl.textContent = v.toFixed(2);
-    });
-  }
-
-  var clickSlider = document.getElementById('bgClick');
-  var clickValEl  = document.getElementById('bgClickVal');
-  if (clickSlider) {
-    clickMult = parseFloat(clickSlider.value);
-    if (clickValEl) clickValEl.textContent = clickMult.toFixed(2);
-    clickSlider.addEventListener('input', function() {
-      var v = parseFloat(clickSlider.value);
-      if (window.__hero && window.__hero.poly && window.__hero.poly.setClick) {
-        window.__hero.poly.setClick(v);
-      } else { clickMult = v; }
-      if (clickValEl) clickValEl.textContent = v.toFixed(2);
-    });
-  }
-
-  var droneSlider = document.getElementById('bgDrone');
-  var droneValEl  = document.getElementById('bgDroneVal');
-  if (droneSlider) {
-    if (droneValEl) droneValEl.textContent = parseFloat(droneSlider.value).toFixed(2);
-    droneSlider.addEventListener('input', function() {
-      var v = parseFloat(droneSlider.value);
-      if (window.__hero && window.__hero.drone && window.__hero.drone.setLevel) {
-        window.__hero.drone.setLevel(v);
-      }
-      if (droneValEl) droneValEl.textContent = v.toFixed(2);
-    });
-  }
-
-  var bgAttraction = document.getElementById('bgAttraction');
-  var bgAttractionVal = document.getElementById('bgAttractionVal');
-  if (bgAttraction) {
-    bgAttraction.addEventListener('input', function() {
-      var v = parseFloat(bgAttraction.value);
-      if (bgAttractionVal) bgAttractionVal.textContent = v.toFixed(2);
-      if (window.__hero && window.__hero.poly && window.__hero.poly.setAttraction) {
-        window.__hero.poly.setAttraction(v);
-      }
-    });
-  }
-
-  var bgSplatter = document.getElementById('bgSplatter');
-  var bgSplatterVal = document.getElementById('bgSplatterVal');
-  if (bgSplatter) {
-    bgSplatter.addEventListener('input', function() {
-      var v = parseFloat(bgSplatter.value);
-      if (bgSplatterVal) bgSplatterVal.textContent = v.toFixed(2);
-      if (window.__hero && window.__hero.poly && window.__hero.poly.setSplatter) {
-        window.__hero.poly.setSplatter(v);
-      }
-    });
-  }
-
-  // ---- External API (same surface as before) ----
-  window.__hero = window.__hero || {};
-  window.__hero.poly = {
-    reset: function() {
-      initRope();
-      lastPx = null; lastPy = null;
-      tiltYBaseline = null;
-      var em = document.getElementById('entropyMeter');
-      if (em) em.textContent = '0.00';
-    },
-    pause:    function() { paused = true; },
-    resume:   function() { paused = false; },
-    isPaused: function() { return paused; },
-    setPointer:    function(v) { POINTER_STRENGTH = +v; },
-    setTilt:       function(v) { tiltMult = +v; },
-    setClick:      function(v) { clickMult = +v; },
-    setAttraction: function(v) { attractionMult = Math.max(0, Math.min(1, +v) || 0); },
-    setSplatter:   function(v) { splatterMult = Math.max(0, Math.min(2, +v) || 0); },
-    getEntropy: function() { return entropy; },
-    getParting: function() { return parting; },
-    getMoved:   function() { return moved; }
-  };
-
-  resize();
-  updateProgress();
-  start();
-})();
-</script>
 
 <script>
 (function heroScrollLock() {
@@ -4942,56 +4224,6 @@ class Knob {
       setTimeout(function(){ document.body.classList.add('lock-scroll'); }, 700);
     });
   }
-})();
-
-(function heroSaveButton() {
-  var btn = document.getElementById('saveSim');
-  var canvas = document.getElementById('bg-canvas');
-  if (!btn || !canvas) return;
-  btn.addEventListener('click', function() {
-    try {
-      var off = document.createElement('canvas');
-      off.width = canvas.width;
-      off.height = canvas.height;
-      var octx = off.getContext('2d');
-      // Use the page body's background color so the export matches what's on screen
-      var bg = window.getComputedStyle(document.body).backgroundColor || '#0a0a0c';
-      octx.fillStyle = bg;
-      octx.fillRect(0, 0, off.width, off.height);
-      octx.drawImage(canvas, 0, 0);
-
-      var ts = new Date();
-      var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
-      var name = 'sayfa-' + ts.getFullYear() + pad(ts.getMonth()+1) + pad(ts.getDate())
-        + '-' + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds()) + '.png';
-
-      if (off.toBlob) {
-        off.toBlob(function(blob) {
-          if (!blob) return;
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url;
-          a.download = name;
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(function() {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          }, 100);
-        }, 'image/png');
-      } else {
-        var dataURL = off.toDataURL('image/png');
-        var a = document.createElement('a');
-        a.href = dataURL;
-        a.download = name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-    } catch (e) {
-      console.error('canvas save failed', e);
-    }
-  });
 })();
 
 (function heroNavToggle() {
@@ -5303,39 +4535,143 @@ class Knob {
   window.__hero.drone.resetNotes = resetNotes;
 })();
 
-(function heroControls() {
-  // Phase 4: wire the RESET button to the polyline engine, and auto-pause/resume
-  // that engine when the hero scrolls out of / back into view.
-  var resetBtn = document.getElementById('resetSim');
-  var hero = document.getElementById('hero');
-  if (!resetBtn || !hero) return;
+</script>
 
-  var poly = function() { return (window.__hero && window.__hero.poly) || null; };
+<script>
+/* ============================================================
+   MAGNETIC FIELD LAYER
+   Grid of dashes that align with a dipole field centred on
+   the mouse. Dipole axis tracks movement direction. Each dash
+   has angular inertia — spring + damping toward field target.
+   ============================================================ */
+(function magneticFieldLayer() {
+  'use strict';
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  resetBtn.disabled = false;
-  resetBtn.removeAttribute('disabled');
-  resetBtn.addEventListener('click', function() {
-    var p = poly(); if (p && p.reset) p.reset();
-    if (window.__hero && window.__hero.drone && window.__hero.drone.resetNotes) {
-      window.__hero.drone.resetNotes();
-    }
+  var canvas = document.getElementById('field-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  var W = 0, H = 0;
+
+  var STEP = 30;   // grid spacing px
+  var HALF = 9;    // half-length of each dash
+  var DIPOLE = 65; // half-separation between N and S poles
+  var REACH  = 400; // influence radius
+
+  var cols, rows, angles, angVels;
+
+  // Precomputed palette: index = Math.round(alpha * 100), alpha 0..0.31
+  var PAL = [];
+  for (var pi = 0; pi < 32; pi++) {
+    PAL[pi] = 'rgba(196,154,71,' + (pi * 0.01).toFixed(2) + ')';
+  }
+
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cols = Math.ceil(W / STEP) + 2;
+    rows = Math.ceil(H / STEP) + 2;
+    var n = cols * rows;
+    angles  = new Float32Array(n);
+    angVels = new Float32Array(n);
+  }
+
+  var mx = -9999, my = -9999;
+  var prevMx = -9999, prevMy = -9999;
+  var dipAngle = 0, dipTarget = 0;
+
+  window.addEventListener('mousemove', function(e) {
+    mx = e.clientX; my = e.clientY;
+    var dx = mx - prevMx, dy = my - prevMy;
+    if (prevMx > -9000 && dx * dx + dy * dy > 9) dipTarget = Math.atan2(dy, dx);
+    prevMx = mx; prevMy = my;
+  });
+  window.addEventListener('mouseleave', function() {
+    mx = -9999; my = -9999; prevMx = -9999; prevMy = -9999;
   });
 
-  // Auto-pause when hero leaves viewport; auto-resume when it returns.
-  if ('IntersectionObserver' in window) {
-    var io = new IntersectionObserver(function(entries) {
-      entries.forEach(function(e) {
-        var p = poly();
-        if (!p) return;
-        if (!e.isIntersecting) {
-          p.pause();
-        } else {
-          p.resume();
-        }
-      });
-    }, { threshold: 0.3 });
-    io.observe(hero);
+  // Direction of dipole field at (gx,gy) given two poles
+  function fieldDir(gx, gy, npx, npy, spx, spy) {
+    var dx1 = gx - npx, dy1 = gy - npy;
+    var dx2 = gx - spx, dy2 = gy - spy;
+    var r1sq = dx1*dx1 + dy1*dy1 || 1;
+    var r2sq = dx2*dx2 + dy2*dy2 || 1;
+    var r1 = Math.sqrt(r1sq), r2 = Math.sqrt(r2sq);
+    var bx = dx1 / (r1 * r1sq) - dx2 / (r2 * r2sq);
+    var by = dy1 / (r1 * r1sq) - dy2 / (r2 * r2sq);
+    return Math.atan2(by, bx);
   }
+
+  var lastT = 0;
+  function frame(t) {
+    var dt = Math.min((t - lastT) * 0.001, 0.05);
+    lastT = t;
+
+    // Smooth dipole axis toward movement direction
+    var da = dipTarget - dipAngle;
+    if (da >  Math.PI) da -= 2 * Math.PI;
+    if (da < -Math.PI) da += 2 * Math.PI;
+    dipAngle += da * Math.min(1, 4 * dt);
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+
+    var hasMouse = mx > -9000;
+    var cdA = Math.cos(dipAngle), sdA = Math.sin(dipAngle);
+    var npx = mx + cdA * DIPOLE, npy = my + sdA * DIPOLE;
+    var spx = mx - cdA * DIPOLE, spy = my - sdA * DIPOLE;
+
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        var gx  = (c + 0.5) * STEP;
+        var gy  = (r + 0.5) * STEP;
+        var idx = r * cols + c;
+
+        var dist = hasMouse
+          ? Math.sqrt((gx - mx) * (gx - mx) + (gy - my) * (gy - my))
+          : Infinity;
+        var infl = dist < REACH ? 1 - dist / REACH : 0;
+        infl = infl * infl; // ease: concentrate near cursor
+
+        if (infl > 4e-4) {
+          var tgt  = fieldDir(gx, gy, npx, npy, spx, spy);
+          var diff = tgt - angles[idx];
+          if (diff >  Math.PI) diff -= 2 * Math.PI;
+          if (diff < -Math.PI) diff += 2 * Math.PI;
+          // spring k=9*infl, damping=3.5 — underdamped → slight overshoot
+          angVels[idx] += (9 * infl * diff - 3.5 * angVels[idx]) * dt;
+        } else {
+          // bleed velocity when cursor leaves
+          angVels[idx] *= Math.max(0, 1 - 8 * dt);
+        }
+        angles[idx] += angVels[idx] * dt;
+
+        // alpha: faint dormant presence + bloom near cursor
+        var alpha   = 0.025 + infl * 0.29;
+        var palIdx  = Math.min(31, Math.round(alpha * 100));
+        var cos = Math.cos(angles[idx]) * HALF;
+        var sin = Math.sin(angles[idx]) * HALF;
+
+        ctx.strokeStyle = PAL[palIdx];
+        ctx.beginPath();
+        ctx.moveTo(gx - cos, gy - sin);
+        ctx.lineTo(gx + cos, gy + sin);
+        ctx.stroke();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(frame);
 })();
 </script>
 
