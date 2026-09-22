@@ -1437,7 +1437,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;   /* shared centre axis the zigzag weaves around */
-    gap: 64px;              /* breathing space between cards */
+    gap: 40px;              /* breathing space between cards */
     padding: 80px 20px;
     max-width: 1040px;
     margin: 0 auto;
@@ -1447,7 +1447,6 @@
   @media (max-width: 900px) {
     /* Too narrow for the zigzag spread — collapse back to a single clean
        centred stack and drop the drift (see cardStreams()). */
-    .card-streams { gap: 40px; }
     .card-streams [data-stream] { align-self: center; }
   }
   /* Cards read small now that there are nine of them — real reflow (not a
@@ -2606,7 +2605,7 @@
   var rightEls = Array.prototype.slice.call(wrap.querySelectorAll('[data-stream="right"]'));
   var allEls   = leftEls.concat(rightEls);
 
-  var RATE       = 0.45;         // max slow-down from 1x — right's multiplier stays in [1-RATE, 1]
+  var RATE       = 0.3;          // max slow-down from 1x — right's multiplier stays in [1-RATE, 1]
   var PRIMARY_K  = 0.55;         // primary cycle across the section's scroll range
   var SECOND_K   = 1.55;         // secondary harmonic, deliberately incommensurate with PRIMARY_K so
                                   // the combined rhythm never repeats in an obvious, metronomic way
