@@ -1421,39 +1421,15 @@
      Each major section is a card on the page; clicking opens a fullscreen
      modal containing the full functional UI. */
 
-  /* Two rigid columns, no drift — both move with the page at exactly the
-     same rate (see cardStreams() below, which now only publishes card
-     positions to the magnetic-field layer, nothing scroll-driven). The
-     zigzag comes purely from layout: the right column is nudged down by
-     roughly half a card's height, and cards within a column touch with no
-     gap of their own, so the two columns interleave into a staggered
-     "brick" pattern down the page. */
+  /* One centered column of cards, plain native scroll. */
   .card-streams {
     position: relative;
     z-index: 1;
     display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 32px;
-    padding: 80px 20px;
-    max-width: 1040px;
-    margin: 0 auto;
-  }
-  .stream-col {
-    display: flex;
     flex-direction: column;
-    flex: 1 1 0;
-    min-width: 0;
-  }
-  .stream-col[data-stream="right"] {
-    margin-top: 150px; /* ~half a card's rendered height — the zigzag offset */
-  }
-  @media (max-width: 900px) {
-    /* Too narrow for two columns — collapse to one, offset dropped. */
-    .card-streams { flex-direction: column; align-items: center; gap: 24px; }
-    .stream-col[data-stream="right"] { margin-top: 0; }
-    .stream-col { width: 100%; }
+    align-items: center;
+    gap: 40px;
+    padding: 80px 20px;
   }
   /* Cards read small now that there are nine of them — real reflow (not a
      visual-only transform), so the layout actually collapses around the
@@ -1657,16 +1633,27 @@
     .modal-content { padding: 20px; }
   }
 
-  /* ----- Return Home button — cross-fades with WORKS (hero-nav-toggle) ----
-     Both buttons share the same top-left slot. WORKS is visible on the hero,
-     HOME is visible once the user has scrolled away. They swap via opacity so
-     the transition is smooth in both directions.
-     Default: hidden (opacity 0) so there's no flash before JS runs. */
-  .return-home {
-    position: fixed;
-    top: 68px;
-    left: 24px;
+  /* ----- WORKS / HOME magnet button -------------------------------------
+     One button, not two. It rests at the lower-middle of the hero reading
+     WORKS; as the page scrolls it rides up the centre line with the page
+     and docks at the top-centre, where it reads HOME. The travel is plain
+     position: sticky — the browser moves it, not JS — so it has no scroll
+     latency. The negative top margin pulls it up into the hero's bottom
+     area and the bottom margin gives that space back, so nothing below
+     shifts. Its first and last letters are the N/S poles of a magnet in
+     the background field (see magButton() and magneticFieldLayer()). */
+  .mag-dock {
+    position: sticky;
+    top: 24px;
     z-index: 8000;
+    height: 32px;
+    margin: -104px 0 72px;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .mag-btn {
+    pointer-events: auto;
     background: transparent;
     color: rgba(255,255,255,0.95);
     border: 0;
@@ -1678,24 +1665,20 @@
     text-transform: uppercase;
     line-height: 1;
     cursor: pointer;
-    opacity: 0;
-    pointer-events: none;
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    transition: opacity 300ms;
+    opacity: 0.5;
+    transition: opacity 200ms;
   }
-  .return-home-chev {
-    display: inline-block;
-    font-size: 0.9rem;
-  }
-  /* Fade HOME in once the hero has scrolled mostly out of view */
-  body.past-hero .return-home { opacity: 0.5; pointer-events: auto; }
-  body.past-hero .return-home:hover { opacity: 1; }
-  /* Fade WORKS out at the same point */
-  body.past-hero .hero-nav-toggle { opacity: 0; pointer-events: none; }
+  .mag-btn:hover,
+  .mag-btn:focus-visible { opacity: 1; }
+  .mag-label { display: inline-flex; align-items: center; gap: 10px; }
+  .mag-label-home,
+  .mag-btn.docked .mag-label-works { display: none; }
+  .mag-btn.docked .mag-label-home { display: inline-flex; }
+  .mag-chev { font-size: 0.9rem; letter-spacing: 0; }
   @media (max-width: 640px) {
-    .return-home { top: 60px; left: 16px; }
+    .mag-dock { top: 16px; }
   }
 
   /* ----- Quick Showreel button + lightbox -------------------------------
@@ -1798,40 +1781,6 @@
      .hero-nav, and the old one is redundant on the cards section too. */
   nav:not(.hero-nav) { display: none; }
 
-  .hero-nav-toggle {
-    position: absolute;
-    top: 24px;
-    left: 24px;
-    background: transparent;
-    color: rgba(255,255,255,0.95);
-    border: 0;
-    height: 32px;
-    padding: 0;
-    font: inherit;
-    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    line-height: 1;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    opacity: 0.5;
-    transition: opacity 200ms;
-    z-index: 4;
-  }
-  .hero-nav-toggle:hover {
-    opacity: 1;
-  }
-  .hero-nav-toggle .hero-nav-toggle-chev {
-    display: inline-block;
-    font-size: 0.9rem;
-    transition: transform 200ms;
-  }
-  .hero-nav-toggle[aria-expanded="true"] .hero-nav-toggle-chev {
-    transform: rotate(180deg);
-  }
-
   .hero-nav {
     position: absolute;
     top: 64px;
@@ -1926,7 +1875,6 @@
 
 
   @media (max-width: 640px) {
-    .hero-nav-toggle { top: 16px; left: 16px; }
     .hero-nav { top: 56px; left: 16px; gap: 10px; font-size: 0.7rem; }
     .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
@@ -1939,7 +1887,6 @@
 <canvas id="field-canvas" aria-hidden="true"></canvas>
 
 <section class="hero" id="hero" aria-label="Welcome">
-  <button class="hero-nav-toggle" type="button" aria-expanded="false" aria-controls="heroNav" aria-label="Toggle navigation"><span class="hero-nav-toggle-label">WORKS</span><span class="hero-nav-toggle-chev" aria-hidden="true">▾</span></button>
   <nav class="hero-nav" id="heroNav" aria-label="Sections">
     <a href="#three-d" data-target="three-d">3D SHOWREEL</a>
     <a href="#synths" data-target="synths">Synths</a>
@@ -1955,11 +1902,15 @@
   </div>
 </section>
 
-<!-- Return Home button: lives outside hero, always rendered, but stays
-     invisible (opacity 0, see .return-home) until body.past-hero is set —
-     i.e. once the hero has scrolled mostly out of view. Click → smooth
-     scroll back to the hero. -->
-<button class="return-home" id="returnHome" type="button" aria-label="Return to hero">HOME<span class="return-home-chev" aria-hidden="true">▴</span></button>
+<!-- WORKS / HOME magnet: rests at the hero's lower-middle, rides up with
+     the scroll and docks top-centre as HOME (see .mag-dock). The data-pole
+     letters are the magnet's poles in the background field. -->
+<div class="mag-dock" id="magDock">
+  <button class="mag-btn" id="magBtn" type="button" aria-label="Go to works">
+    <span class="mag-label mag-label-works" aria-hidden="true"><span><span data-pole="n">W</span>ORK<span data-pole="s">S</span></span><span class="mag-chev">▾</span></span>
+    <span class="mag-label mag-label-home" aria-hidden="true"><span><span data-pole="n">H</span>OM<span data-pole="s">E</span></span><span class="mag-chev">▴</span></span>
+  </button>
+</div>
 
 <!-- Quick Showreel: single-click access to the latest reel. The iframe src
      is set on open (with autoplay) and cleared on close so audio stops.
@@ -1995,112 +1946,107 @@
   </div>
 </nav>
 
-<!-- Two card columns sharing one native page scroll — right column offset
-     down by roughly half a card height to interleave a zigzag against the
-     left column. No per-card spacing (see .stream-col), no independent
-     scroll input. -->
+<!-- Works: one centered column of cards. Modals live at the end of this
+     wrapper — they're position:fixed, so their DOM position doesn't matter. -->
 <div class="card-streams" id="workStreams">
-<div class="stream-col" data-stream="left">
-  <section id="three-d" class="section-shell">
-    <div class="section-card" data-modal-target="modal-3d">
-      <img class="card-hero" src="assets/images/durex.webp" alt="DUR3 — stylized still" loading="lazy">
-      <div class="card-text">
-        <h2 class="card-title">3D</h2>
-        <p class="card-desc">Showreel, scenes, FX rigs — current reel with earlier ones tucked underneath.</p>
-      </div>
-      <span class="card-cta" aria-hidden="true">Open ↗</span>
+<section id="three-d" class="section-shell">
+  <div class="section-card" data-modal-target="modal-3d">
+    <img class="card-hero" src="assets/images/durex.webp" alt="DUR3 — stylized still" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">3D</h2>
+      <p class="card-desc">Showreel, scenes, FX rigs — current reel with earlier ones tucked underneath.</p>
     </div>
-  </section>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
 
-  <section id="synths" class="section-shell">
-    <div class="section-card" data-modal-target="modal-synths">
-      <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
-      <div class="card-text">
-        <h2 class="card-title">Synths</h2>
-        <p class="card-desc">Modular synth patching — cables, knobs, sensors. Click to play.</p>
-      </div>
-      <span class="card-cta" aria-hidden="true">Open ↗</span>
+<section id="procedural" class="section-shell">
+  <div class="section-card" data-modal-target="modal-procedural">
+    <img class="card-hero" src="assets/images/car-bridge.webp" alt="Procedural car simulation — stylized still" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Procedural</h2>
+      <p class="card-desc">Generative scenes, FX rigs, and asset systems.</p>
     </div>
-  </section>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
 
-  <section id="stray-voltage" class="section-shell">
-    <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="angDetails">
-      <img class="card-hero" src="assets/images/miksciwire.webp" alt="Wireframe render of a DIY hardware device with knobs and jacks" loading="lazy">
-      <div class="card-text">
-        <h2 class="card-title">Stray Voltage</h2>
-        <p class="card-desc">Other hardware — DIY builds and hacked-together devices. VCOs, fuzz, delay, whatever else got made along the way.</p>
-      </div>
-      <span class="card-cta" aria-hidden="true">Open ↗</span>
+<section id="synths" class="section-shell">
+  <div class="section-card" data-modal-target="modal-synths">
+    <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Synths</h2>
+      <p class="card-desc">Modular synth patching — cables, knobs, sensors. Click to play.</p>
     </div>
-  </section>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
 
-  <section id="loops" class="section-shell">
-    <div class="section-card" data-modal-target="modal-loops">
-      <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — loops built from DIY instrument samples" loading="lazy">
-      <div class="card-text">
-        <h2 class="card-title">Loops &amp; Beats</h2>
-        <p class="card-desc">Looped phrases built from those samples. Click to preview, arrow to download.</p>
-      </div>
-      <span class="card-cta" aria-hidden="true">Open ↗</span>
+<section id="pedals" class="section-shell">
+  <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="pedalsRow">
+    <img class="card-hero" src="assets/images/mkv-pcbhrz.webp" alt="Hand-built pedal PCB layout" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Pedals</h2>
+      <p class="card-desc">Effect pedals living on the same patchable rig — overdrive, reverb, more to come.</p>
     </div>
-  </section>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
 
-  <section id="photography" class="section-shell">
-    <div class="section-card" data-modal-target="modal-photography">
-      <img class="card-hero" src="assets/images/isyan_hatirasi.webp" alt="Photograph: isyan hatirasi" loading="lazy">
-      <div class="card-text">
-        <h2 class="card-title">Photo</h2>
-        <p class="card-desc">Older work — film, walks, things noticed. Click for the gallery.</p>
-      </div>
-      <span class="card-cta" aria-hidden="true">Open ↗</span>
+<section id="stray-voltage" class="section-shell">
+  <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="angDetails">
+    <img class="card-hero" src="assets/images/miksciwire.webp" alt="Wireframe render of a DIY hardware device with knobs and jacks" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Stray Voltage</h2>
+      <p class="card-desc">Other hardware — DIY builds and hacked-together devices. VCOs, fuzz, delay, whatever else got made along the way.</p>
     </div>
-  </section>
-</div>
-<div class="stream-col" data-stream="right">
-  <section id="procedural" class="section-shell">
-    <div class="section-card" data-modal-target="modal-procedural">
-      <img class="card-hero" src="assets/images/car-bridge.webp" alt="Procedural car simulation — stylized still" loading="lazy">
-      <div class="card-text">
-        <h2 class="card-title">Procedural</h2>
-        <p class="card-desc">Generative scenes, FX rigs, and asset systems.</p>
-      </div>
-      <span class="card-cta" aria-hidden="true">Open ↗</span>
-    </div>
-  </section>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
 
-  <section id="pedals" class="section-shell">
-    <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="pedalsRow">
-      <img class="card-hero" src="assets/images/mkv-pcbhrz.webp" alt="Hand-built pedal PCB layout" loading="lazy">
-      <div class="card-text">
-        <h2 class="card-title">Pedals</h2>
-        <p class="card-desc">Effect pedals living on the same patchable rig — overdrive, reverb, more to come.</p>
-      </div>
-      <span class="card-cta" aria-hidden="true">Open ↗</span>
+<section id="music" class="section-shell">
+  <div class="section-card" data-modal-target="modal-samples">
+    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — DIY instrument samples" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Samples</h2>
+      <p class="card-desc">Single-shot samples recorded out of my DIY instruments. Click to preview, arrow to download.</p>
     </div>
-  </section>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
 
-  <section id="music" class="section-shell">
-    <div class="section-card" data-modal-target="modal-samples">
-      <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — DIY instrument samples" loading="lazy">
-      <div class="card-text">
-        <h2 class="card-title">Samples</h2>
-        <p class="card-desc">Single-shot samples recorded out of my DIY instruments. Click to preview, arrow to download.</p>
-      </div>
-      <span class="card-cta" aria-hidden="true">Open ↗</span>
+<section id="loops" class="section-shell">
+  <div class="section-card" data-modal-target="modal-loops">
+    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — loops built from DIY instrument samples" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Loops &amp; Beats</h2>
+      <p class="card-desc">Looped phrases built from those samples. Click to preview, arrow to download.</p>
     </div>
-  </section>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
 
-  <section id="tracks" class="section-shell">
-    <div class="section-card" data-modal-target="modal-tracks">
-      <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — ambient hardware jam tracks" loading="lazy">
-      <div class="card-text">
-        <h2 class="card-title">Tracks</h2>
-        <p class="card-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
-      </div>
-      <span class="card-cta" aria-hidden="true">Open ↗</span>
+<section id="tracks" class="section-shell">
+  <div class="section-card" data-modal-target="modal-tracks">
+    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — ambient hardware jam tracks" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Tracks</h2>
+      <p class="card-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
     </div>
-  </section>
-</div>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
+
+<section id="photography" class="section-shell">
+  <div class="section-card" data-modal-target="modal-photography">
+    <img class="card-hero" src="assets/images/isyan_hatirasi.webp" alt="Photograph: isyan hatirasi" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Photo</h2>
+      <p class="card-desc">Older work — film, walks, things noticed. Click for the gallery.</p>
+    </div>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
 
 <div class="modal" id="modal-3d" role="dialog" aria-modal="true" aria-hidden="true" aria-label="3D">
   <button class="modal-close" aria-label="Close">×</button>
@@ -2561,23 +2507,14 @@
 
 <script>
 /* ============================================================
-   CARD STREAMS
-
-   Both columns move together, pure native document flow — no
-   JS-driven vertical offset on either one, so there's zero added
-   latency (that was the whole complaint with the old lag effect on
-   the right side: even non-bouncy easing still trails a few frames
-   behind a stopped scroll, and that trailing read as bounce). The
-   zigzag is purely CSS layout now — two columns, right one shifted
-   down (see .stream-col above) — nothing here drives it.
-
-   Each visible card's screen-space center is still published to
+   CARD FIELD SOURCES
+   Publishes each visible card's screen-space center to
    window.__fieldCardSources for the background magnetic-field layer
-   to read — card screen positions → magnetic field calculation →
-   background rendering. The field only reads this; nothing here
-   reads anything back from the field.
+   (card screen positions → field calculation → rendering). Nothing
+   here moves the cards — they scroll natively — and nothing reads
+   anything back from the field.
    ============================================================ */
-(function cardStreams() {
+(function cardFieldSources() {
   'use strict';
   var wrap = document.getElementById('workStreams');
   if (!wrap) return;
@@ -4382,42 +4319,66 @@ class Knob {
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
+})();
 
-  var homeBtn = document.getElementById('returnHome');
-  if (homeBtn) {
-    homeBtn.addEventListener('click', function() {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+(function magButton() {
+  // The dock's travel is pure CSS (sticky); this only swaps WORKS/HOME once
+  // it has actually docked, handles the click, and publishes the current
+  // label's first/last letters as the magnet's poles for the field layer.
+  var dock  = document.getElementById('magDock');
+  var btn   = document.getElementById('magBtn');
+  var works = document.getElementById('workStreams');
+  if (!dock || !btn) return;
+
+  var docked = false;
+  var stickyTop = 0;
+  var ticking = false;
+
+  function readStickyTop() {
+    stickyTop = parseFloat(getComputedStyle(dock).top) || 0;
   }
-})();
 
-(function heroVisibility() {
-  // Free scrolling between the hero and the sections below it — no lock in
-  // either direction. `past-hero` just drives the WORKS/HOME button
-  // crossfade, tracking whichever way the user actually scrolls.
-  var hero = document.getElementById('hero');
-  if (!hero || !('IntersectionObserver' in window)) return;
-  var obs = new IntersectionObserver(function(entries) {
-    document.body.classList.toggle('past-hero', entries[0].intersectionRatio < 0.5);
-  }, { threshold: [0, 0.5, 1] });
-  obs.observe(hero);
-})();
+  function publishPoles() {
+    var label = btn.querySelector(docked ? '.mag-label-home' : '.mag-label-works');
+    var n = label.querySelector('[data-pole="n"]').getBoundingClientRect();
+    var s = label.querySelector('[data-pole="s"]').getBoundingClientRect();
+    window.__fieldMagnet = {
+      nx: n.left + n.width / 2, ny: n.top + n.height / 2,
+      sx: s.left + s.width / 2, sy: s.top + s.height / 2
+    };
+    if (window.__fieldEnsureLoop) window.__fieldEnsureLoop();
+  }
 
-(function heroNavToggle() {
-  var btn = document.querySelector('.hero-nav-toggle');
-  var nav = document.getElementById('heroNav');
-  if (!btn || !nav) return;
+  function update() {
+    ticking = false;
+    var nowDocked = window.scrollY > 0 && dock.getBoundingClientRect().top <= stickyTop + 0.5;
+    if (nowDocked !== docked) {
+      docked = nowDocked;
+      btn.classList.toggle('docked', docked);
+      btn.setAttribute('aria-label', docked ? 'Back to top' : 'Go to works');
+    }
+    publishPoles();
+  }
+
+  function schedule() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }
+
   btn.addEventListener('click', function() {
-    var target = document.getElementById('three-d');
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (docked) window.scrollTo({ top: 0, behavior: 'smooth' });
+    else if (works) works.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-  // Close after any link click
-  nav.querySelectorAll('a').forEach(function(a) {
-    a.addEventListener('click', function() {
-      nav.classList.remove('open');
-      btn.setAttribute('aria-expanded', 'false');
-    });
-  });
+
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', function() { readStickyTop(); schedule(); });
+  // Letter positions move once the webfont swaps in.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  window.addEventListener('load', schedule);
+
+  readStickyTop();
+  update();
 })();
 
 (function droneEngine() {
@@ -4677,7 +4638,7 @@ class Knob {
 <script>
 /* ============================================================
    MAGNETIC FIELD LAYER
-   Grid of dashes aligned to the summed field of two sources:
+   Grid of dashes aligned to the summed field of three sources:
 
      1. A dipole centred on the last place you touched/moved the
         mouse. It sticks there — never drifts on its own — so the
@@ -4685,11 +4646,14 @@ class Knob {
         loop stops once the spring settles (nothing animates
         without live input, which is also why this is trivially
         fine under prefers-reduced-motion).
-     2. Every currently-visible card from cardStreams(), read each
-        frame from window.__fieldCardSources — card screen position
-        → field calculation → this rendering. Each card is its own
-        small dipole, same physics as the pointer. One-way: the
-        field reacts to the cards, the cards never react to the
+     2. The WORKS/HOME button (window.__fieldMagnet, published by
+        magButton()): its first letter is the N pole, its last the S
+        pole, at exactly the pointer's reach and strength.
+     3. Every currently-visible card from cardFieldSources(), read
+        each frame from window.__fieldCardSources — card screen
+        position → field calculation → this rendering. Each card is
+        its own small dipole, same physics as the pointer. One-way:
+        the field reacts to the cards, the cards never react to the
         field.
 
    Each dash has angular inertia — spring + damping toward whatever
@@ -4796,6 +4760,19 @@ class Knob {
     // back to them.
     var cardSources = window.__fieldCardSources || [];
 
+    // WORKS/HOME magnet. Its poles (two letters) sit closer together than
+    // the pointer's, and a dipole's strength scales with pole separation —
+    // so scale it up to the pointer's dipole moment, making it genuinely
+    // as strong as the pointer rather than weaker by accident of font size.
+    var mag = window.__fieldMagnet;
+    var magCx = 0, magCy = 0, magScale = 0;
+    if (mag) {
+      magCx = (mag.nx + mag.sx) / 2;
+      magCy = (mag.ny + mag.sy) / 2;
+      var mdx = mag.nx - mag.sx, mdy = mag.ny - mag.sy;
+      magScale = DIPOLE / Math.max(1, Math.sqrt(mdx * mdx + mdy * mdy) / 2);
+    }
+
     var stillMoving = false;
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
@@ -4812,6 +4789,19 @@ class Knob {
           var v = dipoleVector(gx, gy, npx, npy, spx, spy);
           bx += v.x * pInfl; by += v.y * pInfl;
           maxInfl = pInfl;
+        }
+
+        // WORKS/HOME button magnet — same reach and falloff as the pointer.
+        if (mag) {
+          var mgx = gx - magCx, mgy = gy - magCy;
+          var mDist = Math.sqrt(mgx * mgx + mgy * mgy);
+          var mInfl = mDist < REACH ? 1 - mDist / REACH : 0;
+          mInfl = mInfl * mInfl;
+          if (mInfl > 4e-4) {
+            var mv = dipoleVector(gx, gy, mag.nx, mag.ny, mag.sx, mag.sy);
+            bx += mv.x * mInfl * magScale; by += mv.y * mInfl * magScale;
+            if (mInfl > maxInfl) maxInfl = mInfl;
+          }
         }
 
         // Each card is a little magnet too — same dipole physics as the
@@ -4877,8 +4867,8 @@ class Knob {
     loopRunning = true;
     requestAnimationFrame(frame);
   }
-  // Exposed so cardStreams() can wake this loop after updating card
-  // positions on scroll — the only channel between the two, and one-way.
+  // Exposed so cardFieldSources() and magButton() can wake this loop after
+  // publishing new positions on scroll — one-way, nothing flows back.
   window.__fieldEnsureLoop = ensureLoop;
 
   resize();
