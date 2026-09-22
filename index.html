@@ -1425,11 +1425,11 @@
      grid-column per item (grid-row left auto) lets grid auto-placement
      stack each stream in DOM order without needing row indices. JS
      (cardStreams(), script right after .card-streams below) adds a
-     translateY on top of this static grid position — the two streams'
-     extra offset is driven by
-     different non-linear curves over scroll progress, so their effective
-     speed continuously diverges and re-syncs. That's the whole "stream":
-     no separate scroll containers, no independent input. */
+     translateY on top of this static grid position — one shared wave,
+     taken with opposite sign per side, so the columns push and pull
+     against each other (yielding speed back and forth) rather than each
+     just running its own fixed parallax rate. No separate scroll
+     containers, no independent input — one scroll drives both. */
   .card-streams {
     position: relative;
     z-index: 1;
@@ -2572,17 +2572,20 @@
    pageScroll → leftScroll(t), rightScroll(t)
 
    One scroll position (this section's progress through the
-   viewport) drives two independent translateY curves, each a
-   sine envelope at its own frequency/phase. Because the two
-   frequencies differ, the pair's relative offset — effectively
-   each stream's velocity multiplier relative to the other —
-   changes continuously and non-linearly, so the streams drift
-   apart and re-align rather than holding a fixed ratio. There is
-   no separate scroll container or input anywhere in this: both
-   streams move only because the page itself scrolled. The DOM
-   transform doesn't snap straight to that curve, though — it eases
-   toward it every frame (see SMOOTH below), which is what keeps
-   fast/bursty scroll input from reading as jiggly.
+   viewport) drives a single shared wave — two blended sine
+   harmonics so its own accel/decel character keeps shifting
+   instead of repeating on a clean beat. Left and right each take
+   that wave with opposite sign: a true zero-sum push-pull, not two
+   independently-drifting curves. Whatever speed one column gains,
+   the other yields by exactly that much, so they swing together
+   through perfect alignment (wave = 0) out to max separation and
+   back — meant to read as attraction/repulsion rather than
+   ordinary parallax. There is no separate scroll container or
+   input anywhere in this: both streams move only because the page
+   itself scrolled. The DOM transform doesn't snap straight to that
+   curve, though — it eases toward it every frame (see SMOOTH
+   below), which is what keeps fast/bursty scroll input from
+   reading as jiggly.
 
    Each visible card's screen-space center is also published to
    window.__fieldCardSources for the background magnetic-field
@@ -2598,10 +2601,12 @@
   var rightEls = Array.prototype.slice.call(wrap.querySelectorAll('[data-stream="right"]'));
   var allEls   = leftEls.concat(rightEls);
 
-  var AMP         = 46;          // px of drift at a curve's peak
-  var LEFT_K      = 0.6;         // cycles across the section's scroll range — gentle, now that 9 cards give it real room
-  var RIGHT_K     = 0.95;        // different frequency → continuously shifting phase relationship
-  var RIGHT_PHASE = Math.PI * 0.6;
+  var AMP        = 52;           // px of drift at the push-pull's peak
+  var PRIMARY_K  = 0.55;         // primary cycle across the section's scroll range
+  var SECOND_K   = 1.55;         // secondary harmonic, deliberately incommensurate with PRIMARY_K so
+                                  // the combined rhythm never repeats in an obvious, metronomic way
+  var SECOND_W   = 0.35;         // secondary's weight relative to the primary (primary carries the rest)
+  var SECOND_PHASE = Math.PI * 0.4;
   var SMOOTH      = 0.12;        // per-frame easing toward the target offset. Scroll events arrive in bursty,
                                   // high-frequency clumps (esp. trackpads); snapping straight to the raw computed
                                   // value every tick is what read as "jiggly". Easing low-pass-filters that out —
@@ -2640,8 +2645,18 @@
     var leftTarget = 0, rightTarget = 0;
     if (window.innerWidth >= NARROW) {
       var t = progress();
-      leftTarget  = AMP * Math.sin(2 * Math.PI * LEFT_K  * t);
-      rightTarget = AMP * Math.sin(2 * Math.PI * RIGHT_K * t + RIGHT_PHASE);
+      // One shared wave, two harmonics blended so its own accel/decel
+      // character keeps shifting rather than reading as a clean metronome.
+      var wave = (1 - SECOND_W) * Math.sin(2 * Math.PI * PRIMARY_K * t) +
+                       SECOND_W * Math.sin(2 * Math.PI * SECOND_K  * t + SECOND_PHASE);
+      // Left and right take that wave with opposite sign — a true zero-sum
+      // push-pull, not two independently-drifting curves. Whatever speed
+      // one side gains, the other yields by exactly that much, so they
+      // swing together through perfect alignment (wave = 0) out to max
+      // separation (|wave| peak) and back — attraction and repulsion, not
+      // just two different parallax rates.
+      leftTarget  =  AMP * wave;
+      rightTarget = -AMP * wave;
     }
 
     leftCur  += (leftTarget  - leftCur)  * SMOOTH;
