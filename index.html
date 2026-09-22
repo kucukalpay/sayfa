@@ -1449,6 +1449,12 @@
   .card-streams .section-shell {
     padding: 0 0 32px;
   }
+  /* Cards read small now that there are nine of them — real reflow (not a
+     visual-only transform), so the grid actually collapses around the
+     smaller box instead of leaving empty space. */
+  .card-streams .section-card {
+    zoom: 0.5;
+  }
   .section-card {
     max-width: 720px;
     margin: 0 auto;
@@ -1990,26 +1996,24 @@
 
 <!-- 01 · 3D (card) -->
 <section id="three-d" class="section-shell" data-stream="left">
-  <div class="section-card" data-modal-target="modal-three-d">
+  <div class="section-card" data-modal-target="modal-3d">
     <img class="card-hero" src="assets/images/durex.webp" alt="DUR3 — stylized still" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">3D</h2>
-      <p class="card-desc">3D and procedural work — showreel, scenes, FX rigs, and asset systems.</p>
+      <p class="card-desc">Showreel, scenes, FX rigs — current reel with earlier ones tucked underneath.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
 </section>
 
 <!-- MODAL · 3D -->
-<div class="modal" id="modal-three-d" role="dialog" aria-modal="true" aria-hidden="true" aria-label="3D">
+<div class="modal" id="modal-3d" role="dialog" aria-modal="true" aria-hidden="true" aria-label="3D">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
-    <h2 style="margin-top: 0;">3D &amp; Procedural</h2>
-    <p style="opacity: 0.75;">Showreel, selected works, generative scenes, and FX rigs.</p>
+    <h2 style="margin-top: 0;">3D</h2>
+    <p style="opacity: 0.75;">Current showreel, with earlier reels tucked underneath.</p>
 
     <div class="subcard">
-      <h3>3D</h3>
-      <p class="subcard-desc">Current showreel, with earlier reels tucked underneath.</p>
       <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 16px 0;">
         <iframe data-src="https://www.youtube.com/embed/TzZFn1TwO70" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="3D showreel — 2026"></iframe>
       </div>
@@ -2028,10 +2032,29 @@
         </div>
       </div>
     </div>
+  </div><!-- /.modal-content -->
+</div><!-- /#modal-3d -->
+
+<!-- 01b · PROCEDURAL (card) -->
+<section id="procedural" class="section-shell" data-stream="right">
+  <div class="section-card" data-modal-target="modal-procedural">
+    <img class="card-hero" src="assets/images/car-bridge.webp" alt="Procedural car simulation — stylized still" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Procedural</h2>
+      <p class="card-desc">Generative scenes, FX rigs, and asset systems.</p>
+    </div>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
+
+<!-- MODAL · PROCEDURAL -->
+<div class="modal" id="modal-procedural" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Procedural">
+  <button class="modal-close" aria-label="Close">×</button>
+  <div class="modal-content">
+    <h2 style="margin-top: 0;">Procedural</h2>
+    <p style="opacity: 0.75;">Generative scenes, FX rigs, and asset systems.</p>
 
     <div class="subcard">
-      <h3>Procedural</h3>
-      <p class="subcard-desc">Generative scenes, FX rigs, and asset systems.</p>
       <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin: 16px 0;">
         <iframe data-src="https://www.youtube.com/embed/PuqNwdWHfZI" loading="lazy" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen title="Procedural showreel"></iframe>
       </div>
@@ -2048,15 +2071,39 @@
       </div>
     </div>
   </div><!-- /.modal-content -->
-</div><!-- /#modal-three-d -->
+</div><!-- /#modal-procedural -->
 
 <!-- 02 · SYNTHS (card) -->
-<section id="synths" class="section-shell" data-stream="right">
+<section id="synths" class="section-shell" data-stream="left">
   <div class="section-card" data-modal-target="modal-synths">
     <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
     <div class="card-text">
-      <h2 class="card-title">Synths &amp; Pedals</h2>
-      <p class="card-desc">Modular synth experiments and effect pedals — patch some cables, tweak a knob, plug in a sensor. Click to play.</p>
+      <h2 class="card-title">Synths</h2>
+      <p class="card-desc">Modular synth patching — cables, knobs, sensors. Click to play.</p>
+    </div>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
+
+<!-- 02b · PEDALS (card) — same rig, deep-links to the pedals row -->
+<section id="pedals" class="section-shell" data-stream="right">
+  <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="pedalsRow">
+    <img class="card-hero" src="assets/images/mkv-pcbhrz.webp" alt="Hand-built pedal PCB layout" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Pedals</h2>
+      <p class="card-desc">Effect pedals living on the same patchable rig — overdrive, reverb, more to come.</p>
+    </div>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
+
+<!-- 02c · STRAY VOLTAGE (card) — same rig, deep-links to the ANG devices subcard -->
+<section id="stray-voltage" class="section-shell" data-stream="left">
+  <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="angDetails">
+    <img class="card-hero" src="assets/images/bg-blueprint.webp" alt="Circuit schematic blueprint artwork" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Stray Voltage</h2>
+      <p class="card-desc">Other hardware — DIY builds and hacked-together devices. VCOs, fuzz, delay, whatever else got made along the way.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2175,7 +2222,7 @@
 
       </div>
 
-      <div class="pedals">
+      <div class="pedals" id="pedalsRow">
         <div class="pedal" data-fx="fuzz">
           <button class="pedal-switch" type="button"><span class="led"></span><span class="name">Overdrive</span></button>
           <div class="pedal-knobs">
@@ -2197,7 +2244,7 @@
       </div><!-- /.synth-subcard-body -->
     </details><!-- /.synth-subcard ANE -->
 
-    <details class="synth-subcard">
+    <details class="synth-subcard" id="angDetails">
       <summary class="synth-subcard-head">
         <h3 class="synth-subcard-title"><span class="abbr">ANG</span> Annoying Noise Generator</h3>
         <p class="synth-subcard-desc">Annoying Noise Generator and some other devices for making noise and low fidelity effects. You can buy or order from my Etsy page. You can find the sounds and samples made by these devices streamable and downloadable in the “Music: Loops and Samples” section.</p>
@@ -2288,155 +2335,201 @@
   </div><!-- /.modal-content -->
 </div><!-- /#modal-synths -->
 
-<!-- 03 · MUSIC (card) -->
-<section id="music" class="section-shell" data-stream="left">
-  <div class="section-card" data-modal-target="modal-music">
-    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — DIY instrument samples and ambient jams" loading="lazy">
+<!-- 03 · SAMPLES (card) -->
+<section id="music" class="section-shell" data-stream="right">
+  <div class="section-card" data-modal-target="modal-samples">
+    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — DIY instrument samples" loading="lazy">
     <div class="card-text">
-      <h2 class="card-title">Music</h2>
-      <p class="card-desc">Samples of my DIY instruments and loops using those and other samples that i recorded. Also some ambient hardware+instrument jam tracks. Visit my Bandcamp page to listen and buy experimental music that I made with various instruments, devices and samples.</p>
+      <h2 class="card-title">Samples</h2>
+      <p class="card-desc">Single-shot samples recorded out of my DIY instruments. Click to preview, arrow to download.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
 </section>
 
-<!-- MODAL · MUSIC -->
-<div class="modal" id="modal-music" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Music">
+<!-- MODAL · SAMPLES -->
+<div class="modal" id="modal-samples" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Samples">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
   <div class="block">
   <div class="section-head">
     <span class="num">03 /</span>
-    <h2>Music</h2>
-    <span class="tag">Samples · Loops · Ambient</span>
+    <h2>Samples</h2>
+    <span class="tag">DIY instruments</span>
   </div>
   <p class="music-blurb">
-    Samples of my DIY instruments and loops done with those. Also some ambient hardware+instrument jam tracks. Visit my <strong>Bandcamp</strong> page to listen and buy experimental music that I made with various instruments, devices and samples.
+    Single-shot samples recorded out of my DIY instruments. Visit my <strong>Bandcamp</strong> page to listen and buy experimental music that I made with various instruments, devices and samples.
   </p>
 
-  <details class="synth-subcard" open>
-    <summary class="synth-subcard-head">
-      <h3 class="synth-subcard-title"><span class="abbr">SL</span> Samples &amp; Loops</h3>
-      <p class="synth-subcard-desc">Single-shot samples and looped phrases recorded out of my DIY instruments. Click to preview, arrow to download.</p>
-    </summary>
-    <div class="synth-subcard-body">
-      <h4 class="audio-group-title">Samples</h4>
-      <div class="audio-list">
-        <div class="audio-row" data-src="assets/Audio/sample-ang_rb_czrt.wav">
-          <button class="audio-play" type="button" aria-label="Preview">▶</button>
-          <span class="audio-name">ANG · Rb · Czrt</span>
-          <span class="audio-time">—</span>
-          <a class="audio-dl" href="assets/Audio/sample-ang_rb_czrt.wav" download title="Download">↓</a>
-        </div>
-        <div class="audio-row" data-src="assets/Audio/sample-ang_rb_v1_shamanik.wav">
-          <button class="audio-play" type="button" aria-label="Preview">▶</button>
-          <span class="audio-name">ANG · Rb · V1 Shamanik</span>
-          <span class="audio-time">—</span>
-          <a class="audio-dl" href="assets/Audio/sample-ang_rb_v1_shamanik.wav" download title="Download">↓</a>
-        </div>
-        <div class="audio-row" data-src="assets/Audio/sample-shaman_bas_hit.wav">
-          <button class="audio-play" type="button" aria-label="Preview">▶</button>
-          <span class="audio-name">Shaman · Bass Hit</span>
-          <span class="audio-time">—</span>
-          <a class="audio-dl" href="assets/Audio/sample-shaman_bas_hit.wav" download title="Download">↓</a>
-        </div>
-      </div>
-
-      <h4 class="audio-group-title">Loops</h4>
-      <div class="audio-list">
-        <div class="audio-row" data-src="assets/Audio/loop-12barblues.wav">
-          <button class="audio-play" type="button" aria-label="Preview">▶</button>
-          <span class="audio-name">12-Bar Blues</span>
-          <span class="audio-time">—</span>
-          <a class="audio-dl" href="assets/Audio/loop-12barblues.wav" download title="Download">↓</a>
-        </div>
-        <div class="audio-row" data-src="assets/Audio/loop-bluzunu-hala.wav">
-          <button class="audio-play" type="button" aria-label="Preview">▶</button>
-          <span class="audio-name">Bluzunu Hala</span>
-          <span class="audio-time">—</span>
-          <a class="audio-dl" href="assets/Audio/loop-bluzunu-hala.wav" download title="Download">↓</a>
-        </div>
-        <div class="audio-row" data-src="assets/Audio/loop-hczcorev3.wav">
-          <button class="audio-play" type="button" aria-label="Preview">▶</button>
-          <span class="audio-name">HCZ Core v3</span>
-          <span class="audio-time">—</span>
-          <a class="audio-dl" href="assets/Audio/loop-hczcorev3.wav" download title="Download">↓</a>
-        </div>
-        <div class="audio-row" data-src="assets/Audio/loop-hczcorev4.wav">
-          <button class="audio-play" type="button" aria-label="Preview">▶</button>
-          <span class="audio-name">HCZ Core v4</span>
-          <span class="audio-time">—</span>
-          <a class="audio-dl" href="assets/Audio/loop-hczcorev4.wav" download title="Download">↓</a>
-        </div>
-        <div class="audio-row" data-src="assets/Audio/loop-k-rep-kkprj-B.wav">
-          <button class="audio-play" type="button" aria-label="Preview">▶</button>
-          <span class="audio-name">K-Rep · KKPRJ B</span>
-          <span class="audio-time">—</span>
-          <a class="audio-dl" href="assets/Audio/loop-k-rep-kkprj-B.wav" download title="Download">↓</a>
-        </div>
-      </div>
+  <div class="subcard">
+  <div class="audio-list">
+    <div class="audio-row" data-src="assets/Audio/sample-ang_rb_czrt.wav">
+      <button class="audio-play" type="button" aria-label="Preview">▶</button>
+      <span class="audio-name">ANG · Rb · Czrt</span>
+      <span class="audio-time">—</span>
+      <a class="audio-dl" href="assets/Audio/sample-ang_rb_czrt.wav" download title="Download">↓</a>
     </div>
-  </details>
-
-  <details class="synth-subcard">
-    <summary class="synth-subcard-head">
-      <h3 class="synth-subcard-title"><span class="abbr">AT</span> Ambient Tracks</h3>
-      <p class="synth-subcard-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
-    </summary>
-    <div class="synth-subcard-body">
-      <div class="music-player">
-        <div class="now-playing">
-          <button class="play-btn" id="playBtn" aria-label="Play">▶</button>
-          <div class="track-info">
-            <div class="name" id="trackName">—</div>
-            <div class="meta" id="trackMeta">SELECT A TRACK</div>
-          </div>
-        </div>
-        <canvas class="viz-canvas" id="musicViz"></canvas>
-        <label class="keep-playing">
-          <input type="checkbox" id="keepPlaying">
-          <span>Keep playing when closed</span>
-        </label>
-      </div>
-      <div class="music-library">
-        <div class="lib-head">
-          <span>#</span>
-          <span>Track</span>
-          <span>Tag</span>
-          <span>Len</span>
-          <span>File</span>
-        </div>
-        <ul class="track-list">
-          <li class="track-row" data-track="0" data-src="assets/Tracks/Bul_uzun15-4.mp3">
-            <span class="track-num">01</span>
-            <div class="track-meta">
-              <span class="track-name">Bul Uzun 15-4</span>
-              <span class="track-sub">hardware jam · ambient</span>
-            </div>
-            <span class="track-tag">Ambient</span>
-            <span class="track-dur" data-dur>—</span>
-            <a class="track-dl" href="assets/Tracks/Bul_uzun15-4.mp3" download>MP3 ↓</a>
-          </li>
-          <li class="track-row" data-track="1" data-src="assets/Tracks/tambirbiyans.mp3">
-            <span class="track-num">02</span>
-            <div class="track-meta">
-              <span class="track-name">Tambirbiyans</span>
-              <span class="track-sub">hardware jam · ambient</span>
-            </div>
-            <span class="track-tag">Ambient</span>
-            <span class="track-dur" data-dur>—</span>
-            <a class="track-dl" href="assets/Tracks/tambirbiyans.mp3" download>MP3 ↓</a>
-          </li>
-        </ul>
-      </div>
+    <div class="audio-row" data-src="assets/Audio/sample-ang_rb_v1_shamanik.wav">
+      <button class="audio-play" type="button" aria-label="Preview">▶</button>
+      <span class="audio-name">ANG · Rb · V1 Shamanik</span>
+      <span class="audio-time">—</span>
+      <a class="audio-dl" href="assets/Audio/sample-ang_rb_v1_shamanik.wav" download title="Download">↓</a>
     </div>
-  </details>
+    <div class="audio-row" data-src="assets/Audio/sample-shaman_bas_hit.wav">
+      <button class="audio-play" type="button" aria-label="Preview">▶</button>
+      <span class="audio-name">Shaman · Bass Hit</span>
+      <span class="audio-time">—</span>
+      <a class="audio-dl" href="assets/Audio/sample-shaman_bas_hit.wav" download title="Download">↓</a>
+    </div>
+  </div>
+  </div><!-- /.subcard -->
   </div><!-- /.block -->
   </div><!-- /.modal-content -->
-</div><!-- /#modal-music -->
+</div><!-- /#modal-samples -->
+
+<!-- 03b · LOOPS & BEATS (card) -->
+<section id="loops" class="section-shell" data-stream="left">
+  <div class="section-card" data-modal-target="modal-loops">
+    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — loops built from DIY instrument samples" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Loops &amp; Beats</h2>
+      <p class="card-desc">Looped phrases built from those samples. Click to preview, arrow to download.</p>
+    </div>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
+
+<!-- MODAL · LOOPS & BEATS -->
+<div class="modal" id="modal-loops" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Loops and Beats">
+  <button class="modal-close" aria-label="Close">×</button>
+  <div class="modal-content">
+  <div class="block">
+  <div class="section-head">
+    <span class="num">03 /</span>
+    <h2>Loops &amp; Beats</h2>
+    <span class="tag">Built from the samples</span>
+  </div>
+  <p class="music-blurb">
+    Looped phrases built out of the DIY instrument samples. Visit my <strong>Bandcamp</strong> page to listen and buy experimental music that I made with various instruments, devices and samples.
+  </p>
+
+  <div class="subcard">
+  <div class="audio-list">
+    <div class="audio-row" data-src="assets/Audio/loop-12barblues.wav">
+      <button class="audio-play" type="button" aria-label="Preview">▶</button>
+      <span class="audio-name">12-Bar Blues</span>
+      <span class="audio-time">—</span>
+      <a class="audio-dl" href="assets/Audio/loop-12barblues.wav" download title="Download">↓</a>
+    </div>
+    <div class="audio-row" data-src="assets/Audio/loop-bluzunu-hala.wav">
+      <button class="audio-play" type="button" aria-label="Preview">▶</button>
+      <span class="audio-name">Bluzunu Hala</span>
+      <span class="audio-time">—</span>
+      <a class="audio-dl" href="assets/Audio/loop-bluzunu-hala.wav" download title="Download">↓</a>
+    </div>
+    <div class="audio-row" data-src="assets/Audio/loop-hczcorev3.wav">
+      <button class="audio-play" type="button" aria-label="Preview">▶</button>
+      <span class="audio-name">HCZ Core v3</span>
+      <span class="audio-time">—</span>
+      <a class="audio-dl" href="assets/Audio/loop-hczcorev3.wav" download title="Download">↓</a>
+    </div>
+    <div class="audio-row" data-src="assets/Audio/loop-hczcorev4.wav">
+      <button class="audio-play" type="button" aria-label="Preview">▶</button>
+      <span class="audio-name">HCZ Core v4</span>
+      <span class="audio-time">—</span>
+      <a class="audio-dl" href="assets/Audio/loop-hczcorev4.wav" download title="Download">↓</a>
+    </div>
+    <div class="audio-row" data-src="assets/Audio/loop-k-rep-kkprj-B.wav">
+      <button class="audio-play" type="button" aria-label="Preview">▶</button>
+      <span class="audio-name">K-Rep · KKPRJ B</span>
+      <span class="audio-time">—</span>
+      <a class="audio-dl" href="assets/Audio/loop-k-rep-kkprj-B.wav" download title="Download">↓</a>
+    </div>
+  </div>
+  </div><!-- /.subcard -->
+  </div><!-- /.block -->
+  </div><!-- /.modal-content -->
+</div><!-- /#modal-loops -->
+
+<!-- 03c · TRACKS (card) -->
+<section id="tracks" class="section-shell" data-stream="right">
+  <div class="section-card" data-modal-target="modal-tracks">
+    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — ambient hardware jam tracks" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">Tracks</h2>
+      <p class="card-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
+    </div>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
+
+<!-- MODAL · TRACKS -->
+<div class="modal" id="modal-tracks" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Tracks">
+  <button class="modal-close" aria-label="Close">×</button>
+  <div class="modal-content">
+  <div class="block">
+  <div class="section-head">
+    <span class="num">03 /</span>
+    <h2>Tracks</h2>
+    <span class="tag">Ambient · hardware jams</span>
+  </div>
+  <p class="music-blurb">
+    Long-form ambient + hardware jam tracks. Visit my <strong>Bandcamp</strong> page to listen and buy experimental music that I made with various instruments, devices and samples.
+  </p>
+
+  <div class="subcard">
+  <div class="music-player">
+    <div class="now-playing">
+      <button class="play-btn" id="playBtn" aria-label="Play">▶</button>
+      <div class="track-info">
+        <div class="name" id="trackName">—</div>
+        <div class="meta" id="trackMeta">SELECT A TRACK</div>
+      </div>
+    </div>
+    <canvas class="viz-canvas" id="musicViz"></canvas>
+    <label class="keep-playing">
+      <input type="checkbox" id="keepPlaying">
+      <span>Keep playing when closed</span>
+    </label>
+  </div>
+  <div class="music-library">
+    <div class="lib-head">
+      <span>#</span>
+      <span>Track</span>
+      <span>Tag</span>
+      <span>Len</span>
+      <span>File</span>
+    </div>
+    <ul class="track-list">
+      <li class="track-row" data-track="0" data-src="assets/Tracks/Bul_uzun15-4.mp3">
+        <span class="track-num">01</span>
+        <div class="track-meta">
+          <span class="track-name">Bul Uzun 15-4</span>
+          <span class="track-sub">hardware jam · ambient</span>
+        </div>
+        <span class="track-tag">Ambient</span>
+        <span class="track-dur" data-dur>—</span>
+        <a class="track-dl" href="assets/Tracks/Bul_uzun15-4.mp3" download>MP3 ↓</a>
+      </li>
+      <li class="track-row" data-track="1" data-src="assets/Tracks/tambirbiyans.mp3">
+        <span class="track-num">02</span>
+        <div class="track-meta">
+          <span class="track-name">Tambirbiyans</span>
+          <span class="track-sub">hardware jam · ambient</span>
+        </div>
+        <span class="track-tag">Ambient</span>
+        <span class="track-dur" data-dur>—</span>
+        <a class="track-dl" href="assets/Tracks/tambirbiyans.mp3" download>MP3 ↓</a>
+      </li>
+    </ul>
+  </div>
+  </div><!-- /.subcard -->
+  </div><!-- /.block -->
+  </div><!-- /.modal-content -->
+</div><!-- /#modal-tracks -->
 
 <!-- 04 · PHOTO (card) -->
-<section id="photography" class="section-shell" data-stream="right">
+<section id="photography" class="section-shell" data-stream="left">
   <div class="section-card" data-modal-target="modal-photography">
     <img class="card-hero" src="assets/images/isyan_hatirasi.webp" alt="Photograph: isyan hatirasi" loading="lazy">
     <div class="card-text">
@@ -2486,7 +2579,10 @@
    changes continuously and non-linearly, so the streams drift
    apart and re-align rather than holding a fixed ratio. There is
    no separate scroll container or input anywhere in this: both
-   streams move only because the page itself scrolled.
+   streams move only because the page itself scrolled. The DOM
+   transform doesn't snap straight to that curve, though — it eases
+   toward it every frame (see SMOOTH below), which is what keeps
+   fast/bursty scroll input from reading as jiggly.
 
    Each visible card's screen-space center is also published to
    window.__fieldCardSources for the background magnetic-field
@@ -2502,11 +2598,19 @@
   var rightEls = Array.prototype.slice.call(wrap.querySelectorAll('[data-stream="right"]'));
   var allEls   = leftEls.concat(rightEls);
 
-  var AMP         = 70;          // px of drift at a curve's peak
-  var LEFT_K      = 1.3;         // cycles across the section's scroll range
-  var RIGHT_K     = 2.1;         // different frequency → continuously shifting phase relationship
+  var AMP         = 46;          // px of drift at a curve's peak
+  var LEFT_K      = 0.6;         // cycles across the section's scroll range — gentle, now that 9 cards give it real room
+  var RIGHT_K     = 0.95;        // different frequency → continuously shifting phase relationship
   var RIGHT_PHASE = Math.PI * 0.6;
+  var SMOOTH      = 0.12;        // per-frame easing toward the target offset. Scroll events arrive in bursty,
+                                  // high-frequency clumps (esp. trackpads); snapping straight to the raw computed
+                                  // value every tick is what read as "jiggly". Easing low-pass-filters that out —
+                                  // the curve underneath is unchanged, only how quickly the DOM chases it.
+  var SETTLE      = 0.05;        // px — close enough to target to stop the loop
   var NARROW      = 900;         // below this, columns collapse — see CSS — so skip the drift too
+
+  var leftCur = 0, rightCur = 0;
+  var running = false;
 
   function progress() {
     var rect = wrap.getBoundingClientRect();
@@ -2520,19 +2624,7 @@
     for (var i = 0; i < els.length; i++) els[i].style.transform = 'translateY(' + v + ')';
   }
 
-  var ticking = false;
-  function update() {
-    ticking = false;
-
-    if (window.innerWidth < NARROW) {
-      setY(leftEls, 0);
-      setY(rightEls, 0);
-    } else {
-      var t = progress();
-      setY(leftEls,  AMP * Math.sin(2 * Math.PI * LEFT_K  * t));
-      setY(rightEls, AMP * Math.sin(2 * Math.PI * RIGHT_K * t + RIGHT_PHASE));
-    }
-
+  function publishFieldSources() {
     var sources = [];
     for (var i = 0; i < allEls.length; i++) {
       var r = allEls[i].getBoundingClientRect();
@@ -2544,15 +2636,38 @@
     if (window.__fieldEnsureLoop) window.__fieldEnsureLoop();
   }
 
-  function onScrollOrResize() {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(update);
+  function tick() {
+    var leftTarget = 0, rightTarget = 0;
+    if (window.innerWidth >= NARROW) {
+      var t = progress();
+      leftTarget  = AMP * Math.sin(2 * Math.PI * LEFT_K  * t);
+      rightTarget = AMP * Math.sin(2 * Math.PI * RIGHT_K * t + RIGHT_PHASE);
+    }
+
+    leftCur  += (leftTarget  - leftCur)  * SMOOTH;
+    rightCur += (rightTarget - rightCur) * SMOOTH;
+    setY(leftEls,  leftCur);
+    setY(rightEls, rightCur);
+    publishFieldSources();
+
+    // Keep easing until both streams have essentially caught up — smooth
+    // but bounded, not a permanent rAF loop running behind a static page.
+    if (Math.abs(leftTarget - leftCur) > SETTLE || Math.abs(rightTarget - rightCur) > SETTLE) {
+      requestAnimationFrame(tick);
+    } else {
+      running = false;
+    }
   }
 
-  window.addEventListener('scroll', onScrollOrResize, { passive: true });
-  window.addEventListener('resize', onScrollOrResize);
-  update();
+  function ensureTick() {
+    if (running) return;
+    running = true;
+    requestAnimationFrame(tick);
+  }
+
+  window.addEventListener('scroll', ensureTick, { passive: true });
+  window.addEventListener('resize', ensureTick);
+  ensureTick();
 })();
 </script>
 
@@ -3731,7 +3846,7 @@ class Knob {
   }
 
   // ============== Ambient tracks playlist ==============
-  const trackRows = Array.from(document.querySelectorAll('#modal-music .track-row[data-src]'));
+  const trackRows = Array.from(document.querySelectorAll('#modal-tracks .track-row[data-src]'));
   let currentTrackIdx = -1;
 
   function loadTrack(idx) {
@@ -3813,7 +3928,9 @@ class Knob {
   });
 
   // ============== Sample / loop previewer ==============
-  const sampleRows = Array.from(document.querySelectorAll('#modal-music .audio-row[data-src]'));
+  // Samples and Loops & Beats are separate modals now, but the previewer
+  // works on any .audio-row with a data-src regardless of which one it's in.
+  const sampleRows = Array.from(document.querySelectorAll('#modal-samples .audio-row[data-src], #modal-loops .audio-row[data-src]'));
   let currentSampleRow = null;
 
   function clearSampleRow() {
@@ -3919,9 +4036,14 @@ class Knob {
     miniPlayer.setAttribute('aria-hidden', 'true');
   }
 
+  // Samples, Loops & Beats and Tracks are three separate modals now, but
+  // they share one audio engine (trackAudio/sampleAudio) — any of them
+  // opening/closing should drive the same mini-player logic.
+  const MUSIC_MODAL_IDS = new Set(['modal-samples', 'modal-loops', 'modal-tracks']);
+
   // Modal close: respect the checkbox.
   document.addEventListener('modal:closed', (e) => {
-    if (!e.detail || e.detail.id !== 'modal-music') return;
+    if (!e.detail || !MUSIC_MODAL_IDS.has(e.detail.id)) return;
     const keepOn = keepPlayingChk && keepPlayingChk.checked;
     if (keepOn) {
       // Leave audio alone; surface the mini player if anything is audible.
@@ -3935,7 +4057,7 @@ class Knob {
 
   // Modal reopen: full UI takes over again, dismiss the mini.
   document.addEventListener('modal:opened', (e) => {
-    if (!e.detail || e.detail.id !== 'modal-music') return;
+    if (!e.detail || !MUSIC_MODAL_IDS.has(e.detail.id)) return;
     hideMini();
   });
 
@@ -3998,8 +4120,9 @@ class Knob {
     return g;
   }
 
-  // IO-gate — only draw when #music is on-screen.
-  const musicSection = document.getElementById('music');
+  // IO-gate — only draw when #tracks (the card that opens the player) is
+  // on-screen.
+  const musicSection = document.getElementById('tracks');
   let musicVizVisible = false;
   let musicVizRunning = false;
   const MUSIC_FRAME_MS = 33; // ~30 fps
@@ -4220,7 +4343,7 @@ class Knob {
   var modals = document.querySelectorAll('.modal');
   var openModal = null;
 
-  function open(modal) {
+  function open(modal, scrollToId) {
     if (openModal) close();
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
@@ -4229,6 +4352,16 @@ class Knob {
       if (!f.getAttribute('src')) f.setAttribute('src', f.getAttribute('data-src'));
     });
     openModal = modal;
+    // Several cards can share one modal (e.g. Synths/Pedals/Stray Voltage
+    // all open the same rig) — data-modal-scroll deep-links to the part
+    // that card is actually about.
+    var scrollTarget = scrollToId ? modal.querySelector('#' + scrollToId) : null;
+    if (scrollTarget) {
+      if (scrollTarget.tagName === 'DETAILS') scrollTarget.open = true;
+      requestAnimationFrame(function() {
+        scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
     var closeBtn = modal.querySelector('.modal-close');
     if (closeBtn) closeBtn.focus();
     document.dispatchEvent(new CustomEvent('modal:opened', { detail: { id: modal.id } }));
@@ -4252,14 +4385,14 @@ class Knob {
     card.addEventListener('click', function() {
       var id = card.getAttribute('data-modal-target');
       var m = document.getElementById(id);
-      if (m) open(m);
+      if (m) open(m, card.getAttribute('data-modal-scroll'));
     });
     card.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         var id = card.getAttribute('data-modal-target');
         var m = document.getElementById(id);
-        if (m) open(m);
+        if (m) open(m, card.getAttribute('data-modal-scroll'));
       }
     });
   });
@@ -4611,8 +4744,10 @@ class Knob {
         fine under prefers-reduced-motion).
      2. Every currently-visible card from cardStreams(), read each
         frame from window.__fieldCardSources — card screen position
-        → field calculation → this rendering. One-way: the field
-        reacts to the cards, the cards never react to the field.
+        → field calculation → this rendering. Each card is its own
+        small dipole, same physics as the pointer. One-way: the
+        field reacts to the cards, the cards never react to the
+        field.
 
    Each dash has angular inertia — spring + damping toward whatever
    direction the combined field points at its cell.
@@ -4629,7 +4764,8 @@ class Knob {
   var HALF = 9;    // half-length of each dash
   var DIPOLE = 65; // half-separation between N and S poles
   var REACH  = 400; // pointer influence radius
-  var CARD_REACH = 220; // per-card influence radius — smaller, so field lines gather locally around each card rather than washing over the whole grid
+  var CARD_DIPOLE = 30;  // each card is a small dipole too — same physics as the pointer, smaller scale
+  var CARD_REACH  = 180; // per-card influence radius — local, so field lines gather around each card rather than washing over the whole grid
 
   var cols, rows, angles, angVels;
 
@@ -4735,15 +4871,19 @@ class Knob {
           maxInfl = pInfl;
         }
 
+        // Each card is a little magnet too — same dipole physics as the
+        // pointer (see dipoleVector above), just smaller/local, and summed
+        // in with everything else before the one final atan2 below.
         for (var s = 0; s < cardSources.length; s++) {
           var src = cardSources[s];
           var cdx = gx - src.x, cdy = gy - src.y;
           var cr2 = cdx * cdx + cdy * cdy || 1;
           var cr  = Math.sqrt(cr2);
           var cInfl = cr < CARD_REACH ? 1 - cr / CARD_REACH : 0;
-          cInfl = cInfl * cInfl * 0.6; // dimmer ceiling than the pointer — a supporting presence, not the lead
+          cInfl = cInfl * cInfl;
           if (cInfl > 4e-4) {
-            bx += (cdx / cr) * cInfl; by += (cdy / cr) * cInfl;
+            var cv = dipoleVector(gx, gy, src.x + CARD_DIPOLE, src.y, src.x - CARD_DIPOLE, src.y);
+            bx += cv.x * cInfl; by += cv.y * cInfl;
             if (cInfl > maxInfl) maxInfl = cInfl;
           }
         }
