@@ -2568,72 +2568,29 @@
 <script>
 /* ============================================================
    CARD STREAMS
-   pageScroll → rightScroll(t)
 
-   Left is the untouched reference — pure 1:1 document flow, no JS
-   transform at all. Right is the one that varies: its effective
-   scroll speed is 1x times a multiplier confined to [1-RATE, 1], so
-   it can only ever lag the natural 1:1 position (never lead it) and
-   the multiplier structurally never reaches zero, let alone
-   negative. That's the whole point — only one side slows, it only
-   ever slows (never speeds up or reverses), so there's no rebound:
-   right falls behind by a continuously, non-linearly varying amount
-   and eases back toward alignment, but it can't overshoot past 1:1
-   or bounce back the other way.
+   Baseline: both sides move together, pure native document flow —
+   no JS-driven vertical offset on either one, so there's zero added
+   latency (that was the whole complaint with the old lag effect on
+   the right side: even non-bouncy easing still trails a few frames
+   behind a stopped scroll, and that trailing read as bounce). The
+   zigzag left/right stagger is still just CSS (data-stream +
+   align-self, see .card-streams above) — only the differential
+   scroll speed is gone for now.
 
-   This is accumulated from real scroll deltas (not a closed-form
-   function of position), so it's exact regardless of how the user
-   scrolls back and forth, and it freezes rather than drifting once
-   the section has fully scrolled past. The DOM transform doesn't
-   snap straight to the accumulated value, though — it eases toward
-   it every frame (see SMOOTH below, a plain linear interpolation
-   that can only approach its target, never overshoot it — the
-   non-bouncy part), which is what keeps fast/bursty scroll input
-   from reading as jiggly.
-
-   Each visible card's screen-space center is also published to
-   window.__fieldCardSources for the background magnetic-field
-   layer to read — card screen positions → magnetic field
-   calculation → background rendering. The field only reads this;
-   nothing here reads anything back from the field.
+   Each visible card's screen-space center is still published to
+   window.__fieldCardSources for the background magnetic-field layer
+   to read — card screen positions → magnetic field calculation →
+   background rendering. The field only reads this; nothing here
+   reads anything back from the field.
    ============================================================ */
 (function cardStreams() {
   'use strict';
   var wrap = document.getElementById('workStreams');
   if (!wrap) return;
-  var leftEls  = Array.prototype.slice.call(wrap.querySelectorAll('[data-stream="left"]'));
-  var rightEls = Array.prototype.slice.call(wrap.querySelectorAll('[data-stream="right"]'));
-  var allEls   = leftEls.concat(rightEls);
+  var allEls = Array.prototype.slice.call(wrap.querySelectorAll('[data-stream]'));
 
-  var RATE       = 0.3;          // max slow-down from 1x — right's multiplier stays in [1-RATE, 1]
-  var PRIMARY_K  = 0.55;         // primary cycle across the section's scroll range
-  var SECOND_K   = 1.55;         // secondary harmonic, deliberately incommensurate with PRIMARY_K so
-                                  // the combined rhythm never repeats in an obvious, metronomic way
-  var SECOND_W   = 0.35;         // secondary's weight relative to the primary (primary carries the rest)
-  var SECOND_PHASE = Math.PI * 0.4;
-  var SMOOTH      = 0.12;        // per-frame easing toward the accumulated offset. Scroll events arrive in
-                                  // bursty, high-frequency clumps (esp. trackpads); snapping straight to the
-                                  // raw value every tick is what read as "jiggly". Easing low-pass-filters
-                                  // that out — the accumulation underneath is unchanged, only how quickly
-                                  // the DOM chases it.
-  var SETTLE      = 0.05;        // px — close enough to target to stop the loop
-  var NARROW      = 900;         // below this, sides collapse to plain centered stacking — see CSS — so skip the drift too
-
-  var rightCur = 0, rightAccum = 0;
-  var lastScrollY = window.scrollY;
-  var running = false;
-
-  function progress() {
-    var rect = wrap.getBoundingClientRect();
-    var total = rect.height - window.innerHeight;
-    if (total <= 0) return rect.top <= 0 ? 1 : 0;
-    return Math.min(1, Math.max(0, -rect.top / total));
-  }
-
-  function setY(els, y) {
-    var v = y.toFixed(1) + 'px';
-    for (var i = 0; i < els.length; i++) els[i].style.transform = 'translateY(' + v + ')';
-  }
+  var ticking = false;
 
   function publishFieldSources() {
     var sources = [];
@@ -2648,60 +2605,19 @@
   }
 
   function tick() {
-    var scrollY  = window.scrollY;
-    var rawDelta = scrollY - lastScrollY;
-    lastScrollY  = scrollY;
-
-    var t = progress();
-    // Once the section has fully scrolled past (or hasn't been reached
-    // yet) and the user keeps scrolling further the same way, stop
-    // accumulating — otherwise the offset would keep drifting forever
-    // behind unrelated later sections instead of freezing where it was.
-    var atEdge = (t <= 0 && rawDelta <= 0) || (t >= 1 && rawDelta >= 0);
-
-    if (window.innerWidth < NARROW) {
-      // Collapsed to plain centered stacking (see CSS) — no drift at all.
-      rightAccum = 0;
-    } else if (!atEdge && rawDelta !== 0) {
-      // Two blended, incommensurate harmonics so the lag's rise and fall
-      // keeps shifting character instead of reading as a clean metronome.
-      var wave = (1 - SECOND_W) * Math.sin(2 * Math.PI * PRIMARY_K * t) +
-                       SECOND_W * Math.sin(2 * Math.PI * SECOND_K  * t + SECOND_PHASE);
-      // Remap wave (~[-1,1]) to a lag fraction in [0,1], so the slow-down
-      // itself only ever varies in magnitude — never sign. Scaled straight
-      // off the real pixels just scrolled, never an independent clock.
-      // Positive translateY holds the card back (lower on screen) exactly
-      // enough to cancel that fraction of the normal upward scroll shift —
-      // never negative, so it can only fall behind, never get ahead.
-      var lag = (1 - wave) * 0.5;
-      rightAccum += RATE * lag * rawDelta;
-    }
-
-    rightCur += (rightAccum - rightCur) * SMOOTH;
-    setY(rightEls, rightCur);
+    ticking = false;
     publishFieldSources();
-
-    // Keep easing until right has essentially caught up to the
-    // accumulated offset — smooth but bounded, not a permanent rAF loop
-    // running behind a static page. A scroll event always calls
-    // ensureTick() again regardless, so stopping a frame early mid-scroll
-    // (accum momentarily flat) just means the next scroll tick restarts it.
-    if (Math.abs(rightAccum - rightCur) > SETTLE) {
-      requestAnimationFrame(tick);
-    } else {
-      running = false;
-    }
   }
 
-  function ensureTick() {
-    if (running) return;
-    running = true;
+  function onScrollOrResize() {
+    if (ticking) return;
+    ticking = true;
     requestAnimationFrame(tick);
   }
 
-  window.addEventListener('scroll', ensureTick, { passive: true });
-  window.addEventListener('resize', ensureTick);
-  ensureTick();
+  window.addEventListener('scroll', onScrollOrResize, { passive: true });
+  window.addEventListener('resize', onScrollOrResize);
+  publishFieldSources();
 })();
 </script>
 
