@@ -1400,7 +1400,6 @@
     z-index: 0;
     pointer-events: none;
   }
-  @media (prefers-reduced-motion: reduce) { #field-canvas { display: none; } }
 
 
   /* Lift primary content above the fixed z-index:0 field-canvas layer. */
@@ -4543,7 +4542,13 @@ class Knob {
    ============================================================ */
 (function magneticFieldLayer() {
   'use strict';
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // iOS Low Power Mode forces prefers-reduced-motion:reduce in Safari even
+  // when the user never touched the Reduce Motion accessibility setting —
+  // that made the whole layer vanish on any phone with low power mode on.
+  // Respect reduced motion by skipping the animation loop, but still paint
+  // one static frame so the dashes are visible.
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
 
   var canvas = document.getElementById('field-canvas');
   if (!canvas) return;
@@ -4665,8 +4670,10 @@ class Knob {
         }
         angles[idx] += angVels[idx] * dt;
 
-        // alpha: faint presence + bloom (capped lower in demo mode)
-        var alpha   = 0.025 + infl * (hasPointer ? 0.29 : 0.14);
+        // alpha: faint presence + bloom (capped lower in demo mode; boosted
+        // on touch devices since they idle in demo mode almost all the time —
+        // there's no lasting hover to brighten the field like on desktop)
+        var alpha   = 0.025 + infl * (hasPointer ? 0.29 : (isCoarsePointer ? 0.22 : 0.14));
         var palIdx  = Math.min(31, Math.round(alpha * 100));
         var cos = Math.cos(angles[idx]) * HALF;
         var sin = Math.sin(angles[idx]) * HALF;
@@ -4681,9 +4688,36 @@ class Knob {
     requestAnimationFrame(frame);
   }
 
+  // Single static frame for reduced-motion: same grid, fixed faint angle,
+  // no per-frame animation or pointer tracking.
+  function drawStatic() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = PAL[6];
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        var gx = (c + 0.5) * STEP;
+        var gy = (r + 0.5) * STEP;
+        ctx.beginPath();
+        ctx.moveTo(gx - HALF, gy);
+        ctx.lineTo(gx + HALF, gy);
+        ctx.stroke();
+      }
+    }
+  }
+
   resize();
-  window.addEventListener('resize', resize);
-  requestAnimationFrame(frame);
+  window.addEventListener('resize', function() {
+    resize();
+    if (reducedMotion) drawStatic();
+  });
+
+  if (reducedMotion) {
+    drawStatic();
+  } else {
+    requestAnimationFrame(frame);
+  }
 })();
 </script>
 
