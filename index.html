@@ -1440,11 +1440,20 @@
   }
   .card-streams [data-stream="left"]  { grid-column: 1; }
   .card-streams [data-stream="right"] { grid-column: 2; }
+  /* Per-card horizontal variation within each column — some cards pulled
+     toward the shared centre gutter, some pushed out toward the page
+     edge, so the two streams don't read as two rigid rails. "in"/"out"
+     are relative to which side the card is already on. Unmarked cards
+     keep the default centred position (.section-card's own auto margins). */
+  .card-streams [data-stream="left"][data-align="in"]   { justify-self: end; }
+  .card-streams [data-stream="left"][data-align="out"]  { justify-self: start; }
+  .card-streams [data-stream="right"][data-align="in"]  { justify-self: start; }
+  .card-streams [data-stream="right"][data-align="out"] { justify-self: end; }
   @media (max-width: 900px) {
     /* Too narrow for two 720px-max-width columns — collapse back to a
        single clean stacked stream and drop the drift (see cardStreams()). */
     .card-streams { grid-template-columns: 1fr; }
-    .card-streams [data-stream] { grid-column: 1; }
+    .card-streams [data-stream] { grid-column: 1; justify-self: stretch; }
   }
   .card-streams .section-shell {
     padding: 0 0 32px;
@@ -1995,7 +2004,7 @@
 <div class="card-streams" id="workStreams">
 
 <!-- 01 · 3D (card) -->
-<section id="three-d" class="section-shell" data-stream="left">
+<section id="three-d" class="section-shell" data-stream="left" data-align="in">
   <div class="section-card" data-modal-target="modal-3d">
     <img class="card-hero" src="assets/images/durex.webp" alt="DUR3 — stylized still" loading="lazy">
     <div class="card-text">
@@ -2036,7 +2045,7 @@
 </div><!-- /#modal-3d -->
 
 <!-- 01b · PROCEDURAL (card) -->
-<section id="procedural" class="section-shell" data-stream="right">
+<section id="procedural" class="section-shell" data-stream="right" data-align="out">
   <div class="section-card" data-modal-target="modal-procedural">
     <img class="card-hero" src="assets/images/car-bridge.webp" alt="Procedural car simulation — stylized still" loading="lazy">
     <div class="card-text">
@@ -2074,7 +2083,7 @@
 </div><!-- /#modal-procedural -->
 
 <!-- 02 · SYNTHS (card) -->
-<section id="synths" class="section-shell" data-stream="left">
+<section id="synths" class="section-shell" data-stream="left" data-align="out">
   <div class="section-card" data-modal-target="modal-synths">
     <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
     <div class="card-text">
@@ -2086,7 +2095,7 @@
 </section>
 
 <!-- 02b · PEDALS (card) — same rig, deep-links to the pedals row -->
-<section id="pedals" class="section-shell" data-stream="right">
+<section id="pedals" class="section-shell" data-stream="right" data-align="in">
   <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="pedalsRow">
     <img class="card-hero" src="assets/images/mkv-pcbhrz.webp" alt="Hand-built pedal PCB layout" loading="lazy">
     <div class="card-text">
@@ -2336,7 +2345,7 @@
 </div><!-- /#modal-synths -->
 
 <!-- 03 · SAMPLES (card) -->
-<section id="music" class="section-shell" data-stream="right">
+<section id="music" class="section-shell" data-stream="right" data-align="in">
   <div class="section-card" data-modal-target="modal-samples">
     <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — DIY instrument samples" loading="lazy">
     <div class="card-text">
@@ -2452,7 +2461,7 @@
 </div><!-- /#modal-loops -->
 
 <!-- 03c · TRACKS (card) -->
-<section id="tracks" class="section-shell" data-stream="right">
+<section id="tracks" class="section-shell" data-stream="right" data-align="out">
   <div class="section-card" data-modal-target="modal-tracks">
     <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — ambient hardware jam tracks" loading="lazy">
     <div class="card-text">
@@ -2529,7 +2538,7 @@
 </div><!-- /#modal-tracks -->
 
 <!-- 04 · PHOTO (card) -->
-<section id="photography" class="section-shell" data-stream="left">
+<section id="photography" class="section-shell" data-stream="left" data-align="out">
   <div class="section-card" data-modal-target="modal-photography">
     <img class="card-hero" src="assets/images/isyan_hatirasi.webp" alt="Photograph: isyan hatirasi" loading="lazy">
     <div class="card-text">
@@ -2571,21 +2580,25 @@
    CARD STREAMS
    pageScroll → leftScroll(t), rightScroll(t)
 
-   One scroll position (this section's progress through the
-   viewport) drives a single shared wave — two blended sine
-   harmonics so its own accel/decel character keeps shifting
-   instead of repeating on a clean beat. Left and right each take
-   that wave with opposite sign: a true zero-sum push-pull, not two
-   independently-drifting curves. Whatever speed one column gains,
-   the other yields by exactly that much, so they swing together
-   through perfect alignment (wave = 0) out to max separation and
-   back — meant to read as attraction/repulsion rather than
-   ordinary parallax. There is no separate scroll container or
-   input anywhere in this: both streams move only because the page
-   itself scrolled. The DOM transform doesn't snap straight to that
-   curve, though — it eases toward it every frame (see SMOOTH
-   below), which is what keeps fast/bursty scroll input from
-   reading as jiggly.
+   Each stream's effective scroll speed is 1 (normal, 1:1 with the
+   page) times a multiplier that oscillates between roughly 0.6x and
+   1.4x, driven by one shared wave that left and right take with
+   opposite sign — a zero-sum push-pull, so whatever speed one
+   column gains, the other yields by exactly that much. Because the
+   multiplier is a fixed offset from 1 (never crosses it), the
+   result is exactly "changing rates of scroll, not direction": both
+   streams still only ever move the way the page scrolled, just
+   faster or slower relative to it — no reversal, no rebound. Two
+   incommensurate harmonics keep the rate's rise and fall from
+   reading as a clean metronome.
+
+   This is accumulated from real scroll deltas (not a closed-form
+   function of position), so it's exact regardless of how the user
+   scrolls back and forth, and it freezes rather than drifting once
+   the section has fully scrolled past. The DOM transform doesn't
+   snap straight to the accumulated value, though — it eases toward
+   it every frame (see SMOOTH below), which is what keeps
+   fast/bursty scroll input from reading as jiggly.
 
    Each visible card's screen-space center is also published to
    window.__fieldCardSources for the background magnetic-field
@@ -2601,20 +2614,23 @@
   var rightEls = Array.prototype.slice.call(wrap.querySelectorAll('[data-stream="right"]'));
   var allEls   = leftEls.concat(rightEls);
 
-  var AMP        = 52;           // px of drift at the push-pull's peak
+  var RATE       = 0.4;          // max speed deviation from 1x (so the multiplier stays in [0.6, 1.4] — always positive)
   var PRIMARY_K  = 0.55;         // primary cycle across the section's scroll range
   var SECOND_K   = 1.55;         // secondary harmonic, deliberately incommensurate with PRIMARY_K so
                                   // the combined rhythm never repeats in an obvious, metronomic way
   var SECOND_W   = 0.35;         // secondary's weight relative to the primary (primary carries the rest)
   var SECOND_PHASE = Math.PI * 0.4;
-  var SMOOTH      = 0.12;        // per-frame easing toward the target offset. Scroll events arrive in bursty,
-                                  // high-frequency clumps (esp. trackpads); snapping straight to the raw computed
-                                  // value every tick is what read as "jiggly". Easing low-pass-filters that out —
-                                  // the curve underneath is unchanged, only how quickly the DOM chases it.
+  var SMOOTH      = 0.12;        // per-frame easing toward the accumulated offset. Scroll events arrive in
+                                  // bursty, high-frequency clumps (esp. trackpads); snapping straight to the
+                                  // raw value every tick is what read as "jiggly". Easing low-pass-filters
+                                  // that out — the accumulation underneath is unchanged, only how quickly
+                                  // the DOM chases it.
   var SETTLE      = 0.05;        // px — close enough to target to stop the loop
   var NARROW      = 900;         // below this, columns collapse — see CSS — so skip the drift too
 
   var leftCur = 0, rightCur = 0;
+  var leftAccum = 0, rightAccum = 0;
+  var lastScrollY = window.scrollY;
   var running = false;
 
   function progress() {
@@ -2642,32 +2658,47 @@
   }
 
   function tick() {
-    var leftTarget = 0, rightTarget = 0;
-    if (window.innerWidth >= NARROW) {
-      var t = progress();
+    var scrollY  = window.scrollY;
+    var rawDelta = scrollY - lastScrollY;
+    lastScrollY  = scrollY;
+
+    var t = progress();
+    // Once the section has fully scrolled past (or hasn't been reached
+    // yet) and the user keeps scrolling further the same way, stop
+    // accumulating — otherwise the offset would keep drifting forever
+    // behind unrelated later sections instead of freezing where it was.
+    var atEdge = (t <= 0 && rawDelta <= 0) || (t >= 1 && rawDelta >= 0);
+
+    if (window.innerWidth < NARROW) {
+      // Collapsed to a single stacked column (see CSS) — no drift at all.
+      leftAccum = 0; rightAccum = 0;
+    } else if (!atEdge && rawDelta !== 0) {
       // One shared wave, two harmonics blended so its own accel/decel
       // character keeps shifting rather than reading as a clean metronome.
       var wave = (1 - SECOND_W) * Math.sin(2 * Math.PI * PRIMARY_K * t) +
                        SECOND_W * Math.sin(2 * Math.PI * SECOND_K  * t + SECOND_PHASE);
-      // Left and right take that wave with opposite sign — a true zero-sum
-      // push-pull, not two independently-drifting curves. Whatever speed
-      // one side gains, the other yields by exactly that much, so they
-      // swing together through perfect alignment (wave = 0) out to max
-      // separation (|wave| peak) and back — attraction and repulsion, not
-      // just two different parallax rates.
-      leftTarget  =  AMP * wave;
-      rightTarget = -AMP * wave;
+      // Left and right take that wave with opposite sign (push-pull), and
+      // each is scaled straight off the real pixels just scrolled — never
+      // an independent clock. |RATE * wave| < 1 always, so this speed
+      // deviation can shrink a column's effective rate toward zero but
+      // never past it: motion always follows real scroll direction.
+      var extra = RATE * wave * rawDelta;
+      leftAccum  += extra;
+      rightAccum -= extra;
     }
 
-    leftCur  += (leftTarget  - leftCur)  * SMOOTH;
-    rightCur += (rightTarget - rightCur) * SMOOTH;
+    leftCur  += (leftAccum  - leftCur)  * SMOOTH;
+    rightCur += (rightAccum - rightCur) * SMOOTH;
     setY(leftEls,  leftCur);
     setY(rightEls, rightCur);
     publishFieldSources();
 
-    // Keep easing until both streams have essentially caught up — smooth
-    // but bounded, not a permanent rAF loop running behind a static page.
-    if (Math.abs(leftTarget - leftCur) > SETTLE || Math.abs(rightTarget - rightCur) > SETTLE) {
+    // Keep easing until both streams have essentially caught up to the
+    // accumulated offset — smooth but bounded, not a permanent rAF loop
+    // running behind a static page. A scroll event always calls
+    // ensureTick() again regardless, so stopping a frame early mid-scroll
+    // (accum momentarily flat) just means the next scroll tick restarts it.
+    if (Math.abs(leftAccum - leftCur) > SETTLE || Math.abs(rightAccum - rightCur) > SETTLE) {
       requestAnimationFrame(tick);
     } else {
       running = false;
