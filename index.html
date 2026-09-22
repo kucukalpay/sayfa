@@ -1421,33 +1421,39 @@
      Each major section is a card on the page; clicking opens a fullscreen
      modal containing the full functional UI. */
 
-  /* A single zigzag column sharing one native page scroll — cards alternate
-     left/right of a shared centre axis via data-stream + align-self, in an
-     irregular lr pattern (not strict LRLR — see the data-stream value on
-     each card below) so the stagger doesn't look mechanical. JS
-     (cardStreams(), script right after .card-streams below) adds an extra
-     translateY to the right side only: left is the untouched reference,
-     right continuously lags behind it by a varying, never-negative-passing
-     amount, which is what gives the zigzag its scroll-driven push without
-     ever reversing or bouncing. No separate scroll containers, no
-     independent input — one scroll drives it. */
+  /* Two rigid columns, no drift — both move with the page at exactly the
+     same rate (see cardStreams() below, which now only publishes card
+     positions to the magnetic-field layer, nothing scroll-driven). The
+     zigzag comes purely from layout: the right column is nudged down by
+     roughly half a card's height, and cards within a column touch with no
+     gap of their own, so the two columns interleave into a staggered
+     "brick" pattern down the page. */
   .card-streams {
     position: relative;
     z-index: 1;
     display: flex;
-    flex-direction: column;
-    align-items: center;   /* shared centre axis the zigzag weaves around */
-    gap: 40px;              /* breathing space between cards */
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 32px;
     padding: 80px 20px;
     max-width: 1040px;
     margin: 0 auto;
   }
-  .card-streams [data-stream="left"]  { align-self: flex-start; }
-  .card-streams [data-stream="right"] { align-self: flex-end; }
+  .stream-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .stream-col[data-stream="right"] {
+    margin-top: 150px; /* ~half a card's rendered height — the zigzag offset */
+  }
   @media (max-width: 900px) {
-    /* Too narrow for the zigzag spread — collapse back to a single clean
-       centred stack and drop the drift (see cardStreams()). */
-    .card-streams [data-stream] { align-self: center; }
+    /* Too narrow for two columns — collapse to one, offset dropped. */
+    .card-streams { flex-direction: column; align-items: center; gap: 24px; }
+    .stream-col[data-stream="right"] { margin-top: 0; }
+    .stream-col { width: 100%; }
   }
   /* Cards read small now that there are nine of them — real reflow (not a
      visual-only transform), so the layout actually collapses around the
@@ -1989,23 +1995,113 @@
   </div>
 </nav>
 
-<!-- Two parallel card streams, one native page scroll driving both at
-     independently drifting, non-linear rates — see cardStreams() below. -->
+<!-- Two card columns sharing one native page scroll — right column offset
+     down by roughly half a card height to interleave a zigzag against the
+     left column. No per-card spacing (see .stream-col), no independent
+     scroll input. -->
 <div class="card-streams" id="workStreams">
-
-<!-- 01 · 3D (card) -->
-<section id="three-d" class="section-shell" data-stream="left">
-  <div class="section-card" data-modal-target="modal-3d">
-    <img class="card-hero" src="assets/images/durex.webp" alt="DUR3 — stylized still" loading="lazy">
-    <div class="card-text">
-      <h2 class="card-title">3D</h2>
-      <p class="card-desc">Showreel, scenes, FX rigs — current reel with earlier ones tucked underneath.</p>
+<div class="stream-col" data-stream="left">
+  <section id="three-d" class="section-shell">
+    <div class="section-card" data-modal-target="modal-3d">
+      <img class="card-hero" src="assets/images/durex.webp" alt="DUR3 — stylized still" loading="lazy">
+      <div class="card-text">
+        <h2 class="card-title">3D</h2>
+        <p class="card-desc">Showreel, scenes, FX rigs — current reel with earlier ones tucked underneath.</p>
+      </div>
+      <span class="card-cta" aria-hidden="true">Open ↗</span>
     </div>
-    <span class="card-cta" aria-hidden="true">Open ↗</span>
-  </div>
-</section>
+  </section>
 
-<!-- MODAL · 3D -->
+  <section id="synths" class="section-shell">
+    <div class="section-card" data-modal-target="modal-synths">
+      <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
+      <div class="card-text">
+        <h2 class="card-title">Synths</h2>
+        <p class="card-desc">Modular synth patching — cables, knobs, sensors. Click to play.</p>
+      </div>
+      <span class="card-cta" aria-hidden="true">Open ↗</span>
+    </div>
+  </section>
+
+  <section id="stray-voltage" class="section-shell">
+    <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="angDetails">
+      <img class="card-hero" src="assets/images/miksciwire.webp" alt="Wireframe render of a DIY hardware device with knobs and jacks" loading="lazy">
+      <div class="card-text">
+        <h2 class="card-title">Stray Voltage</h2>
+        <p class="card-desc">Other hardware — DIY builds and hacked-together devices. VCOs, fuzz, delay, whatever else got made along the way.</p>
+      </div>
+      <span class="card-cta" aria-hidden="true">Open ↗</span>
+    </div>
+  </section>
+
+  <section id="loops" class="section-shell">
+    <div class="section-card" data-modal-target="modal-loops">
+      <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — loops built from DIY instrument samples" loading="lazy">
+      <div class="card-text">
+        <h2 class="card-title">Loops &amp; Beats</h2>
+        <p class="card-desc">Looped phrases built from those samples. Click to preview, arrow to download.</p>
+      </div>
+      <span class="card-cta" aria-hidden="true">Open ↗</span>
+    </div>
+  </section>
+
+  <section id="photography" class="section-shell">
+    <div class="section-card" data-modal-target="modal-photography">
+      <img class="card-hero" src="assets/images/isyan_hatirasi.webp" alt="Photograph: isyan hatirasi" loading="lazy">
+      <div class="card-text">
+        <h2 class="card-title">Photo</h2>
+        <p class="card-desc">Older work — film, walks, things noticed. Click for the gallery.</p>
+      </div>
+      <span class="card-cta" aria-hidden="true">Open ↗</span>
+    </div>
+  </section>
+</div>
+<div class="stream-col" data-stream="right">
+  <section id="procedural" class="section-shell">
+    <div class="section-card" data-modal-target="modal-procedural">
+      <img class="card-hero" src="assets/images/car-bridge.webp" alt="Procedural car simulation — stylized still" loading="lazy">
+      <div class="card-text">
+        <h2 class="card-title">Procedural</h2>
+        <p class="card-desc">Generative scenes, FX rigs, and asset systems.</p>
+      </div>
+      <span class="card-cta" aria-hidden="true">Open ↗</span>
+    </div>
+  </section>
+
+  <section id="pedals" class="section-shell">
+    <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="pedalsRow">
+      <img class="card-hero" src="assets/images/mkv-pcbhrz.webp" alt="Hand-built pedal PCB layout" loading="lazy">
+      <div class="card-text">
+        <h2 class="card-title">Pedals</h2>
+        <p class="card-desc">Effect pedals living on the same patchable rig — overdrive, reverb, more to come.</p>
+      </div>
+      <span class="card-cta" aria-hidden="true">Open ↗</span>
+    </div>
+  </section>
+
+  <section id="music" class="section-shell">
+    <div class="section-card" data-modal-target="modal-samples">
+      <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — DIY instrument samples" loading="lazy">
+      <div class="card-text">
+        <h2 class="card-title">Samples</h2>
+        <p class="card-desc">Single-shot samples recorded out of my DIY instruments. Click to preview, arrow to download.</p>
+      </div>
+      <span class="card-cta" aria-hidden="true">Open ↗</span>
+    </div>
+  </section>
+
+  <section id="tracks" class="section-shell">
+    <div class="section-card" data-modal-target="modal-tracks">
+      <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — ambient hardware jam tracks" loading="lazy">
+      <div class="card-text">
+        <h2 class="card-title">Tracks</h2>
+        <p class="card-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
+      </div>
+      <span class="card-cta" aria-hidden="true">Open ↗</span>
+    </div>
+  </section>
+</div>
+
 <div class="modal" id="modal-3d" role="dialog" aria-modal="true" aria-hidden="true" aria-label="3D">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
@@ -2034,19 +2130,6 @@
   </div><!-- /.modal-content -->
 </div><!-- /#modal-3d -->
 
-<!-- 01b · PROCEDURAL (card) -->
-<section id="procedural" class="section-shell" data-stream="right">
-  <div class="section-card" data-modal-target="modal-procedural">
-    <img class="card-hero" src="assets/images/car-bridge.webp" alt="Procedural car simulation — stylized still" loading="lazy">
-    <div class="card-text">
-      <h2 class="card-title">Procedural</h2>
-      <p class="card-desc">Generative scenes, FX rigs, and asset systems.</p>
-    </div>
-    <span class="card-cta" aria-hidden="true">Open ↗</span>
-  </div>
-</section>
-
-<!-- MODAL · PROCEDURAL -->
 <div class="modal" id="modal-procedural" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Procedural">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
@@ -2072,43 +2155,6 @@
   </div><!-- /.modal-content -->
 </div><!-- /#modal-procedural -->
 
-<!-- 02 · SYNTHS (card) -->
-<section id="synths" class="section-shell" data-stream="left">
-  <div class="section-card" data-modal-target="modal-synths">
-    <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
-    <div class="card-text">
-      <h2 class="card-title">Synths</h2>
-      <p class="card-desc">Modular synth patching — cables, knobs, sensors. Click to play.</p>
-    </div>
-    <span class="card-cta" aria-hidden="true">Open ↗</span>
-  </div>
-</section>
-
-<!-- 02b · PEDALS (card) — same rig, deep-links to the pedals row -->
-<section id="pedals" class="section-shell" data-stream="right">
-  <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="pedalsRow">
-    <img class="card-hero" src="assets/images/mkv-pcbhrz.webp" alt="Hand-built pedal PCB layout" loading="lazy">
-    <div class="card-text">
-      <h2 class="card-title">Pedals</h2>
-      <p class="card-desc">Effect pedals living on the same patchable rig — overdrive, reverb, more to come.</p>
-    </div>
-    <span class="card-cta" aria-hidden="true">Open ↗</span>
-  </div>
-</section>
-
-<!-- 02c · STRAY VOLTAGE (card) — same rig, deep-links to the ANG devices subcard -->
-<section id="stray-voltage" class="section-shell" data-stream="right">
-  <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="angDetails">
-    <img class="card-hero" src="assets/images/bg-blueprint.webp" alt="Circuit schematic blueprint artwork" loading="lazy">
-    <div class="card-text">
-      <h2 class="card-title">Stray Voltage</h2>
-      <p class="card-desc">Other hardware — DIY builds and hacked-together devices. VCOs, fuzz, delay, whatever else got made along the way.</p>
-    </div>
-    <span class="card-cta" aria-hidden="true">Open ↗</span>
-  </div>
-</section>
-
-<!-- MODAL · SYNTHS -->
 <div class="modal" id="modal-synths" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Synths and Pedals">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
@@ -2334,19 +2380,6 @@
   </div><!-- /.modal-content -->
 </div><!-- /#modal-synths -->
 
-<!-- 03 · SAMPLES (card) -->
-<section id="music" class="section-shell" data-stream="left">
-  <div class="section-card" data-modal-target="modal-samples">
-    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — DIY instrument samples" loading="lazy">
-    <div class="card-text">
-      <h2 class="card-title">Samples</h2>
-      <p class="card-desc">Single-shot samples recorded out of my DIY instruments. Click to preview, arrow to download.</p>
-    </div>
-    <span class="card-cta" aria-hidden="true">Open ↗</span>
-  </div>
-</section>
-
-<!-- MODAL · SAMPLES -->
 <div class="modal" id="modal-samples" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Samples">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
@@ -2386,19 +2419,6 @@
   </div><!-- /.modal-content -->
 </div><!-- /#modal-samples -->
 
-<!-- 03b · LOOPS & BEATS (card) -->
-<section id="loops" class="section-shell" data-stream="right">
-  <div class="section-card" data-modal-target="modal-loops">
-    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — loops built from DIY instrument samples" loading="lazy">
-    <div class="card-text">
-      <h2 class="card-title">Loops &amp; Beats</h2>
-      <p class="card-desc">Looped phrases built from those samples. Click to preview, arrow to download.</p>
-    </div>
-    <span class="card-cta" aria-hidden="true">Open ↗</span>
-  </div>
-</section>
-
-<!-- MODAL · LOOPS & BEATS -->
 <div class="modal" id="modal-loops" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Loops and Beats">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
@@ -2450,19 +2470,6 @@
   </div><!-- /.modal-content -->
 </div><!-- /#modal-loops -->
 
-<!-- 03c · TRACKS (card) -->
-<section id="tracks" class="section-shell" data-stream="left">
-  <div class="section-card" data-modal-target="modal-tracks">
-    <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — ambient hardware jam tracks" loading="lazy">
-    <div class="card-text">
-      <h2 class="card-title">Tracks</h2>
-      <p class="card-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
-    </div>
-    <span class="card-cta" aria-hidden="true">Open ↗</span>
-  </div>
-</section>
-
-<!-- MODAL · TRACKS -->
 <div class="modal" id="modal-tracks" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Tracks">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
@@ -2527,19 +2534,6 @@
   </div><!-- /.modal-content -->
 </div><!-- /#modal-tracks -->
 
-<!-- 04 · PHOTO (card) -->
-<section id="photography" class="section-shell" data-stream="left">
-  <div class="section-card" data-modal-target="modal-photography">
-    <img class="card-hero" src="assets/images/isyan_hatirasi.webp" alt="Photograph: isyan hatirasi" loading="lazy">
-    <div class="card-text">
-      <h2 class="card-title">Photo</h2>
-      <p class="card-desc">Older work — film, walks, things noticed. Click for the gallery.</p>
-    </div>
-    <span class="card-cta" aria-hidden="true">Open ↗</span>
-  </div>
-</section>
-
-<!-- MODAL · PHOTO -->
 <div class="modal" id="modal-photography" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Photography">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
@@ -2569,14 +2563,13 @@
 /* ============================================================
    CARD STREAMS
 
-   Baseline: both sides move together, pure native document flow —
-   no JS-driven vertical offset on either one, so there's zero added
+   Both columns move together, pure native document flow — no
+   JS-driven vertical offset on either one, so there's zero added
    latency (that was the whole complaint with the old lag effect on
    the right side: even non-bouncy easing still trails a few frames
    behind a stopped scroll, and that trailing read as bounce). The
-   zigzag left/right stagger is still just CSS (data-stream +
-   align-self, see .card-streams above) — only the differential
-   scroll speed is gone for now.
+   zigzag is purely CSS layout now — two columns, right one shifted
+   down (see .stream-col above) — nothing here drives it.
 
    Each visible card's screen-space center is still published to
    window.__fieldCardSources for the background magnetic-field layer
@@ -2588,7 +2581,7 @@
   'use strict';
   var wrap = document.getElementById('workStreams');
   if (!wrap) return;
-  var allEls = Array.prototype.slice.call(wrap.querySelectorAll('[data-stream]'));
+  var allEls = Array.prototype.slice.call(wrap.querySelectorAll('.section-shell'));
 
   var ticking = false;
 
