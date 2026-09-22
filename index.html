@@ -1641,7 +1641,7 @@
     top: 24px;
     z-index: 8000;
     height: 48px;
-    margin: -120px 0 72px;   /* -(height + 72): rests 72px above the hero's bottom edge */
+    margin: -288px 0 240px;   /* -(height + 5*height): rests 5x its own height above the hero's bottom edge */
     display: flex;
     justify-content: center;
     pointer-events: none;
@@ -1678,6 +1678,37 @@
     /* At this size a docked HOME would run into the top-right Showreel
        button, so it docks just below that row instead. */
     .mag-dock { top: 60px; }
+  }
+
+  /* ----- Entropy HUD -----------------------------------------------------
+     Top-left readout of the background field's current entropy (see
+     magneticFieldLayer()'s frame()). Copper-oxide green — --accent-2 is
+     already that color, used for the same "live circuit" reading elsewhere
+     (CV jacks, connected states). Display-only: never interactive, and it
+     doesn't move or animate on its own — it just reflects whatever the
+     field last computed, sticky the same way the field itself is. */
+  .entropy-hud {
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    z-index: 4000;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  .entropy-value {
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 640px) {
+    .entropy-hud { top: 16px; left: 16px; }
   }
 
   /* ----- Quick Showreel button + lightbox -------------------------------
@@ -1884,6 +1915,15 @@
 <body>
 
 <canvas id="field-canvas" aria-hidden="true"></canvas>
+
+<!-- Entropy readout for the field above: how scattered the dashes'
+     directions are from each other (see magneticFieldLayer()'s frame()
+     for the calculation). Sits over the canvas it's reporting on, so it's
+     a page-wide HUD, not scoped to the hero. -->
+<div class="entropy-hud" id="entropyHud" aria-hidden="true">
+  <span class="entropy-label">Entropy</span>
+  <span class="entropy-value" id="entropyValue">0</span>
+</div>
 
 <section class="hero" id="hero" aria-label="Welcome">
   <nav class="hero-nav" id="heroNav" aria-label="Sections">
@@ -4657,6 +4697,19 @@ class Knob {
 
    Each dash has angular inertia — spring + damping toward whatever
    direction the combined field points at its cell.
+
+   Each frame also derives an entropy value from the resulting angles
+   — the sum of each rod's absolute deviation from the field's own
+   circular mean, so it's zero whenever every rod agrees on a
+   direction (any direction) and grows with how much they disagree —
+   and publishes it to window.__fieldEntropy and the top-left HUD
+   (#entropyValue). It's a raw sum over every grid cell, so its scale
+   depends on viewport size (more cells, larger number) — fine for a
+   HUD reading, but not something to feed into anything calibrated to
+   a specific range without rescaling. (droneEngine()'s getEntropy()
+   already reads a different, always-zero window.__hero.poly stub —
+   left untouched here, since wiring it to this raw sum would blow out
+   its filter/gain formulas, which expect a small bounded number.)
    ============================================================ */
 (function magneticFieldLayer() {
   'use strict';
@@ -4665,6 +4718,7 @@ class Knob {
   var ctx = canvas.getContext('2d');
   var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   var W = 0, H = 0;
+  var entropyEl = document.getElementById('entropyValue');
 
   var STEP = 30;   // grid spacing px
   var HALF = 9;    // half-length of each dash
@@ -4848,6 +4902,27 @@ class Knob {
         ctx.stroke();
       }
     }
+
+    // Entropy: how scattered the rods' directions are from EACH OTHER, not
+    // from any fixed reference — measured against the field's own circular
+    // mean, so it reads zero whenever every rod points the same way,
+    // whatever that way happens to be (all resting at their initial 0 rad
+    // counts too, since that's just "all the same direction").
+    var sumSin = 0, sumCos = 0;
+    for (var ei = 0; ei < angles.length; ei++) {
+      sumSin += Math.sin(angles[ei]);
+      sumCos += Math.cos(angles[ei]);
+    }
+    var meanAngle = Math.atan2(sumSin, sumCos);
+    var entropy = 0;
+    for (var ej = 0; ej < angles.length; ej++) {
+      var dev = angles[ej] - meanAngle;
+      if (dev >  Math.PI) dev -= 2 * Math.PI;
+      if (dev < -Math.PI) dev += 2 * Math.PI;
+      entropy += Math.abs(dev);
+    }
+    window.__fieldEntropy = entropy;
+    if (entropyEl) entropyEl.textContent = entropy.toFixed(0);
 
     // Keep animating only while the spring is still easing toward the
     // (fixed) target. Once it settles, stop requesting frames entirely —
