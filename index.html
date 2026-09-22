@@ -1431,12 +1431,6 @@
     gap: 40px;
     padding: 80px 20px;
   }
-  /* Cards read small now that there are nine of them — real reflow (not a
-     visual-only transform), so the layout actually collapses around the
-     smaller box instead of leaving empty space. */
-  .card-streams .section-card {
-    zoom: 0.5;
-  }
   .section-card {
     max-width: 720px;
     margin: 0 auto;
@@ -1646,8 +1640,8 @@
     position: sticky;
     top: 24px;
     z-index: 8000;
-    height: 32px;
-    margin: -104px 0 72px;
+    height: 48px;
+    margin: -120px 0 72px;   /* -(height + 72): rests 72px above the hero's bottom edge */
     display: flex;
     justify-content: center;
     pointer-events: none;
@@ -1657,10 +1651,10 @@
     background: transparent;
     color: rgba(255,255,255,0.95);
     border: 0;
-    height: 32px;
+    height: 48px;
     padding: 0;
     font: inherit;
-    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+    font-size: clamp(1.4rem, 2.4vw, 1.8rem);
     letter-spacing: 0.3em;
     text-transform: uppercase;
     line-height: 1;
@@ -1672,13 +1666,18 @@
   }
   .mag-btn:hover,
   .mag-btn:focus-visible { opacity: 1; }
-  .mag-label { display: inline-flex; align-items: center; gap: 10px; }
+  .mag-label { display: inline-flex; align-items: center; gap: 20px; }
   .mag-label-home,
   .mag-btn.docked .mag-label-works { display: none; }
   .mag-btn.docked .mag-label-home { display: inline-flex; }
-  .mag-chev { font-size: 0.9rem; letter-spacing: 0; }
+  .mag-chev { font-size: 1.8rem; letter-spacing: 0; }
   @media (max-width: 640px) {
     .mag-dock { top: 16px; }
+  }
+  @media (max-width: 420px) {
+    /* At this size a docked HOME would run into the top-right Showreel
+       button, so it docks just below that row instead. */
+    .mag-dock { top: 60px; }
   }
 
   /* ----- Quick Showreel button + lightbox -------------------------------
