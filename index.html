@@ -4545,8 +4545,9 @@ class Knob {
   // iOS Low Power Mode forces prefers-reduced-motion:reduce in Safari even
   // when the user never touched the Reduce Motion accessibility setting —
   // that made the whole layer vanish on any phone with low power mode on.
-  // Respect reduced motion by skipping the animation loop, but still paint
-  // one static frame so the dashes are visible.
+  // Respect reduced motion by never drifting/animating on its own: render a
+  // static frame at rest, and only run the loop while a touch/mouse is
+  // actively driving it (see ensureLoop()/frame() below).
   var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
 
@@ -4594,6 +4595,10 @@ class Knob {
     var dx = mx - prevMx, dy = my - prevMy;
     if (prevMx > -9000 && dx * dx + dy * dy > 9) dipTarget = Math.atan2(dy, dx);
     prevMx = mx; prevMy = my;
+    // Under reduced motion the render loop stops itself once idle (see
+    // frame() below) — a touch/mouse move needs to restart it so the field
+    // is still interactive without ever animating on its own.
+    if (reducedMotion) ensureLoop();
   }
   function clearPointer() {
     mx = -9999; my = -9999; prevMx = -9999; prevMy = -9999;
@@ -4635,27 +4640,36 @@ class Knob {
     ctx.lineCap = 'round';
 
     var hasPointer = mx > -9000;
-    // Autonomous slow drift when no pointer — keeps the field alive on mobile
-    demoT += dt * 0.28;
+    // Autonomous slow drift when no pointer — keeps the field alive on
+    // desktop/mobile with motion enabled. Reduced motion never drifts on
+    // its own: the field only moves in direct response to touch/mouse.
+    var fieldActive = hasPointer || !reducedMotion;
+    if (!reducedMotion) {
+      demoT += dt * 0.28;
+    }
     var ax = hasPointer ? mx : W * 0.5 + Math.cos(demoT * 0.71) * W * 0.28;
     var ay = hasPointer ? my : H * 0.5 + Math.sin(demoT) * H * 0.22;
-    if (!hasPointer) dipTarget = demoT * 0.4; // slow dipole rotation in demo mode
+    if (!hasPointer && !reducedMotion) dipTarget = demoT * 0.4; // slow dipole rotation in demo mode
 
     var cdA = Math.cos(dipAngle), sdA = Math.sin(dipAngle);
     var npx = ax + cdA * DIPOLE, npy = ay + sdA * DIPOLE;
     var spx = ax - cdA * DIPOLE, spy = ay - sdA * DIPOLE;
 
+    var stillMoving = false;
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
         var gx  = (c + 0.5) * STEP;
         var gy  = (r + 0.5) * STEP;
         var idx = r * cols + c;
 
-        var dist = Math.sqrt((gx - ax) * (gx - ax) + (gy - ay) * (gy - ay));
-        // In demo mode, spread the field wider so it covers the screen
-        var reach = hasPointer ? REACH : Math.max(W, H) * 0.65;
-        var infl = dist < reach ? 1 - dist / reach : 0;
-        infl = infl * infl;
+        var infl = 0;
+        if (fieldActive) {
+          var dist = Math.sqrt((gx - ax) * (gx - ax) + (gy - ay) * (gy - ay));
+          // In demo mode, spread the field wider so it covers the screen
+          var reach = hasPointer ? REACH : Math.max(W, H) * 0.65;
+          infl = dist < reach ? 1 - dist / reach : 0;
+          infl = infl * infl;
+        }
 
         if (infl > 4e-4) {
           var tgt  = fieldDir(gx, gy, npx, npy, spx, spy);
@@ -4669,6 +4683,7 @@ class Knob {
           angVels[idx] *= Math.max(0, 1 - 8 * dt);
         }
         angles[idx] += angVels[idx] * dt;
+        if (reducedMotion && Math.abs(angVels[idx]) > 1e-3) stillMoving = true;
 
         // alpha: faint presence + bloom (capped lower in demo mode; boosted
         // on touch devices since they idle in demo mode almost all the time —
@@ -4685,39 +4700,32 @@ class Knob {
         ctx.stroke();
       }
     }
-    requestAnimationFrame(frame);
+
+    // Reduced motion: only keep animating while a touch/mouse is active or
+    // the spring is still easing toward it. Once everything settles, stop
+    // requesting frames entirely — no idle/ambient animation runs on its
+    // own. onPointer() restarts the loop on the next interaction.
+    if (!reducedMotion || hasPointer || stillMoving) {
+      requestAnimationFrame(frame);
+    } else {
+      loopRunning = false;
+    }
   }
 
-  // Single static frame for reduced-motion: same grid, fixed faint angle,
-  // no per-frame animation or pointer tracking.
-  function drawStatic() {
-    ctx.clearRect(0, 0, W, H);
-    ctx.lineWidth = 1;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = PAL[6];
-    for (var r = 0; r < rows; r++) {
-      for (var c = 0; c < cols; c++) {
-        var gx = (c + 0.5) * STEP;
-        var gy = (r + 0.5) * STEP;
-        ctx.beginPath();
-        ctx.moveTo(gx - HALF, gy);
-        ctx.lineTo(gx + HALF, gy);
-        ctx.stroke();
-      }
-    }
+  var loopRunning = false;
+  function ensureLoop() {
+    if (loopRunning) return;
+    loopRunning = true;
+    requestAnimationFrame(frame);
   }
 
   resize();
   window.addEventListener('resize', function() {
     resize();
-    if (reducedMotion) drawStatic();
+    ensureLoop();
   });
 
-  if (reducedMotion) {
-    drawStatic();
-  } else {
-    requestAnimationFrame(frame);
-  }
+  ensureLoop();
 })();
 </script>
 
