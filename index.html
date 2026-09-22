@@ -1622,12 +1622,6 @@
     .modal-content { padding: 20px; }
   }
 
-  body.lock-scroll {
-    overflow: hidden;
-    height: 100vh;
-    height: 100dvh;
-  }
-
   /* ----- Return Home button — cross-fades with WORKS (hero-nav-toggle) ----
      Both buttons share the same top-left slot. WORKS is visible on the hero,
      HOME is visible once the user has scrolled away. They swap via opacity so
@@ -1660,11 +1654,11 @@
     display: inline-block;
     font-size: 0.9rem;
   }
-  /* Fade HOME in once scroll lock is lifted */
-  body:not(.lock-scroll) .return-home { opacity: 0.5; pointer-events: auto; }
-  body:not(.lock-scroll) .return-home:hover { opacity: 1; }
-  /* Fade WORKS out when the user has scrolled into the sections */
-  body.nav-locked-down .hero-nav-toggle { opacity: 0; pointer-events: none; }
+  /* Fade HOME in once the hero has scrolled mostly out of view */
+  body.past-hero .return-home { opacity: 0.5; pointer-events: auto; }
+  body.past-hero .return-home:hover { opacity: 1; }
+  /* Fade WORKS out at the same point */
+  body.past-hero .hero-nav-toggle { opacity: 0; pointer-events: none; }
   @media (max-width: 640px) {
     .return-home { top: 60px; left: 16px; }
   }
@@ -1926,10 +1920,10 @@
   </div>
 </section>
 
-<!-- Return Home button: lives outside hero, always rendered, but the CSS rule
-     `body.lock-scroll .return-home { display: none; }` keeps it invisible while
-     the page is in its initial hero-locked state. Click → smooth scroll back
-     to the hero and re-apply the scroll lock. -->
+<!-- Return Home button: lives outside hero, always rendered, but stays
+     invisible (opacity 0, see .return-home) until body.past-hero is set —
+     i.e. once the hero has scrolled mostly out of view. Click → smooth
+     scroll back to the hero. -->
 <button class="return-home" id="returnHome" type="button" aria-label="Return to hero">HOME<span class="return-home-chev" aria-hidden="true">▴</span></button>
 
 <!-- Quick Showreel: single-click access to the latest reel. The iframe src
@@ -4183,43 +4177,41 @@ class Knob {
 
 
 <script>
-(function heroScrollLock() {
+(function heroLanding() {
   // Prevent the browser from auto-restoring the previous scroll position on
-  // reload — otherwise the page reloads scrolled into a section *and* the
-  // hero lock kicks in, stranding the user mid-page with no scroll. Force
-  // the viewport to the top before applying the lock so a reload always
-  // lands back at the hero.
+  // reload — a fresh load should always land on the hero, not mid-page.
   if ('scrollRestoration' in history) {
     try { history.scrollRestoration = 'manual'; } catch (e) {}
   }
   window.scrollTo(0, 0);
-  document.body.classList.add('lock-scroll');
+
   document.querySelectorAll('.hero-nav a').forEach(function(a) {
     a.addEventListener('click', function(e) {
       e.preventDefault();
       var href = a.getAttribute('href');
-      document.body.classList.remove('lock-scroll');
       var target = href ? document.querySelector(href) : null;
-      if (target) {
-        requestAnimationFrame(function() {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      }
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
 
-  // Return Home: smooth scroll to top, then re-apply lock-scroll once the
-  // viewport has settled at the hero. We poll briefly because `scrollend`
-  // isn't supported everywhere; bail after 2.5s as a safety net so we never
-  // leave the scroll lock un-applied if the user interrupts the scroll.
   var homeBtn = document.getElementById('returnHome');
   if (homeBtn) {
     homeBtn.addEventListener('click', function() {
-      document.body.classList.remove('nav-locked-down');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(function(){ document.body.classList.add('lock-scroll'); }, 700);
     });
   }
+})();
+
+(function heroVisibility() {
+  // Free scrolling between the hero and the sections below it — no lock in
+  // either direction. `past-hero` just drives the WORKS/HOME button
+  // crossfade, tracking whichever way the user actually scrolls.
+  var hero = document.getElementById('hero');
+  if (!hero || !('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries) {
+    document.body.classList.toggle('past-hero', entries[0].intersectionRatio < 0.5);
+  }, { threshold: [0, 0.5, 1] });
+  obs.observe(hero);
 })();
 
 (function heroNavToggle() {
@@ -4227,14 +4219,8 @@ class Knob {
   var nav = document.getElementById('heroNav');
   if (!btn || !nav) return;
   btn.addEventListener('click', function() {
-    document.body.classList.remove('lock-scroll');
     var target = document.getElementById('three-d');
-    if (target) {
-      requestAnimationFrame(function() {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    }
-    setTimeout(function(){ document.body.classList.add('nav-locked-down'); }, 700);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   // Close after any link click
   nav.querySelectorAll('a').forEach(function(a) {
@@ -4243,40 +4229,6 @@ class Knob {
       btn.setAttribute('aria-expanded', 'false');
     });
   });
-})();
-
-(function navUpGuard() {
-  // When nav-locked-down is active, clamp scroll to the top of #three-d.
-  // Uses scrollTop (not window.scrollTo) to bypass html{scroll-behavior:smooth}
-  // — window.scrollTo triggers a smooth animation that cascades into jitter
-  // when called from a scroll listener. scrollTop is always instant.
-  function getMinY() {
-    if (!document.body.classList.contains('nav-locked-down')) return null;
-    var el = document.getElementById('three-d');
-    return el ? el.offsetTop : null;
-  }
-
-  window.addEventListener('wheel', function(e) {
-    var minY = getMinY();
-    if (minY === null) return;
-    if (window.scrollY <= minY && e.deltaY < 0) e.preventDefault();
-  }, { passive: false });
-
-  var touchStartY = 0;
-  window.addEventListener('touchstart', function(e) {
-    touchStartY = e.touches[0].clientY;
-  }, { passive: true });
-  window.addEventListener('touchmove', function(e) {
-    var minY = getMinY();
-    if (minY === null) return;
-    if (window.scrollY <= minY && e.touches[0].clientY > touchStartY) e.preventDefault();
-  }, { passive: false });
-
-  window.addEventListener('scroll', function() {
-    var minY = getMinY();
-    if (minY === null) return;
-    if (window.scrollY < minY) document.documentElement.scrollTop = minY;
-  }, { passive: true });
 })();
 
 (function droneEngine() {
