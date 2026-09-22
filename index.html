@@ -4558,9 +4558,9 @@ class Knob {
 
   var cols, rows, angles, angVels;
 
-  // Precomputed palette: index = Math.round(alpha * 100), alpha 0..0.31
+  // Precomputed palette: index = Math.round(alpha * 100), alpha 0..0.42
   var PAL = [];
-  for (var pi = 0; pi < 32; pi++) {
+  for (var pi = 0; pi < 43; pi++) {
     PAL[pi] = 'rgba(196,154,71,' + (pi * 0.01).toFixed(2) + ')';
   }
 
@@ -4631,10 +4631,10 @@ class Knob {
 
     var hasPointer = mx > -9000;
     // Autonomous slow drift when no pointer — keeps the field alive on mobile
-    demoT += dt * 0.28;
-    var ax = hasPointer ? mx : W * 0.5 + Math.cos(demoT * 0.71) * W * 0.28;
-    var ay = hasPointer ? my : H * 0.5 + Math.sin(demoT) * H * 0.22;
-    if (!hasPointer) dipTarget = demoT * 0.4; // slow dipole rotation in demo mode
+    demoT += dt * 0.38;
+    var ax = hasPointer ? mx : W * 0.5 + Math.cos(demoT * 0.73) * W * 0.32;
+    var ay = hasPointer ? my : H * 0.5 + Math.sin(demoT * 1.07) * H * 0.28;
+    if (!hasPointer) dipTarget = demoT * 0.45; // slow dipole rotation in demo mode
 
     var cdA = Math.cos(dipAngle), sdA = Math.sin(dipAngle);
     var npx = ax + cdA * DIPOLE, npy = ay + sdA * DIPOLE;
@@ -4665,9 +4665,9 @@ class Knob {
         }
         angles[idx] += angVels[idx] * dt;
 
-        // alpha: faint presence + bloom (capped lower in demo mode)
-        var alpha   = 0.025 + infl * (hasPointer ? 0.29 : 0.14);
-        var palIdx  = Math.min(31, Math.round(alpha * 100));
+        // alpha: ambient presence + bloom (demo mode nearly as bright as pointer mode)
+        var alpha   = 0.05 + infl * (hasPointer ? 0.30 : 0.26);
+        var palIdx  = Math.min(42, Math.round(alpha * 100));
         var cos = Math.cos(angles[idx]) * HALF;
         var sin = Math.sin(angles[idx]) * HALF;
 
