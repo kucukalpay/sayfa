@@ -4582,16 +4582,25 @@ class Knob {
   var mx = -9999, my = -9999;
   var prevMx = -9999, prevMy = -9999;
   var dipAngle = 0, dipTarget = 0;
+  var demoT = 0; // autonomous drift clock (used when no pointer is active)
 
-  window.addEventListener('mousemove', function(e) {
-    mx = e.clientX; my = e.clientY;
+  function onPointer(cx, cy) {
+    mx = cx; my = cy;
     var dx = mx - prevMx, dy = my - prevMy;
     if (prevMx > -9000 && dx * dx + dy * dy > 9) dipTarget = Math.atan2(dy, dx);
     prevMx = mx; prevMy = my;
-  });
-  window.addEventListener('mouseleave', function() {
+  }
+  function clearPointer() {
     mx = -9999; my = -9999; prevMx = -9999; prevMy = -9999;
-  });
+  }
+
+  window.addEventListener('mousemove',  function(e) { onPointer(e.clientX, e.clientY); });
+  window.addEventListener('mouseleave', clearPointer);
+  window.addEventListener('touchmove',  function(e) {
+    var t = e.touches[0]; if (t) onPointer(t.clientX, t.clientY);
+  }, { passive: true });
+  window.addEventListener('touchend',    clearPointer);
+  window.addEventListener('touchcancel', clearPointer);
 
   // Direction of dipole field at (gx,gy) given two poles
   function fieldDir(gx, gy, npx, npy, spx, spy) {
@@ -4620,10 +4629,16 @@ class Knob {
     ctx.lineWidth = 1;
     ctx.lineCap = 'round';
 
-    var hasMouse = mx > -9000;
+    var hasPointer = mx > -9000;
+    // Autonomous slow drift when no pointer — keeps the field alive on mobile
+    demoT += dt * 0.28;
+    var ax = hasPointer ? mx : W * 0.5 + Math.cos(demoT * 0.71) * W * 0.28;
+    var ay = hasPointer ? my : H * 0.5 + Math.sin(demoT) * H * 0.22;
+    if (!hasPointer) dipTarget = demoT * 0.4; // slow dipole rotation in demo mode
+
     var cdA = Math.cos(dipAngle), sdA = Math.sin(dipAngle);
-    var npx = mx + cdA * DIPOLE, npy = my + sdA * DIPOLE;
-    var spx = mx - cdA * DIPOLE, spy = my - sdA * DIPOLE;
+    var npx = ax + cdA * DIPOLE, npy = ay + sdA * DIPOLE;
+    var spx = ax - cdA * DIPOLE, spy = ay - sdA * DIPOLE;
 
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
@@ -4631,11 +4646,11 @@ class Knob {
         var gy  = (r + 0.5) * STEP;
         var idx = r * cols + c;
 
-        var dist = hasMouse
-          ? Math.sqrt((gx - mx) * (gx - mx) + (gy - my) * (gy - my))
-          : Infinity;
-        var infl = dist < REACH ? 1 - dist / REACH : 0;
-        infl = infl * infl; // ease: concentrate near cursor
+        var dist = Math.sqrt((gx - ax) * (gx - ax) + (gy - ay) * (gy - ay));
+        // In demo mode, spread the field wider so it covers the screen
+        var reach = hasPointer ? REACH : Math.max(W, H) * 0.65;
+        var infl = dist < reach ? 1 - dist / reach : 0;
+        infl = infl * infl;
 
         if (infl > 4e-4) {
           var tgt  = fieldDir(gx, gy, npx, npy, spx, spy);
@@ -4650,8 +4665,8 @@ class Knob {
         }
         angles[idx] += angVels[idx] * dt;
 
-        // alpha: faint dormant presence + bloom near cursor
-        var alpha   = 0.025 + infl * 0.29;
+        // alpha: faint presence + bloom (capped lower in demo mode)
+        var alpha   = 0.025 + infl * (hasPointer ? 0.29 : 0.14);
         var palIdx  = Math.min(31, Math.round(alpha * 100));
         var cos = Math.cos(angles[idx]) * HALF;
         var sin = Math.sin(angles[idx]) * HALF;
