@@ -4439,6 +4439,7 @@ class Knob {
   var SHEP_ROOT     = freqs[0] * 8; // A3
   var SHEP_VOICES   = 4;
   var SHEP_INTERVAL = 10 / 12;      // flat 7th, as a fraction of an octave
+  var SHEP_CYCLE    = 200;          // entropy units per full rotation — measured entropy rarely clears ~4000, so 1000 (max 4 rotations) barely registered
 
   // Phase 2: modulation state. Pointer position normalized 0..1, gamma-tilt
   // mirrored from a local deviceorientation listener (duplicating the bg
@@ -4456,29 +4457,30 @@ class Knob {
     return (p && typeof p.getEntropy === 'function') ? p.getEntropy() : 0;
   }
 
-  // Entropy-driven Shepherd tone. Cyclical: entropy 1-1000 maps to one full
-  // glide (positions 0..8 — that 8-way division of the octave is the
-  // "octave" here, not the usual 12-tone one), then the instant entropy
-  // passes 1000 it reverts to 0 and the same climb repeats — so it keeps
-  // climbing and rotating indefinitely as entropy grows rather than
-  // topping out once. All four voices ride that same rotation, phase-
-  // offset from each other by a flat 7th's worth of the cycle (matching
-  // their pitch spacing, so the interval and the stagger are the same
-  // number), each with a sin²-shaped gain envelope that fades it to
-  // silence right as it wraps — the classic Shepherd-tone trick: you hear
-  // the parts of each voice's climb that sound like a climb, never the
-  // reset, so the four together read as one endless rise.
+  // Entropy-driven Shepherd tone. Cyclical: every SHEP_CYCLE units of
+  // entropy is one full glide (positions 0..8 — that 8-way division of the
+  // octave is the "octave" here, not the usual 12-tone one), then the
+  // instant entropy crosses the next multiple of SHEP_CYCLE, position
+  // reverts to 0 and the same climb repeats — so it keeps climbing and
+  // rotating indefinitely as entropy grows rather than topping out once.
+  // All four voices ride that same rotation, phase-offset from each other
+  // by a flat 7th's worth of the cycle (matching their pitch spacing, so
+  // the interval and the stagger are the same number), each with a
+  // sin²-shaped gain envelope that fades it to silence right as it wraps —
+  // the classic Shepherd-tone trick: you hear the parts of each voice's
+  // climb that sound like a climb, never the reset, so the four together
+  // read as one endless rise.
   function updateShepherd(t) {
     if (!shepherdOscs || !shepherdOscs.length) return;
     var fe = window.__fieldEntropy || 0;
-    var cyclePos = fe > 0 ? (fe - 1) % 1000 : 0; // 0..999
-    var basePos = (cyclePos / 1000) * 8;         // 0..8
-    // Fades the whole voice bank in over the first 50 units of entropy —
-    // without this, voices other than the 0-offset one would sit at a
-    // nonzero phase (and therefore audible) even at zero entropy, since
-    // their offset is fixed regardless of whether there's any entropy to
-    // rotate through yet.
-    var presence = Math.min(1, fe / 50);
+    var cyclePos = fe > 0 ? (fe - 1) % SHEP_CYCLE : 0;   // 0..SHEP_CYCLE-1
+    var basePos = (cyclePos / SHEP_CYCLE) * 8;           // 0..8
+    // Fades the whole voice bank in over the first 5% of a cycle — without
+    // this, voices other than the 0-offset one would sit at a nonzero
+    // phase (and therefore audible) even at zero entropy, since their
+    // offset is fixed regardless of whether there's any entropy to rotate
+    // through yet.
+    var presence = Math.min(1, fe / (SHEP_CYCLE * 0.05));
     for (var vi = 0; vi < shepherdOscs.length; vi++) {
       var voicePos = (basePos + vi * SHEP_INTERVAL * 8) % 8;
       var freq = SHEP_ROOT * Math.pow(2, voicePos / 8);
@@ -4505,8 +4507,12 @@ class Knob {
     // Overall interaction strength — halves the response of every parameter
     // (pointer / tilt / entropy) so the drone modulates more subtly.
     var K = 0.5;
-    // Filter cutoff drifts with pointerX + entropy; Q with pointerY + entropy.
-    var cutoff = 280 + (pointerNX * 800 * K) + (entropy * 60 * K);
+    // Filter carries all the pointer/tilt/entropy reactivity now — the
+    // chord stays put (see resetNotes()/init() for its fixed pitches) and
+    // only ever moves when explicitly reset. Cutoff: pointerX + tilt +
+    // entropy. Q: pointerY + parting. tiltX used to nudge chord detune;
+    // it lives here instead, same as pointerX/Y always have.
+    var cutoff = 280 + (pointerNX * 800 * K) + (tiltX * 300 * K) + (entropy * 60 * K);
     filter.frequency.cancelScheduledValues(t);
     filter.frequency.setValueAtTime(filter.frequency.value, t);
     filter.frequency.linearRampToValueAtTime(cutoff, t + 0.5);
@@ -4514,15 +4520,6 @@ class Knob {
     filter.Q.cancelScheduledValues(t);
     filter.Q.setValueAtTime(filter.Q.value, t);
     filter.Q.linearRampToValueAtTime(q, t + 0.5);
-    // Detune (cents) — applied uniformly across the chord. All four
-    // parameters (pointerX/Y, tilt, entropy) now nudge pitch so every note
-    // in the chord breathes with the interaction, not just tilt+entropy.
-    var detuneTarget = (tiltX * 30 + (pointerNX - 0.5) * 40 + (pointerNY - 0.5) * 20) * K;
-    oscs.forEach(function(o) {
-      o.detune.cancelScheduledValues(t);
-      o.detune.setValueAtTime(o.detune.value, t);
-      o.detune.linearRampToValueAtTime(detuneTarget, t + 0.5);
-    });
     // preGain headroom — divided down by (1 + entropy*K) so the chord/Shepherd
     // stack auto-attenuates as the line accumulates damage.
     if (preGain) {
@@ -4667,6 +4664,10 @@ class Knob {
     }
   }
 
+  // Click/tap reaction lives on the filter alone now — the chord (pitch
+  // and its three octave-layer gains) stays fixed at whatever init()/
+  // resetNotes() put it at; it no longer bends or sweeps per click. Only
+  // the lowpass zings open and decays back, same shape as before.
   function burst() {
     if (!ac || !filter) return;
     var t = ac.currentTime;
@@ -4677,36 +4678,6 @@ class Knob {
     filter.frequency.setValueAtTime(filter.frequency.value, t);
     filter.frequency.linearRampToValueAtTime(1200 + entropy * 150, t + 0.04);
     filter.frequency.exponentialRampToValueAtTime(280, t + 0.7);
-    // Tiny pitch bend across the chord
-    if (oscs && oscs.length) {
-      oscs.forEach(function(o) {
-        var base = o.frequency.value;
-        o.frequency.cancelScheduledValues(t);
-        o.frequency.setValueAtTime(base, t);
-        o.frequency.linearRampToValueAtTime(base * 1.025, t + 0.03);
-        o.frequency.linearRampToValueAtTime(base, t + 0.6);
-      });
-    }
-    // Shepherd-tone rise: a spectral bell sweeps up the three octave layers
-    // of the same chord (A/C/D/F/G/A# pitch classes). As L2 peaks at the top and
-    // begins fading, L0 swells back from its mid-burst dip — perceived as a
-    // fresh rise emerging from below, so the rising sensation continues even
-    // though the chord stays on the same notes.
-    if (layerGains && layerGains.length === 3) {
-      var L0 = layerGains[0], L1 = layerGains[1], L2 = layerGains[2];
-      L0.gain.cancelScheduledValues(t);
-      L0.gain.setValueAtTime(L0.gain.value, t);
-      L0.gain.linearRampToValueAtTime(0.3, t + 0.35);
-      L0.gain.linearRampToValueAtTime(1.0, t + 0.7);
-      L1.gain.cancelScheduledValues(t);
-      L1.gain.setValueAtTime(L1.gain.value, t);
-      L1.gain.linearRampToValueAtTime(1.0, t + 0.2);
-      L1.gain.linearRampToValueAtTime(0.5, t + 0.7);
-      L2.gain.cancelScheduledValues(t);
-      L2.gain.setValueAtTime(L2.gain.value, t);
-      L2.gain.linearRampToValueAtTime(1.0, t + 0.4);
-      L2.gain.linearRampToValueAtTime(0.25, t + 0.7);
-    }
   }
 
   // Phase 2: pointer + tilt listeners feed the modulation tick. These run
