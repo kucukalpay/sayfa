@@ -4431,7 +4431,7 @@ class Knob {
   if (!btn) return;
 
   // ---- Entropy-driven Shepherd tone (see updateShepherd() below for the
-  // per-tick math) — four sine voices, hoisted here so init() and
+  // per-tick math) — four sawtooth voices, hoisted here so init() and
   // updateShepherd() share the same constants. SHEP_ROOT is the chord's
   // own root (freqs[0], A), three octaves up into a register where the
   // glide actually reads.
@@ -4596,17 +4596,20 @@ class Knob {
     gain.connect(ac.destination);
 
     // Shepherd tone voices — own signal path straight to destination
-    // (not through `filter`, which is tuned for the sawtooth chord and
-    // would unevenly muffle these sines as they glide through its
-    // cutoff). Per-voice gain is driven each tick by updateShepherd();
-    // shepherdMaster is just the overall on/off + level control.
+    // (not through `filter`, which is tuned for the chord and would
+    // unevenly muffle these as they glide through its cutoff). Sawtooth,
+    // same as the chord — sine was getting buried under the chord's 12
+    // sawtooths, since a sawtooth's extra harmonics make it read far
+    // louder than a sine at the same peak amplitude. Per-voice gain is
+    // driven each tick by updateShepherd(); shepherdMaster is just the
+    // overall on/off + level control.
     shepherdMaster = ac.createGain();
     shepherdMaster.gain.value = 0;
     shepherdOscs = [];
     shepherdGains = [];
     for (var si = 0; si < SHEP_VOICES; si++) {
       var so = ac.createOscillator();
-      so.type = 'sine';
+      so.type = 'sawtooth';
       so.frequency.value = SHEP_ROOT;
       var sg = ac.createGain();
       sg.gain.value = 0;
