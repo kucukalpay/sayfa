@@ -4430,6 +4430,16 @@ class Knob {
   var btn = document.getElementById('droneToggle');
   if (!btn) return;
 
+  // ---- Entropy-driven Shepherd tone (see updateShepherd() below for the
+  // per-tick math) — four sine voices, hoisted here so init() and
+  // updateShepherd() share the same constants. SHEP_ROOT is the chord's
+  // own root (freqs[0], A), three octaves up into a register where the
+  // glide actually reads.
+  var shepherdOscs = null, shepherdGains = null, shepherdMaster = null;
+  var SHEP_ROOT     = freqs[0] * 8; // A3
+  var SHEP_VOICES   = 4;
+  var SHEP_INTERVAL = 10 / 12;      // flat 7th, as a fraction of an octave
+
   // Phase 2: modulation state. Pointer position normalized 0..1, gamma-tilt
   // mirrored from a local deviceorientation listener (duplicating the bg
   // listener is fine — both fire). lastMoveTime drives a brief gain bump
@@ -4446,10 +4456,48 @@ class Knob {
     return (p && typeof p.getEntropy === 'function') ? p.getEntropy() : 0;
   }
 
+  // Entropy-driven Shepherd tone. Cyclical: entropy 1-1000 maps to one full
+  // glide (positions 0..8 — that 8-way division of the octave is the
+  // "octave" here, not the usual 12-tone one), then the instant entropy
+  // passes 1000 it reverts to 0 and the same climb repeats — so it keeps
+  // climbing and rotating indefinitely as entropy grows rather than
+  // topping out once. All four voices ride that same rotation, phase-
+  // offset from each other by a flat 7th's worth of the cycle (matching
+  // their pitch spacing, so the interval and the stagger are the same
+  // number), each with a sin²-shaped gain envelope that fades it to
+  // silence right as it wraps — the classic Shepherd-tone trick: you hear
+  // the parts of each voice's climb that sound like a climb, never the
+  // reset, so the four together read as one endless rise.
+  function updateShepherd(t) {
+    if (!shepherdOscs || !shepherdOscs.length) return;
+    var fe = window.__fieldEntropy || 0;
+    var cyclePos = fe > 0 ? (fe - 1) % 1000 : 0; // 0..999
+    var basePos = (cyclePos / 1000) * 8;         // 0..8
+    // Fades the whole voice bank in over the first 50 units of entropy —
+    // without this, voices other than the 0-offset one would sit at a
+    // nonzero phase (and therefore audible) even at zero entropy, since
+    // their offset is fixed regardless of whether there's any entropy to
+    // rotate through yet.
+    var presence = Math.min(1, fe / 50);
+    for (var vi = 0; vi < shepherdOscs.length; vi++) {
+      var voicePos = (basePos + vi * SHEP_INTERVAL * 8) % 8;
+      var freq = SHEP_ROOT * Math.pow(2, voicePos / 8);
+      var env  = Math.sin(Math.PI * voicePos / 8); // 0 at both wrap edges, 1 mid-cycle
+      var o = shepherdOscs[vi], g = shepherdGains[vi];
+      o.frequency.cancelScheduledValues(t);
+      o.frequency.setValueAtTime(o.frequency.value, t);
+      o.frequency.linearRampToValueAtTime(freq, t + 0.5);
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(env * env * 0.5 * presence, t + 0.5);
+    }
+  }
+
   function updateMod() {
     if (!ac || !filter || !oscs || !gain) return;
     if (!isOn) return;
     var t = ac.currentTime;
+    updateShepherd(t);
     var poly = window.__hero && window.__hero.poly;
     var entropy = (poly && poly.getEntropy ? poly.getEntropy() : 0) * 0.1;
     var parting = (poly && poly.getParting ? poly.getParting() : 0) * 0.1;
@@ -4545,6 +4593,30 @@ class Knob {
     preGain.connect(filter);
     filter.connect(gain);
     gain.connect(ac.destination);
+
+    // Shepherd tone voices — own signal path straight to destination
+    // (not through `filter`, which is tuned for the sawtooth chord and
+    // would unevenly muffle these sines as they glide through its
+    // cutoff). Per-voice gain is driven each tick by updateShepherd();
+    // shepherdMaster is just the overall on/off + level control.
+    shepherdMaster = ac.createGain();
+    shepherdMaster.gain.value = 0;
+    shepherdOscs = [];
+    shepherdGains = [];
+    for (var si = 0; si < SHEP_VOICES; si++) {
+      var so = ac.createOscillator();
+      so.type = 'sine';
+      so.frequency.value = SHEP_ROOT;
+      var sg = ac.createGain();
+      sg.gain.value = 0;
+      so.connect(sg);
+      sg.connect(shepherdMaster);
+      so.start();
+      shepherdOscs.push(so);
+      shepherdGains.push(sg);
+    }
+    shepherdMaster.connect(ac.destination);
+
     // Phase 2: 12fps param-update tick. Web Audio handles the actual
     // smoothing via linearRampToValueAtTime, so 80ms is plenty.
     if (!modTimer) modTimer = setInterval(updateMod, 80);
@@ -4559,6 +4631,11 @@ class Knob {
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(gain.gain.value, t);
     gain.gain.linearRampToValueAtTime(isOn ? 0.045 * level : 0, t + 0.5);
+    if (shepherdMaster) {
+      shepherdMaster.gain.cancelScheduledValues(t);
+      shepherdMaster.gain.setValueAtTime(shepherdMaster.gain.value, t);
+      shepherdMaster.gain.linearRampToValueAtTime(isOn ? 0.05 * level : 0, t + 0.5);
+    }
     btn.textContent = 'DRONE · ' + (isOn ? 'ON' : 'OFF');
     btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
   }
@@ -4570,6 +4647,11 @@ class Knob {
       gain.gain.cancelScheduledValues(t);
       gain.gain.setValueAtTime(gain.gain.value, t);
       gain.gain.linearRampToValueAtTime(0.045 * level, t + 0.2);
+      if (shepherdMaster) {
+        shepherdMaster.gain.cancelScheduledValues(t);
+        shepherdMaster.gain.setValueAtTime(shepherdMaster.gain.value, t);
+        shepherdMaster.gain.linearRampToValueAtTime(0.05 * level, t + 0.2);
+      }
     }
   }
 
