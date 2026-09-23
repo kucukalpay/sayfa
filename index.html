@@ -4661,15 +4661,55 @@ class Knob {
     }
   }
 
+  // Water drop — one-shot per click, not part of the sustained chord: a
+  // fresh oscillator+envelope created and started here, left to `stop()`
+  // and be garbage-collected once its 0.4s is up (the standard Web Audio
+  // pattern for percussive/transient sounds, unlike the chord's oscillators
+  // which are created once in init() and run forever). The recipe is the
+  // classic synthesised droplet: a sine gliding fast from a high pitch down
+  // to a low one (exponential, since pitch is perceived logarithmically),
+  // under a near-instant attack / quick decay envelope. Feeds `gain`
+  // (dry, so the drop itself stays clear and present) and `reverbSend` —
+  // reusing burst()'s own send rather than a separate one, so the drop
+  // blooms into exactly the same reverb wash burst() is already opening on
+  // this click, not a second, uncoordinated one.
+  function waterDrop(t) {
+    if (!ac || !gain) return;
+    var startFreq = 900 + Math.random() * 400; // slight per-drop variation so repeats don't sound identical
+    var endFreq   = 200 + Math.random() * 100;
+
+    var o = ac.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(startFreq, t);
+    o.frequency.exponentialRampToValueAtTime(endFreq, t + 0.11);
+
+    // Peak is a raw multiplier, not *level — both downstream nodes it
+    // feeds (`gain` and `reverbSend`) already scale by level themselves,
+    // so applying it a third time here would make the drop fall off with
+    // the square of the volume slider instead of linearly with it.
+    var env = ac.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(0.35, t + 0.006);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+
+    o.connect(env);
+    env.connect(gain);
+    if (reverbSend) env.connect(reverbSend);
+
+    o.start(t);
+    o.stop(t + 0.4);
+  }
+
   // Click/tap reaction: the filter zings open and decays back (chord
-  // stays fixed, unchanged from before), and now reverb gets a big swell
-  // too — opens in fast, then decays back to silent over REVERB_BURST_DECAY
-  // (matching the generated tail's own length, so it rings fully out
-  // rather than getting cut short), so each click reads as opening into a
-  // wash rather than a continuous effect. Guarded on isOn: both wet sends
-  // connect straight to destination, bypassing the dry path's `gain` node
-  // entirely, so without this guard a click while the drone is off would
-  // be audible even though everything else is silent.
+  // stays fixed, unchanged from before), reverb gets a big swell — opens
+  // in fast, then decays back to silent over REVERB_BURST_DECAY (matching
+  // the generated tail's own length, so it rings fully out rather than
+  // getting cut short) — and a water drop plays into that same swell.
+  // Each click reads as a drop landing and opening into a wash, not a
+  // continuous effect. Guarded on isOn: both wet sends connect straight to
+  // destination, bypassing the dry path's `gain` node entirely, so without
+  // this guard a click while the drone is off would be audible even
+  // though everything else is silent.
   function burst() {
     if (!ac || !filter) return;
     if (!isOn) return;
@@ -4688,6 +4728,7 @@ class Knob {
       reverbSend.gain.linearRampToValueAtTime(reverbPeak, t + 0.08);
       reverbSend.gain.linearRampToValueAtTime(0, t + REVERB_BURST_DECAY);
     }
+    waterDrop(t);
   }
 
   // Phase 2: pointer + tilt listeners feed the modulation tick. These run
