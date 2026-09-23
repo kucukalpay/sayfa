@@ -4431,7 +4431,7 @@ class Knob {
   if (!btn) return;
 
   // ---- Entropy-driven Shepherd tone (see updateShepherd() below for the
-  // per-tick math) — four sawtooth voices, hoisted here so init() and
+  // per-tick math) — four voices, hoisted here so init() and
   // updateShepherd() share the same constants. SHEP_ROOT is the chord's
   // own root (freqs[0], A), three octaves up into a register where the
   // glide actually reads.
@@ -4564,7 +4564,11 @@ class Knob {
       lg.gain.value = baselineWeights[i];
       freqs.forEach(function(f) {
         var o = ac.createOscillator();
-        o.type = 'sawtooth';
+        // Sine for now, on request — a diagnostic pass: if the mix still
+        // has any sawtooth-ish edge to it with both this chord and the
+        // Shepherd bank (below) on sine, that edge isn't coming from
+        // either of them.
+        o.type = 'sine';
         o.frequency.value = f * mult;
         o.connect(lg);
         oscs.push(o);
@@ -4597,19 +4601,20 @@ class Knob {
 
     // Shepherd tone voices — own signal path straight to destination
     // (not through `filter`, which is tuned for the chord and would
-    // unevenly muffle these as they glide through its cutoff). Sawtooth,
-    // same as the chord — sine was getting buried under the chord's 12
-    // sawtooths, since a sawtooth's extra harmonics make it read far
-    // louder than a sine at the same peak amplitude. Per-voice gain is
-    // driven each tick by updateShepherd(); shepherdMaster is just the
-    // overall on/off + level control.
+    // unevenly muffle these as they glide through its cutoff). Back to
+    // sine for now, on request, alongside the chord above — see that
+    // comment. (Sawtooth was tried and did help the Shepherd tone compete
+    // with the chord, but for this diagnostic pass both need to be the
+    // same, quieter-by-nature waveform.) Per-voice gain is driven each
+    // tick by updateShepherd(); shepherdMaster is just the overall on/off
+    // + level control.
     shepherdMaster = ac.createGain();
     shepherdMaster.gain.value = 0;
     shepherdOscs = [];
     shepherdGains = [];
     for (var si = 0; si < SHEP_VOICES; si++) {
       var so = ac.createOscillator();
-      so.type = 'sawtooth';
+      so.type = 'sine';
       so.frequency.value = SHEP_ROOT;
       var sg = ac.createGain();
       sg.gain.value = 0;
