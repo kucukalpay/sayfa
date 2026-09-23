@@ -4801,11 +4801,39 @@ class Knob {
     canvas.style.width  = W + 'px';
     canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cols = Math.ceil(W / STEP) + 2;
-    rows = Math.ceil(H / STEP) + 2;
-    var n = cols * rows;
-    angles  = new Float32Array(n);
-    angVels = new Float32Array(n);
+
+    var newCols = Math.ceil(W / STEP) + 2;
+    var newRows = Math.ceil(H / STEP) + 2;
+    // Mobile browsers fire `resize` constantly while scrolling — the
+    // address bar collapses/expands and window.innerHeight changes with
+    // it — so this runs far more often than an actual orientation change.
+    // Bail out (keep the existing angles/angVels untouched) whenever the
+    // grid didn't actually change shape; only real size changes get here.
+    if (newCols === cols && newRows === rows) return;
+
+    var newAngles  = new Float32Array(newCols * newRows);
+    var newAngVels = new Float32Array(newCols * newRows);
+    if (angles) {
+      // Carry over whatever overlaps instead of zeroing everything — the
+      // old code reallocated unconditionally, which snapped the whole
+      // field back to flat (and window.__fieldEntropy to 0, since it's
+      // derived from these same angles — audibly killing the drone's
+      // reverb) on every one of those address-bar-driven resizes.
+      var copyRows = Math.min(rows, newRows);
+      var copyCols = Math.min(cols, newCols);
+      for (var r = 0; r < copyRows; r++) {
+        for (var c = 0; c < copyCols; c++) {
+          var oldIdx = r * cols + c;
+          var newIdx = r * newCols + c;
+          newAngles[newIdx]  = angles[oldIdx];
+          newAngVels[newIdx] = angVels[oldIdx];
+        }
+      }
+    }
+    cols = newCols;
+    rows = newRows;
+    angles  = newAngles;
+    angVels = newAngVels;
   }
 
   // Starts off-screen so nothing is influenced until the first touch/move —
