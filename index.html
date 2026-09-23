@@ -4432,18 +4432,24 @@ class Knob {
 
   // ---- Entropy-driven Shepherd tone (see updateShepherd() below for the
   // per-tick math) — hoisted here so init() and updateShepherd() share the
-  // same constants. SHEP_ROOT is the chord's own root (freqs[0], A), three
-  // octaves up into a register where the glide actually reads. Two sets of
-  // voices, both starting from that same root: 4 a flat 7th apart, 5 a
-  // flat 5th apart — too few notes was why the Shepherd tone read as a
-  // separate, thinner thing next to the chord instead of blending with it.
-  var shepherdOscs = null, shepherdGains = null, shepherdOffsets = null, shepherdMaster = null;
-  var SHEP_ROOT = freqs[0] * 8; // A3
-  var SHEP_SETS = [
-    { count: 4, interval: 10 / 12 }, // flat 7th
-    { count: 5, interval:  6 / 12 }  // flat 5th
-  ];
-  var SHEP_CYCLE = 200; // entropy units per full rotation — measured entropy rarely clears ~4000, so 1000 (max 4 rotations) barely registered
+  // same constants.
+  //
+  // A real Shepard tone is N sine voices at the SAME pitch class, each
+  // exactly one octave apart, together spanning the whole stack (here:
+  // A0..A7, freqs[0] times 2^0 through 2^7). They all glide upward in
+  // lockstep and each wraps down an octave when it reaches the top of the
+  // stack; a fixed bell-shaped loudness curve across the stack (quiet at
+  // both ends, loudest in the middle) hides each wrap, so the ear always
+  // has something present near the loud middle and never notices any one
+  // voice resetting. Earlier attempts used chord-style intervals (flat
+  // 7th, flat 5th) between simultaneously-sounding voices instead of
+  // octaves — different pitch classes sounding at once, each sweeping
+  // independently, which is just a dissonant, sirening cluster (the "cars"
+  // sound) and not the illusion at all. This version has one pitch class.
+  var shepherdOscs = null, shepherdGains = null, shepherdMaster = null;
+  var SHEP_BASE   = freqs[0]; // A0 — bottom of the stack
+  var SHEP_VOICES = 8;        // one octave apart -> spans 8 octaves, A0..A7 (centre ~A4/440Hz)
+  var SHEP_CYCLE  = 200;      // entropy units for one voice to glide a full octave
 
   // Phase 2: modulation state. Pointer position normalized 0..1, gamma-tilt
   // mirrored from a local deviceorientation listener (duplicating the bg
@@ -4461,34 +4467,33 @@ class Knob {
     return (p && typeof p.getEntropy === 'function') ? p.getEntropy() : 0;
   }
 
-  // Entropy-driven Shepherd tone. Cyclical: every SHEP_CYCLE units of
-  // entropy is one full glide (positions 0..8 — that 8-way division of the
-  // octave is the "octave" here, not the usual 12-tone one), then the
-  // instant entropy crosses the next multiple of SHEP_CYCLE, position
-  // reverts to 0 and the same climb repeats — so it keeps climbing and
-  // rotating indefinitely as entropy grows rather than topping out once.
-  // Every voice from every set in SHEP_SETS rides that same rotation,
-  // each phase-offset from the others by its own set's interval (matching
-  // that set's pitch spacing, so the interval and the stagger are the same
-  // number — see shepherdOffsets, built in init()), each with a
-  // sin²-shaped gain envelope that fades it to silence right as it wraps —
-  // the classic Shepherd-tone trick: you hear the parts of each voice's
-  // climb that sound like a climb, never the reset, so together they read
-  // as one endless rise.
+  // Entropy-driven Shepard glide. `p` is one shared, repeating ramp (0..1,
+  // resets the instant entropy crosses another SHEP_CYCLE) — the position
+  // within a single octave that every voice is currently gliding through.
+  // Voice i (fixed, 0..SHEP_VOICES-1) sits at stack position (i + p), wrapped
+  // into the full 0..SHEP_VOICES stack: as p sweeps 0->1, every voice
+  // glides up exactly one octave, and since their integer offsets are all
+  // exactly 1 apart, they permanently stay exactly one octave apart from
+  // each other too — always consonant (same pitch class), never a cluster.
+  // Loudness is a fixed bell curve over that stack position (0 at both
+  // ends, loudest at the middle, ~A4): as each voice glides through the
+  // loud middle it's what you hear, and by the time it reaches the quiet
+  // top edge and wraps back to the bottom, it's already faded near-silent
+  // — so the wrap itself is never audible, only the continuous rise is.
   function updateShepherd(t) {
     if (!shepherdOscs || !shepherdOscs.length) return;
+    var N = shepherdOscs.length;
     var fe = window.__fieldEntropy || 0;
     var cyclePos = fe > 0 ? (fe - 1) % SHEP_CYCLE : 0;   // 0..SHEP_CYCLE-1
-    var basePos = (cyclePos / SHEP_CYCLE) * 8;           // 0..8
-    // Fades the whole voice bank in over the first 5% of a cycle — without
-    // this, voices other than a 0-offset one would sit at a nonzero phase
-    // (and therefore audible) even at zero entropy, since their offset is
-    // fixed regardless of whether there's any entropy to rotate through yet.
+    var p = cyclePos / SHEP_CYCLE;                       // 0..1
+    // Fades the whole bank in over the first 5% of a cycle — without this,
+    // every voice except i=0 would sit at a nonzero (and therefore
+    // audible) stack position even at zero entropy.
     var presence = Math.min(1, fe / (SHEP_CYCLE * 0.05));
-    for (var vi = 0; vi < shepherdOscs.length; vi++) {
-      var voicePos = (basePos + shepherdOffsets[vi]) % 8;
-      var freq = SHEP_ROOT * Math.pow(2, voicePos / 8);
-      var env  = Math.sin(Math.PI * voicePos / 8); // 0 at both wrap edges, 1 mid-cycle
+    for (var vi = 0; vi < N; vi++) {
+      var pos  = (vi + p) % N;                    // 0..N — this voice's place in the stack right now
+      var freq = SHEP_BASE * Math.pow(2, pos);
+      var env  = Math.sin(Math.PI * pos / N);      // 0 at both ends of the stack, 1 at the middle
       var o = shepherdOscs[vi], g = shepherdGains[vi];
       o.frequency.cancelScheduledValues(t);
       o.frequency.setValueAtTime(o.frequency.value, t);
@@ -4606,31 +4611,26 @@ class Knob {
     // Shepherd tone voices — own signal path straight to destination
     // (not through `filter`, which is tuned for the chord and would
     // unevenly muffle these as they glide through its cutoff). Sine, left
-    // untouched from the last pass. Per-voice gain is driven each tick by
-    // updateShepherd(); shepherdMaster is just the overall on/off + level
-    // control. Both SHEP_SETS start from SHEP_ROOT — shepherdOffsets holds
-    // each voice's phase offset (in the same 0..8 units as basePos) so
-    // updateShepherd() can stay a single flat loop over every voice.
+    // untouched from the last pass. Each voice i starts at SHEP_BASE*2^i —
+    // exactly one octave above the previous — updateShepherd() then glides
+    // and re-loudnesses them every tick; shepherdMaster is just the
+    // overall on/off + level control.
     shepherdMaster = ac.createGain();
     shepherdMaster.gain.value = 0;
     shepherdOscs = [];
     shepherdGains = [];
-    shepherdOffsets = [];
-    SHEP_SETS.forEach(function(set) {
-      for (var vi = 0; vi < set.count; vi++) {
-        var so = ac.createOscillator();
-        so.type = 'sine';
-        so.frequency.value = SHEP_ROOT;
-        var sg = ac.createGain();
-        sg.gain.value = 0;
-        so.connect(sg);
-        sg.connect(shepherdMaster);
-        so.start();
-        shepherdOscs.push(so);
-        shepherdGains.push(sg);
-        shepherdOffsets.push(vi * set.interval * 8);
-      }
-    });
+    for (var si = 0; si < SHEP_VOICES; si++) {
+      var so = ac.createOscillator();
+      so.type = 'sine';
+      so.frequency.value = SHEP_BASE * Math.pow(2, si);
+      var sg = ac.createGain();
+      sg.gain.value = 0;
+      so.connect(sg);
+      sg.connect(shepherdMaster);
+      so.start();
+      shepherdOscs.push(so);
+      shepherdGains.push(sg);
+    }
     shepherdMaster.connect(ac.destination);
 
     // Phase 2: 12fps param-update tick. Web Audio handles the actual
