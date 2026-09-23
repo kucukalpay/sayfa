@@ -4424,14 +4424,15 @@ class Knob {
   var ac = null;
   var oscs = null, preGain = null, filter = null, gain = null;
   var isOn = false;
-  // Reverb (entropy) and chorus (clicks) — both parallel sends off preGain,
+  // Reverb (clicks) and chorus (entropy) — both parallel sends off preGain,
   // straight to destination, never inserted in the dry path. See init()
-  // for routing, updateMod() for the reverb's entropy-driven wetness, and
-  // burst() for the chorus's per-click swell.
+  // for routing, burst() for the reverb's big per-click swell, and
+  // updateMod() for the chorus's entropy-driven wetness.
   var reverbSend = null, chorusDelay = null, chorusWet = null;
-  var REVERB_SCALE = 1500;        // entropy at which wetness saturates (not cyclical — just rises and plateaus)
-  var REVERB_PEAK  = 0.045 * 1.1; // scaled to the dry chord's own 0.045 ceiling, not raw preGain, which is far louder
-  var CHORUS_PEAK  = 0.045 * 1.4; // same reference scale, for the per-click swell
+  var REVERB_BURST_PEAK  = 0.045 * 3;   // "a lot" — a click should feel like it opens into a big wash
+  var REVERB_BURST_DECAY = 2.5;         // seconds — matches the generated IR's own length, so the tail rings fully out
+  var CHORUS_SCALE = 1500;              // entropy at which wetness saturates (not cyclical — just rises and plateaus)
+  var CHORUS_PEAK  = 0.045 * 1.1;       // scaled to the dry chord's own 0.045 ceiling, not raw preGain, which is far louder
   // A7b5 (A, C#, Eb, G) — root, major 3rd, flat 5, dominant 7th, all within
   // one octave above the root. Root at A2, not A0 — A0 (27.5Hz) sits below
   // what phone speakers can reproduce, so it read as an indistinct rumble
@@ -4483,18 +4484,18 @@ class Knob {
     filter.Q.cancelScheduledValues(t);
     filter.Q.setValueAtTime(filter.Q.value, t);
     filter.Q.linearRampToValueAtTime(q, t + 0.5);
-    // Reverb wetness — driven by the field's real entropy (not the dead
+    // Chorus wetness — driven by the field's real entropy (not the dead
     // poly-based one above), and deliberately saturating rather than
-    // cyclical: rises smoothly toward REVERB_PEAK and plateaus, never
-    // resets. This is the "buildup" now — the chord gets more spacious
-    // and diffuse as entropy climbs, not higher-pitched or brighter,
-    // which is what read as an engine revving before.
-    if (reverbSend) {
+    // cyclical: rises smoothly toward CHORUS_PEAK and plateaus, never
+    // resets. This is the "buildup" now — the chord gets a little more
+    // shimmer/thickness as entropy climbs, not higher-pitched or
+    // brighter, which is what read as an engine revving before.
+    if (chorusWet) {
       var fieldEntropy = window.__fieldEntropy || 0;
-      var wet = Math.min(1, fieldEntropy / REVERB_SCALE) * REVERB_PEAK * level;
-      reverbSend.gain.cancelScheduledValues(t);
-      reverbSend.gain.setValueAtTime(reverbSend.gain.value, t);
-      reverbSend.gain.linearRampToValueAtTime(wet, t + 0.5);
+      var wet = Math.min(1, fieldEntropy / CHORUS_SCALE) * CHORUS_PEAK * level;
+      chorusWet.gain.cancelScheduledValues(t);
+      chorusWet.gain.setValueAtTime(chorusWet.gain.value, t);
+      chorusWet.gain.linearRampToValueAtTime(wet, t + 0.5);
     }
     // preGain headroom — divided down by (1 + entropy*K) so the chord
     // auto-attenuates as the line accumulates damage.
@@ -4572,9 +4573,10 @@ class Knob {
     preGain.connect(gain);
     gain.connect(ac.destination);
 
-    // Reverb send — parallel path off preGain, entropy-driven wetness set
-    // each tick in updateMod(). Starts silent; ramped by isOn like
-    // everything else so nothing leaks through when the drone is off.
+    // Reverb send — parallel path off preGain, silent at rest. burst()
+    // (click/tap) swells reverbSend way up and lets it decay back down
+    // over its own tail length, so each click opens into a big wash rather
+    // than being a constant effect.
     var reverbConvolver = ac.createConvolver();
     reverbConvolver.buffer = makeReverbImpulse(ac, 2.5, 2.5);
     reverbSend = ac.createGain();
@@ -4584,9 +4586,9 @@ class Knob {
     reverbConvolver.connect(ac.destination);
 
     // Chorus — a short delay whose time is slowly wobbled by an LFO (the
-    // classic chorus technique), silent at rest. burst() swells chorusWet
-    // briefly on each click/tap and lets it decay back down, so it's heard
-    // as a per-click shimmer rather than a constant effect.
+    // classic chorus technique). Wetness is entropy-driven, set each tick
+    // in updateMod(). Starts silent; ramped by isOn like everything else
+    // so nothing leaks through when the drone is off.
     chorusDelay = ac.createDelay(0.05);
     chorusDelay.delayTime.value = 0.02;
     var chorusLFO = ac.createOscillator();
@@ -4618,10 +4620,10 @@ class Knob {
     gain.gain.setValueAtTime(gain.gain.value, t);
     gain.gain.linearRampToValueAtTime(isOn ? 0.045 * level : 0, t + 0.5);
     if (!isOn) {
-      // updateMod() only raises reverbSend while isOn, and burst() is
-      // guarded the same way — but if either was mid-swell when the drone
-      // was switched off, force them to silence here too rather than
-      // leaving them to decay on their own schedule.
+      // updateMod() only raises chorusWet while isOn, and burst() (which
+      // swells reverbSend) is guarded the same way — but if either was
+      // mid-swell when the drone was switched off, force them to silence
+      // here too rather than leaving them to decay on their own schedule.
       if (reverbSend) {
         reverbSend.gain.cancelScheduledValues(t);
         reverbSend.gain.setValueAtTime(reverbSend.gain.value, t);
@@ -4660,13 +4662,14 @@ class Knob {
   }
 
   // Click/tap reaction: the filter zings open and decays back (chord
-  // stays fixed, unchanged from before), and now the chorus gets a brief
-  // shimmer too — swells in fast, decays back to silent over just over a
-  // second, so each click reads as a small flourish rather than a
-  // continuous effect. Guarded on isOn: both wet sends connect straight to
-  // destination, bypassing the dry path's `gain` node entirely, so without
-  // this guard a click while the drone is off would be audible even though
-  // everything else is silent.
+  // stays fixed, unchanged from before), and now reverb gets a big swell
+  // too — opens in fast, then decays back to silent over REVERB_BURST_DECAY
+  // (matching the generated tail's own length, so it rings fully out
+  // rather than getting cut short), so each click reads as opening into a
+  // wash rather than a continuous effect. Guarded on isOn: both wet sends
+  // connect straight to destination, bypassing the dry path's `gain` node
+  // entirely, so without this guard a click while the drone is off would
+  // be audible even though everything else is silent.
   function burst() {
     if (!ac || !filter) return;
     if (!isOn) return;
@@ -4678,12 +4681,12 @@ class Knob {
     filter.frequency.setValueAtTime(filter.frequency.value, t);
     filter.frequency.linearRampToValueAtTime(1200 + entropy * 150, t + 0.04);
     filter.frequency.exponentialRampToValueAtTime(280, t + 0.7);
-    if (chorusWet) {
-      var chorusPeak = CHORUS_PEAK * level;
-      chorusWet.gain.cancelScheduledValues(t);
-      chorusWet.gain.setValueAtTime(chorusWet.gain.value, t);
-      chorusWet.gain.linearRampToValueAtTime(chorusPeak, t + 0.05);
-      chorusWet.gain.linearRampToValueAtTime(0, t + 1.2);
+    if (reverbSend) {
+      var reverbPeak = REVERB_BURST_PEAK * level;
+      reverbSend.gain.cancelScheduledValues(t);
+      reverbSend.gain.setValueAtTime(reverbSend.gain.value, t);
+      reverbSend.gain.linearRampToValueAtTime(reverbPeak, t + 0.08);
+      reverbSend.gain.linearRampToValueAtTime(0, t + REVERB_BURST_DECAY);
     }
   }
 
