@@ -4433,11 +4433,13 @@ class Knob {
   var REVERB_PEAK  = 0.045 * 1.1; // scaled to the dry chord's own 0.045 ceiling, not raw preGain, which is far louder
   var CHORUS_PEAK  = 0.045 * 1.4; // same reference scale, for the per-click swell
   // A7b5 (A, C#, Eb, G) — root, major 3rd, flat 5, dominant 7th, all within
-  // one octave above the root. Hoisted to closure scope so resetNotes()
+  // one octave above the root. Root at A2, not A0 — A0 (27.5Hz) sits below
+  // what phone speakers can reproduce, so it read as an indistinct rumble
+  // instead of a chord on mobile. Hoisted to closure scope so resetNotes()
   // can snap oscs back to canonical values. No Shepherd tone and no
   // octave-layered "substrate" anymore — both retired, this plain 4-note
   // chord is the whole sound now, one oscillator per note.
-  var freqs = [27.5, 34.6478, 38.8909, 48.9994];
+  var freqs = [110.0000, 138.5913, 155.5635, 195.9977];
   var btn = document.getElementById('droneToggle');
   if (!btn) return;
 
