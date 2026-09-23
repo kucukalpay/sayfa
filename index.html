@@ -4587,8 +4587,12 @@ class Knob {
 
     layerGains.forEach(function(lg) { lg.connect(preGain); });
     oscs.forEach(function(o) { o.start(); });
-    preGain.connect(filter);
-    filter.connect(gain);
+    // Filter bypassed for now, on request, to A/B the raw chord + Shepherd
+    // tone with nothing shaping them. `filter` is still created and still
+    // gets its automation each tick in updateMod() (harmless — it's just
+    // not in the signal path), so re-enabling is a one-line swap back to
+    // `preGain.connect(filter); filter.connect(gain);`.
+    preGain.connect(gain);
     gain.connect(ac.destination);
 
     // Shepherd tone voices — own signal path straight to destination
