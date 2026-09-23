@@ -4431,15 +4431,19 @@ class Knob {
   if (!btn) return;
 
   // ---- Entropy-driven Shepherd tone (see updateShepherd() below for the
-  // per-tick math) — four voices, hoisted here so init() and
-  // updateShepherd() share the same constants. SHEP_ROOT is the chord's
-  // own root (freqs[0], A), three octaves up into a register where the
-  // glide actually reads.
-  var shepherdOscs = null, shepherdGains = null, shepherdMaster = null;
-  var SHEP_ROOT     = freqs[0] * 8; // A3
-  var SHEP_VOICES   = 4;
-  var SHEP_INTERVAL = 10 / 12;      // flat 7th, as a fraction of an octave
-  var SHEP_CYCLE    = 200;          // entropy units per full rotation — measured entropy rarely clears ~4000, so 1000 (max 4 rotations) barely registered
+  // per-tick math) — hoisted here so init() and updateShepherd() share the
+  // same constants. SHEP_ROOT is the chord's own root (freqs[0], A), three
+  // octaves up into a register where the glide actually reads. Two sets of
+  // voices, both starting from that same root: 4 a flat 7th apart, 5 a
+  // flat 5th apart — too few notes was why the Shepherd tone read as a
+  // separate, thinner thing next to the chord instead of blending with it.
+  var shepherdOscs = null, shepherdGains = null, shepherdOffsets = null, shepherdMaster = null;
+  var SHEP_ROOT = freqs[0] * 8; // A3
+  var SHEP_SETS = [
+    { count: 4, interval: 10 / 12 }, // flat 7th
+    { count: 5, interval:  6 / 12 }  // flat 5th
+  ];
+  var SHEP_CYCLE = 200; // entropy units per full rotation — measured entropy rarely clears ~4000, so 1000 (max 4 rotations) barely registered
 
   // Phase 2: modulation state. Pointer position normalized 0..1, gamma-tilt
   // mirrored from a local deviceorientation listener (duplicating the bg
@@ -4463,26 +4467,26 @@ class Knob {
   // instant entropy crosses the next multiple of SHEP_CYCLE, position
   // reverts to 0 and the same climb repeats — so it keeps climbing and
   // rotating indefinitely as entropy grows rather than topping out once.
-  // All four voices ride that same rotation, phase-offset from each other
-  // by a flat 7th's worth of the cycle (matching their pitch spacing, so
-  // the interval and the stagger are the same number), each with a
+  // Every voice from every set in SHEP_SETS rides that same rotation,
+  // each phase-offset from the others by its own set's interval (matching
+  // that set's pitch spacing, so the interval and the stagger are the same
+  // number — see shepherdOffsets, built in init()), each with a
   // sin²-shaped gain envelope that fades it to silence right as it wraps —
   // the classic Shepherd-tone trick: you hear the parts of each voice's
-  // climb that sound like a climb, never the reset, so the four together
-  // read as one endless rise.
+  // climb that sound like a climb, never the reset, so together they read
+  // as one endless rise.
   function updateShepherd(t) {
     if (!shepherdOscs || !shepherdOscs.length) return;
     var fe = window.__fieldEntropy || 0;
     var cyclePos = fe > 0 ? (fe - 1) % SHEP_CYCLE : 0;   // 0..SHEP_CYCLE-1
     var basePos = (cyclePos / SHEP_CYCLE) * 8;           // 0..8
     // Fades the whole voice bank in over the first 5% of a cycle — without
-    // this, voices other than the 0-offset one would sit at a nonzero
-    // phase (and therefore audible) even at zero entropy, since their
-    // offset is fixed regardless of whether there's any entropy to rotate
-    // through yet.
+    // this, voices other than a 0-offset one would sit at a nonzero phase
+    // (and therefore audible) even at zero entropy, since their offset is
+    // fixed regardless of whether there's any entropy to rotate through yet.
     var presence = Math.min(1, fe / (SHEP_CYCLE * 0.05));
     for (var vi = 0; vi < shepherdOscs.length; vi++) {
-      var voicePos = (basePos + vi * SHEP_INTERVAL * 8) % 8;
+      var voicePos = (basePos + shepherdOffsets[vi]) % 8;
       var freq = SHEP_ROOT * Math.pow(2, voicePos / 8);
       var env  = Math.sin(Math.PI * voicePos / 8); // 0 at both wrap edges, 1 mid-cycle
       var o = shepherdOscs[vi], g = shepherdGains[vi];
@@ -4601,29 +4605,32 @@ class Knob {
 
     // Shepherd tone voices — own signal path straight to destination
     // (not through `filter`, which is tuned for the chord and would
-    // unevenly muffle these as they glide through its cutoff). Back to
-    // sine for now, on request, alongside the chord above — see that
-    // comment. (Sawtooth was tried and did help the Shepherd tone compete
-    // with the chord, but for this diagnostic pass both need to be the
-    // same, quieter-by-nature waveform.) Per-voice gain is driven each
-    // tick by updateShepherd(); shepherdMaster is just the overall on/off
-    // + level control.
+    // unevenly muffle these as they glide through its cutoff). Sine, left
+    // untouched from the last pass. Per-voice gain is driven each tick by
+    // updateShepherd(); shepherdMaster is just the overall on/off + level
+    // control. Both SHEP_SETS start from SHEP_ROOT — shepherdOffsets holds
+    // each voice's phase offset (in the same 0..8 units as basePos) so
+    // updateShepherd() can stay a single flat loop over every voice.
     shepherdMaster = ac.createGain();
     shepherdMaster.gain.value = 0;
     shepherdOscs = [];
     shepherdGains = [];
-    for (var si = 0; si < SHEP_VOICES; si++) {
-      var so = ac.createOscillator();
-      so.type = 'sine';
-      so.frequency.value = SHEP_ROOT;
-      var sg = ac.createGain();
-      sg.gain.value = 0;
-      so.connect(sg);
-      sg.connect(shepherdMaster);
-      so.start();
-      shepherdOscs.push(so);
-      shepherdGains.push(sg);
-    }
+    shepherdOffsets = [];
+    SHEP_SETS.forEach(function(set) {
+      for (var vi = 0; vi < set.count; vi++) {
+        var so = ac.createOscillator();
+        so.type = 'sine';
+        so.frequency.value = SHEP_ROOT;
+        var sg = ac.createGain();
+        sg.gain.value = 0;
+        so.connect(sg);
+        sg.connect(shepherdMaster);
+        so.start();
+        shepherdOscs.push(so);
+        shepherdGains.push(sg);
+        shepherdOffsets.push(vi * set.interval * 8);
+      }
+    });
     shepherdMaster.connect(ac.destination);
 
     // Phase 2: 12fps param-update tick. Web Audio handles the actual
