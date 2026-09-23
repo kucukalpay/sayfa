@@ -4430,7 +4430,8 @@ class Knob {
   // updateMod() for the chorus's entropy-driven wetness.
   var reverbSend = null, chorusDelay = null, chorusWet = null;
   var REVERB_BURST_PEAK  = 0.045 * 3;   // "a lot" — a click should feel like it opens into a big wash
-  var REVERB_BURST_DECAY = 2.5;         // seconds — matches the generated IR's own length, so the tail rings fully out
+  var REVERB_BURST_HOLD  = 1;           // seconds spent fully wet before it starts dropping back
+  var REVERB_BURST_DECAY = 2.5;         // seconds the drop-back itself takes, after the hold — matches the generated IR's own length, so the tail rings fully out
   var CHORUS_SCALE = 1500;              // entropy at which wetness saturates (not cyclical — just rises and plateaus)
   var CHORUS_PEAK  = 0.045 * 1.1;       // scaled to the dry chord's own 0.045 ceiling, not raw preGain, which is far louder
   // A7b5 (A, C#, Eb, G) — root, major 3rd, flat 5, dominant 7th, all within
@@ -4701,15 +4702,18 @@ class Knob {
   }
 
   // Click/tap reaction: the filter zings open and decays back (chord
-  // stays fixed, unchanged from before), reverb gets a big swell — opens
-  // in fast, then decays back to silent over REVERB_BURST_DECAY (matching
-  // the generated tail's own length, so it rings fully out rather than
-  // getting cut short) — and a water drop plays into that same swell.
-  // Each click reads as a drop landing and opening into a wash, not a
-  // continuous effect. Guarded on isOn: both wet sends connect straight to
-  // destination, bypassing the dry path's `gain` node entirely, so without
-  // this guard a click while the drone is off would be audible even
-  // though everything else is silent.
+  // stays fixed, unchanged from before); reverb goes full wet almost
+  // instantly, holds there for REVERB_BURST_HOLD (so the water drop below,
+  // whose own life is well under a second, always rings out at full
+  // wetness rather than into an already-fading send), then starts
+  // dropping back toward dry over REVERB_BURST_DECAY (matching the
+  // generated tail's own length, so it rings fully out rather than
+  // getting cut short). Each click reads as a drop landing and opening
+  // into a wash that lingers before fading, not a continuous effect.
+  // Guarded on isOn: both wet sends connect straight to destination,
+  // bypassing the dry path's `gain` node entirely, so without this guard
+  // a click while the drone is off would be audible even though
+  // everything else is silent.
   function burst() {
     if (!ac || !filter) return;
     if (!isOn) return;
@@ -4726,7 +4730,8 @@ class Knob {
       reverbSend.gain.cancelScheduledValues(t);
       reverbSend.gain.setValueAtTime(reverbSend.gain.value, t);
       reverbSend.gain.linearRampToValueAtTime(reverbPeak, t + 0.08);
-      reverbSend.gain.linearRampToValueAtTime(0, t + REVERB_BURST_DECAY);
+      reverbSend.gain.setValueAtTime(reverbPeak, t + REVERB_BURST_HOLD);
+      reverbSend.gain.linearRampToValueAtTime(0, t + REVERB_BURST_HOLD + REVERB_BURST_DECAY);
     }
     waterDrop(t);
   }
