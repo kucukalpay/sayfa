@@ -4422,34 +4422,16 @@ class Knob {
 
 (function droneEngine() {
   var ac = null;
-  var oscs = null, preGain = null, layerGains = null, filter = null, gain = null;
+  var oscs = null, preGain = null, filter = null, gain = null;
   var isOn = false;
-  // A0 / C1 / D1 / F1 / G1 / A#1 — base chord frequencies, hoisted to
-  // closure scope so resetNotes() can snap oscs back to canonical values.
-  var freqs = [27.5, 32.7032, 36.7081, 43.6535, 48.9994, 58.2705];
+  // A7b5 (A, C#, Eb, G) — root, major 3rd, flat 5, dominant 7th, all within
+  // one octave above the root. Hoisted to closure scope so resetNotes()
+  // can snap oscs back to canonical values. No Shepherd tone and no
+  // octave-layered "substrate" anymore — both retired, this plain 4-note
+  // chord is the whole sound now, one oscillator per note.
+  var freqs = [27.5, 34.6478, 38.8909, 48.9994];
   var btn = document.getElementById('droneToggle');
   if (!btn) return;
-
-  // ---- Entropy-driven Shepherd tone (see updateShepherd() below for the
-  // per-tick math) — hoisted here so init() and updateShepherd() share the
-  // same constants.
-  //
-  // A real Shepard tone is N sine voices at the SAME pitch class, each
-  // exactly one octave apart, together spanning the whole stack (here:
-  // A0..A7, freqs[0] times 2^0 through 2^7). They all glide upward in
-  // lockstep and each wraps down an octave when it reaches the top of the
-  // stack; a fixed bell-shaped loudness curve across the stack (quiet at
-  // both ends, loudest in the middle) hides each wrap, so the ear always
-  // has something present near the loud middle and never notices any one
-  // voice resetting. Earlier attempts used chord-style intervals (flat
-  // 7th, flat 5th) between simultaneously-sounding voices instead of
-  // octaves — different pitch classes sounding at once, each sweeping
-  // independently, which is just a dissonant, sirening cluster (the "cars"
-  // sound) and not the illusion at all. This version has one pitch class.
-  var shepherdOscs = null, shepherdGains = null, shepherdMaster = null;
-  var SHEP_BASE   = freqs[0]; // A0 — bottom of the stack
-  var SHEP_VOICES = 8;        // one octave apart -> spans 8 octaves, A0..A7 (centre ~A4/440Hz)
-  var SHEP_CYCLE  = 200;      // entropy units for one voice to glide a full octave
 
   // Phase 2: modulation state. Pointer position normalized 0..1, gamma-tilt
   // mirrored from a local deviceorientation listener (duplicating the bg
@@ -4467,48 +4449,10 @@ class Knob {
     return (p && typeof p.getEntropy === 'function') ? p.getEntropy() : 0;
   }
 
-  // Entropy-driven Shepard glide. `p` is one shared, repeating ramp (0..1,
-  // resets the instant entropy crosses another SHEP_CYCLE) — the position
-  // within a single octave that every voice is currently gliding through.
-  // Voice i (fixed, 0..SHEP_VOICES-1) sits at stack position (i + p), wrapped
-  // into the full 0..SHEP_VOICES stack: as p sweeps 0->1, every voice
-  // glides up exactly one octave, and since their integer offsets are all
-  // exactly 1 apart, they permanently stay exactly one octave apart from
-  // each other too — always consonant (same pitch class), never a cluster.
-  // Loudness is a fixed bell curve over that stack position (0 at both
-  // ends, loudest at the middle, ~A4): as each voice glides through the
-  // loud middle it's what you hear, and by the time it reaches the quiet
-  // top edge and wraps back to the bottom, it's already faded near-silent
-  // — so the wrap itself is never audible, only the continuous rise is.
-  function updateShepherd(t) {
-    if (!shepherdOscs || !shepherdOscs.length) return;
-    var N = shepherdOscs.length;
-    var fe = window.__fieldEntropy || 0;
-    var cyclePos = fe > 0 ? (fe - 1) % SHEP_CYCLE : 0;   // 0..SHEP_CYCLE-1
-    var p = cyclePos / SHEP_CYCLE;                       // 0..1
-    // Fades the whole bank in over the first 5% of a cycle — without this,
-    // every voice except i=0 would sit at a nonzero (and therefore
-    // audible) stack position even at zero entropy.
-    var presence = Math.min(1, fe / (SHEP_CYCLE * 0.05));
-    for (var vi = 0; vi < N; vi++) {
-      var pos  = (vi + p) % N;                    // 0..N — this voice's place in the stack right now
-      var freq = SHEP_BASE * Math.pow(2, pos);
-      var env  = Math.sin(Math.PI * pos / N);      // 0 at both ends of the stack, 1 at the middle
-      var o = shepherdOscs[vi], g = shepherdGains[vi];
-      o.frequency.cancelScheduledValues(t);
-      o.frequency.setValueAtTime(o.frequency.value, t);
-      o.frequency.linearRampToValueAtTime(freq, t + 0.5);
-      g.gain.cancelScheduledValues(t);
-      g.gain.setValueAtTime(g.gain.value, t);
-      g.gain.linearRampToValueAtTime(env * env * 0.5 * presence, t + 0.5);
-    }
-  }
-
   function updateMod() {
     if (!ac || !filter || !oscs || !gain) return;
     if (!isOn) return;
     var t = ac.currentTime;
-    updateShepherd(t);
     var poly = window.__hero && window.__hero.poly;
     var entropy = (poly && poly.getEntropy ? poly.getEntropy() : 0) * 0.1;
     var parting = (poly && poly.getParting ? poly.getParting() : 0) * 0.1;
@@ -4529,8 +4473,8 @@ class Knob {
     filter.Q.cancelScheduledValues(t);
     filter.Q.setValueAtTime(filter.Q.value, t);
     filter.Q.linearRampToValueAtTime(q, t + 0.5);
-    // preGain headroom — divided down by (1 + entropy*K) so the chord/Shepherd
-    // stack auto-attenuates as the line accumulates damage.
+    // preGain headroom — divided down by (1 + entropy*K) so the chord
+    // auto-attenuates as the line accumulates damage.
     if (preGain) {
       var preTarget = 1 / (1 + entropy * K);
       preGain.gain.cancelScheduledValues(t);
@@ -4559,30 +4503,13 @@ class Knob {
     if (!Ctx) return;
     ac = new Ctx();
 
-    // A0 / C1 / D1 / F1 / G1 / A#1 — same pitch classes stacked across three octaves
-    // for a Shepherd-tone substrate. The chord stays on these notes; only
-    // the per-octave amplitudes shift during burst() to fake a continuous rise.
-    // `freqs` is hoisted to closure scope above so resetNotes() can read it.
-    var octaveMults = [1, 2, 4]; // base, +1 oct, +2 oct
-    // Steady-state weights — bell weighted toward the base layer so the drone
-    // sits low until burst sweeps the bell upward.
-    var baselineWeights = [1.0, 0.5, 0.25];
-    oscs = [];
-    layerGains = octaveMults.map(function(mult, i) {
-      var lg = ac.createGain();
-      lg.gain.value = baselineWeights[i];
-      freqs.forEach(function(f) {
-        var o = ac.createOscillator();
-        // Sine for now, on request — a diagnostic pass: if the mix still
-        // has any sawtooth-ish edge to it with both this chord and the
-        // Shepherd bank (below) on sine, that edge isn't coming from
-        // either of them.
-        o.type = 'sine';
-        o.frequency.value = f * mult;
-        o.connect(lg);
-        oscs.push(o);
-      });
-      return lg;
+    // One oscillator per chord tone. `freqs` is hoisted to closure scope
+    // above so resetNotes() can read it.
+    oscs = freqs.map(function(f) {
+      var o = ac.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f;
+      return o;
     });
 
     filter = ac.createBiquadFilter();
@@ -4590,48 +4517,20 @@ class Knob {
     filter.frequency.value = 280;
     filter.Q.value = 4;
 
-    // Per-osc gain stage so combined sum doesn't clip; sawtooths are louder
-    // than sines, and we now have 12 of them across 3 octave layers.
     preGain = ac.createGain();
     preGain.gain.value = 1;
 
     gain = ac.createGain();
     gain.gain.value = 0;
 
-    layerGains.forEach(function(lg) { lg.connect(preGain); });
-    oscs.forEach(function(o) { o.start(); });
-    // Filter bypassed for now, on request, to A/B the raw chord + Shepherd
-    // tone with nothing shaping them. `filter` is still created and still
-    // gets its automation each tick in updateMod() (harmless — it's just
-    // not in the signal path), so re-enabling is a one-line swap back to
+    oscs.forEach(function(o) { o.connect(preGain); o.start(); });
+    // Filter bypassed for now, on request, to hear the chord plain.
+    // `filter` is still created and still gets its automation each tick in
+    // updateMod() (harmless — it's just not in the signal path), so
+    // re-enabling is a one-line swap back to
     // `preGain.connect(filter); filter.connect(gain);`.
     preGain.connect(gain);
     gain.connect(ac.destination);
-
-    // Shepherd tone voices — own signal path straight to destination
-    // (not through `filter`, which is tuned for the chord and would
-    // unevenly muffle these as they glide through its cutoff). Sine, left
-    // untouched from the last pass. Each voice i starts at SHEP_BASE*2^i —
-    // exactly one octave above the previous — updateShepherd() then glides
-    // and re-loudnesses them every tick; shepherdMaster is just the
-    // overall on/off + level control.
-    shepherdMaster = ac.createGain();
-    shepherdMaster.gain.value = 0;
-    shepherdOscs = [];
-    shepherdGains = [];
-    for (var si = 0; si < SHEP_VOICES; si++) {
-      var so = ac.createOscillator();
-      so.type = 'sine';
-      so.frequency.value = SHEP_BASE * Math.pow(2, si);
-      var sg = ac.createGain();
-      sg.gain.value = 0;
-      so.connect(sg);
-      sg.connect(shepherdMaster);
-      so.start();
-      shepherdOscs.push(so);
-      shepherdGains.push(sg);
-    }
-    shepherdMaster.connect(ac.destination);
 
     // Phase 2: 12fps param-update tick. Web Audio handles the actual
     // smoothing via linearRampToValueAtTime, so 80ms is plenty.
@@ -4647,11 +4546,6 @@ class Knob {
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(gain.gain.value, t);
     gain.gain.linearRampToValueAtTime(isOn ? 0.045 * level : 0, t + 0.5);
-    if (shepherdMaster) {
-      shepherdMaster.gain.cancelScheduledValues(t);
-      shepherdMaster.gain.setValueAtTime(shepherdMaster.gain.value, t);
-      shepherdMaster.gain.linearRampToValueAtTime(isOn ? 0.05 * level : 0, t + 0.5);
-    }
     btn.textContent = 'DRONE · ' + (isOn ? 'ON' : 'OFF');
     btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
   }
@@ -4663,11 +4557,6 @@ class Knob {
       gain.gain.cancelScheduledValues(t);
       gain.gain.setValueAtTime(gain.gain.value, t);
       gain.gain.linearRampToValueAtTime(0.045 * level, t + 0.2);
-      if (shepherdMaster) {
-        shepherdMaster.gain.cancelScheduledValues(t);
-        shepherdMaster.gain.setValueAtTime(shepherdMaster.gain.value, t);
-        shepherdMaster.gain.linearRampToValueAtTime(0.05 * level, t + 0.2);
-      }
     }
   }
 
@@ -4683,10 +4572,9 @@ class Knob {
     }
   }
 
-  // Click/tap reaction lives on the filter alone now — the chord (pitch
-  // and its three octave-layer gains) stays fixed at whatever init()/
-  // resetNotes() put it at; it no longer bends or sweeps per click. Only
-  // the lowpass zings open and decays back, same shape as before.
+  // Click/tap reaction lives on the filter alone — the chord stays fixed
+  // at whatever init()/resetNotes() put it at; it no longer bends per
+  // click. Only the lowpass zings open and decays back.
   function burst() {
     if (!ac || !filter) return;
     var t = ac.currentTime;
