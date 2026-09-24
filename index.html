@@ -1421,43 +1421,87 @@
      Each major section is a card on the page; clicking opens a fullscreen
      modal containing the full functional UI. */
 
-  /* Magnetic stations: plain native scroll, still one vertical order, but
-     each card sits at its own width and horizontal anchor (--w = width,
-     --x = 0 left .. 1 right) with generous gaps. The cardFieldSources
-     script adds a small scroll-driven sideways drift (--dx) — never any
-     vertical movement, hijacking or snapping. */
+  /* Work as a network. Still plain native scroll, but the cards are nodes
+     placed by how related they are (--x/--y = node centre in % of the
+     stage) and the relationships are drawn as labelled edges. Circuits
+     (pedals, stray voltage, synths), procedural/3D, music and photography
+     form clusters that reach into each other. The edge layer is built by
+     the workGraph script from real node positions, on load/resize only. */
   .card-streams {
     position: relative;
     z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 18vh;
-    padding: 80px 20px 18vh;
+    height: 2900px;
+    margin: 0 auto;
+    max-width: 1500px;
   }
   .section-shell {
-    --w: 56%; --x: 0.5; --dx: 0px;
+    --x: 50; --y: 50; --w: 25%;
+    position: absolute;
+    left: calc(var(--x) * 1%);
+    top: calc(var(--y) * 1%);
     width: var(--w);
-    max-width: 860px;
-    margin-left: calc((100% - var(--w)) * var(--x));
-    transform: translate3d(var(--dx), 0, 0);
-    will-change: transform;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    transition: opacity 300ms;
   }
-  .section-shell:nth-of-type(9n+1) { --w: 62%; --x: 0.04; }
-  .section-shell:nth-of-type(9n+2) { --w: 42%; --x: 0.96; }
-  .section-shell:nth-of-type(9n+3) { --w: 50%; --x: 0.5; }
-  .section-shell:nth-of-type(9n+4) { --w: 40%; --x: 0.14; }
-  .section-shell:nth-of-type(9n+5) { --w: 66%; --x: 0.92; }
-  .section-shell:nth-of-type(9n+6) { --w: 46%; --x: 0.58; }
-  .section-shell:nth-of-type(9n+7) { --w: 58%; --x: 0.06; }
-  .section-shell:nth-of-type(9n+8) { --w: 40%; --x: 0.88; }
-  .section-shell:nth-of-type(9n+9) { --w: 52%; --x: 0.42; }
+  #pedals        { --x: 17; --y: 10; }
+  #stray-voltage { --x: 15; --y: 26; --w: 22%; }
+  #synths        { --x: 49; --y: 17; --w: 27%; }
+  #procedural    { --x: 83; --y: 22; }
+  #three-d       { --x: 82; --y: 48; }
+  #music         { --x: 22; --y: 46; }
+  #loops         { --x: 48; --y: 55; --w: 22%; }
+  #tracks        { --x: 27; --y: 74; }
+  #photography   { --x: 67; --y: 79; }
+
+  .graph-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .graph-layer svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .graph-edge {
+    fill: none;
+    stroke: rgba(196,98,71,0.28);
+    stroke-width: 1;
+    stroke-dasharray: 2 5;
+    transition: stroke 300ms, stroke-width 300ms;
+  }
+  .graph-edge.on { stroke: rgba(196,98,71,0.95); stroke-width: 1.6; stroke-dasharray: none; }
+  .graph-label {
+    position: absolute;
+    z-index: 3;
+    transform: translate(-50%, -50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 2px 8px;
+    color: rgba(196,98,71,0.55);
+    background: rgba(10,10,12,0.85);
+    transition: color 300ms;
+  }
+  .graph-label.on { color: #c46247; }
+  .card-streams.has-focus .section-shell { opacity: 0.35; }
+  .card-streams.has-focus .section-shell.is-linked { opacity: 1; }
+  .card-streams.has-focus .graph-edge:not(.on) { stroke: rgba(196,98,71,0.08); }
+  .card-streams.has-focus .graph-label:not(.on) { color: rgba(196,98,71,0.15); }
+
+  /* Phones: one zig-zag column, same graph, edges redrawn to match. */
   @media (max-width: 900px) {
-    .section-shell:nth-of-type(n) { --w: 78%; }
-  }
-  @media (max-width: 560px) {
-    .card-streams { gap: 12vh; padding-left: 14px; padding-right: 14px; }
-    .section-shell:nth-of-type(n) { --w: 84%; }
+    .card-streams { height: 4900px; }
+    #workStreams .section-shell { --w: 64%; }
+    #workStreams #pedals        { --x: 36; --y: 5; }
+    #workStreams #stray-voltage { --x: 64; --y: 16; }
+    #workStreams #synths        { --x: 36; --y: 27; }
+    #workStreams #procedural    { --x: 64; --y: 38; }
+    #workStreams #three-d       { --x: 36; --y: 49; }
+    #workStreams #photography   { --x: 64; --y: 60; }
+    #workStreams #tracks        { --x: 36; --y: 71; }
+    #workStreams #loops         { --x: 64; --y: 82; }
+    #workStreams #music         { --x: 36; --y: 93; }
+    .graph-label { font-size: 0.6rem; padding: 1px 5px; }
   }
   .section-card {
     margin: 0;
@@ -2590,22 +2634,12 @@
 
   function publishFieldSources() {
     var sources = [];
-    var vh = window.innerHeight, drift = window.innerWidth * 0.05;
-    var dxs = new Array(allEls.length);
-    // Read all rects first, then write transforms (no read/write mixing).
     for (var i = 0; i < allEls.length; i++) {
       var r = allEls[i].getBoundingClientRect();
-      if (r.bottom > 0 && r.top < vh) {
+      if (r.bottom > 0 && r.top < window.innerHeight) {
         sources.push({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
       }
-      // Sideways only: enters from its own edge, settles at mid-screen,
-      // then leaves toward the opposite side.
-      var p = ((r.top + r.height / 2) / vh - 0.5) * 2;
-      p = p < -1 ? -1 : p > 1 ? 1 : p;
-      var side = (i % 9) % 2 === 0 ? -1 : 1;
-      dxs[i] = (side * drift * p).toFixed(1) + 'px';
     }
-    for (var j = 0; j < allEls.length; j++) allEls[j].style.setProperty('--dx', dxs[j]);
     window.__fieldCardSources = sources;
     if (window.__fieldEnsureLoop) window.__fieldEnsureLoop();
   }
@@ -2624,6 +2658,129 @@
   window.addEventListener('scroll', onScrollOrResize, { passive: true });
   window.addEventListener('resize', onScrollOrResize);
   publishFieldSources();
+})();
+
+/* ============================================================
+   WORK GRAPH
+   The work cards are nodes of one network; this draws the edges between
+   them (an SVG curve plus a label per relationship) from the nodes' real
+   positions, so the same code serves the desktop and phone layouts. It
+   runs on load/resize only — nothing here happens on scroll. Hovering or
+   focusing a node lights up its edges and the nodes it connects to.
+   ============================================================ */
+(function workGraph() {
+  'use strict';
+  var stage = document.getElementById('workStreams');
+  if (!stage) return;
+  var EDGES = [
+    ['pedals',        'stray-voltage', 'same bench'],
+    ['pedals',        'synths',        'circuits'],
+    ['stray-voltage', 'synths',        'signal path'],
+    ['synths',        'procedural',    'patching = node graphs'],
+    ['procedural',    'three-d',       'Houdini'],
+    ['synths',        'music',         'sound source'],
+    ['music',         'loops',         'material'],
+    ['loops',         'tracks',        'arrangement'],
+    ['tracks',        'photography',   'artistic endeavour'],
+    ['photography',   'three-d',       'image craft'],
+    ['tracks',        'three-d',       'art × technique']
+  ];
+  var NS = 'http://www.w3.org/2000/svg';
+  var layer = document.createElement('div');
+  layer.className = 'graph-layer';
+  layer.setAttribute('aria-hidden', 'true');
+  var svg = document.createElementNS(NS, 'svg');
+  layer.appendChild(svg);
+  stage.insertBefore(layer, stage.firstChild);
+
+  var nodes = {}, paths = [], labels = [];
+  EDGES.forEach(function(e) {
+    var a = document.getElementById(e[0]), b = document.getElementById(e[1]);
+    if (!a || !b) return;
+    nodes[e[0]] = a; nodes[e[1]] = b;
+    var p = document.createElementNS(NS, 'path');
+    p.setAttribute('class', 'graph-edge');
+    svg.appendChild(p);
+    var l = document.createElement('span');
+    l.className = 'graph-label';
+    l.textContent = e[2];
+    layer.appendChild(l);
+    paths.push(p); labels.push(l);
+  });
+
+  function center(el) {
+    return { x: el.offsetLeft, y: el.offsetTop }; // nodes are centred on left/top
+  }
+
+  // Nodes are centred on their left/top, so their boxes are easy to test.
+  function coveredByNode(x, y) {
+    for (var id in nodes) {
+      var n = nodes[id];
+      if (Math.abs(x - n.offsetLeft) < n.offsetWidth / 2 + 70 &&
+          Math.abs(y - n.offsetTop) < n.offsetHeight / 2 + 14) return true;
+    }
+    return false;
+  }
+
+  function layout() {
+    EDGES.forEach(function(e, i) {
+      var a = nodes[e[0]], b = nodes[e[1]];
+      if (!a || !b) return;
+      var pa = center(a), pb = center(b);
+      var mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
+      var dx = pb.x - pa.x, dy = pb.y - pa.y;
+      var len = Math.sqrt(dx * dx + dy * dy) || 1;
+      // Bow each edge sideways a little so parallel links don't overlap.
+      var bow = (i % 2 ? 1 : -1) * Math.min(90, len * 0.12);
+      var cx = mx - dy / len * bow, cy = my + dx / len * bow;
+      paths[i].setAttribute('d', 'M' + pa.x + ' ' + pa.y + ' Q' + cx + ' ' + cy + ' ' + pb.x + ' ' + pb.y);
+      // Label sits at the first point along the curve (from the middle
+      // outward) that isn't hidden behind a card.
+      var ts = [0.5, 0.42, 0.58, 0.35, 0.65, 0.28, 0.72, 0.22, 0.78], lx = 0, ly = 0;
+      for (var k = 0; k < ts.length; k++) {
+        var t = ts[k], u = 1 - t;
+        lx = u * u * pa.x + 2 * u * t * cx + t * t * pb.x;
+        ly = u * u * pa.y + 2 * u * t * cy + t * t * pb.y;
+        if (!coveredByNode(lx, ly)) break;
+      }
+      labels[i].style.left = lx + 'px';
+      labels[i].style.top  = ly + 'px';
+    });
+  }
+
+  function focusNode(id) {
+    var linked = {};
+    linked[id] = true;
+    EDGES.forEach(function(e, i) {
+      var hit = e[0] === id || e[1] === id;
+      if (hit) { linked[e[0]] = true; linked[e[1]] = true; }
+      if (paths[i]) {
+        paths[i].classList.toggle('on', hit);
+        labels[i].classList.toggle('on', hit);
+      }
+    });
+    stage.classList.add('has-focus');
+    Object.keys(nodes).forEach(function(k) {
+      nodes[k].classList.toggle('is-linked', !!linked[k]);
+    });
+  }
+  function clearFocus() {
+    stage.classList.remove('has-focus');
+    paths.forEach(function(p) { p.classList.remove('on'); });
+    labels.forEach(function(l) { l.classList.remove('on'); });
+    Object.keys(nodes).forEach(function(k) { nodes[k].classList.remove('is-linked'); });
+  }
+  Object.keys(nodes).forEach(function(id) {
+    var el = nodes[id];
+    el.addEventListener('mouseenter', function() { focusNode(id); });
+    el.addEventListener('mouseleave', clearFocus);
+    el.addEventListener('focusin', function() { focusNode(id); });
+    el.addEventListener('focusout', clearFocus);
+  });
+
+  layout();
+  window.addEventListener('resize', layout);
+  window.addEventListener('load', layout); // images can settle card sizes
 })();
 </script>
 
