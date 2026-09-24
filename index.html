@@ -1421,19 +1421,46 @@
      Each major section is a card on the page; clicking opens a fullscreen
      modal containing the full functional UI. */
 
-  /* One centered column of cards, plain native scroll. */
+  /* Magnetic stations: plain native scroll, still one vertical order, but
+     each card sits at its own width and horizontal anchor (--w = width,
+     --x = 0 left .. 1 right) with generous gaps. The cardFieldSources
+     script adds a small scroll-driven sideways drift (--dx) — never any
+     vertical movement, hijacking or snapping. */
   .card-streams {
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 40px;
-    padding: 80px 20px;
+    align-items: flex-start;
+    gap: 18vh;
+    padding: 80px 20px 18vh;
+  }
+  .section-shell {
+    --w: 56%; --x: 0.5; --dx: 0px;
+    width: var(--w);
+    max-width: 860px;
+    margin-left: calc((100% - var(--w)) * var(--x));
+    transform: translate3d(var(--dx), 0, 0);
+    will-change: transform;
+  }
+  .section-shell:nth-of-type(9n+1) { --w: 62%; --x: 0.04; }
+  .section-shell:nth-of-type(9n+2) { --w: 42%; --x: 0.96; }
+  .section-shell:nth-of-type(9n+3) { --w: 50%; --x: 0.5; }
+  .section-shell:nth-of-type(9n+4) { --w: 40%; --x: 0.14; }
+  .section-shell:nth-of-type(9n+5) { --w: 66%; --x: 0.92; }
+  .section-shell:nth-of-type(9n+6) { --w: 46%; --x: 0.58; }
+  .section-shell:nth-of-type(9n+7) { --w: 58%; --x: 0.06; }
+  .section-shell:nth-of-type(9n+8) { --w: 40%; --x: 0.88; }
+  .section-shell:nth-of-type(9n+9) { --w: 52%; --x: 0.42; }
+  @media (max-width: 900px) {
+    .section-shell:nth-of-type(n) { --w: 78%; }
+  }
+  @media (max-width: 560px) {
+    .card-streams { gap: 12vh; padding-left: 14px; padding-right: 14px; }
+    .section-shell:nth-of-type(n) { --w: 84%; }
   }
   .section-card {
-    max-width: 720px;
-    margin: 0 auto;
+    margin: 0;
     position: relative;
     background: rgba(17, 17, 20, 0.55);
     border-radius: 2px;
@@ -2563,12 +2590,22 @@
 
   function publishFieldSources() {
     var sources = [];
+    var vh = window.innerHeight, drift = window.innerWidth * 0.05;
+    var dxs = new Array(allEls.length);
+    // Read all rects first, then write transforms (no read/write mixing).
     for (var i = 0; i < allEls.length; i++) {
       var r = allEls[i].getBoundingClientRect();
-      if (r.bottom > 0 && r.top < window.innerHeight) {
+      if (r.bottom > 0 && r.top < vh) {
         sources.push({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
       }
+      // Sideways only: enters from its own edge, settles at mid-screen,
+      // then leaves toward the opposite side.
+      var p = ((r.top + r.height / 2) / vh - 0.5) * 2;
+      p = p < -1 ? -1 : p > 1 ? 1 : p;
+      var side = (i % 9) % 2 === 0 ? -1 : 1;
+      dxs[i] = (side * drift * p).toFixed(1) + 'px';
     }
+    for (var j = 0; j < allEls.length; j++) allEls[j].style.setProperty('--dx', dxs[j]);
     window.__fieldCardSources = sources;
     if (window.__fieldEnsureLoop) window.__fieldEnsureLoop();
   }
