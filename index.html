@@ -4785,99 +4785,116 @@ class Knob {
 
 <script>
 /* ============================================================
-   MAGNETIC FIELD LAYER
-   Grid of dashes aligned to the summed field of three sources:
+   MAGNETIC FIELD LAYER — a fake field, on purpose
+   Nobody can tell a faint background dash field from real physics, so
+   this does the cheapest thing that still reads as a magnetic field:
 
-     1. A dipole centred on the last place you touched/moved the
-        mouse. It sticks there — never drifts on its own — so the
-        shape persists after you lift your finger, and the render
-        loop stops once the spring settles (nothing animates
-        without live input, which is also why this is trivially
-        fine under prefers-reduced-motion).
-     2. The WORKS/HOME button (window.__fieldMagnet, published by
-        magButton()): its first letter is the N pole, its last the S
-        pole, at exactly the pointer's reach and strength.
-     3. Every currently-visible card from cardFieldSources(), read
-        each frame from window.__fieldCardSources — card screen
-        position → field calculation → this rendering. Each card is
-        its own small dipole, same physics as the pointer. One-way:
-        the field reacts to the cards, the cards never react to the
-        field.
+     - Sources: the pointer (a dipole that keeps its last position and
+       tracks its movement direction), the WORKS/HOME button
+       (window.__fieldMagnet: first letter N pole, last letter S pole,
+       same reach and strength as the pointer), and every visible card
+       (window.__fieldCardSources, small horizontal dipoles). One-way:
+       the field reacts to them, nothing flows back.
+     - Per dash, only the STRONGEST nearby source counts (no vector
+       summing across sources). Its direction is the closed-form 2D
+       dipole field angle, 2*phi - axis, where phi is the dash's angle
+       around that source — one atan2 (a polynomial approximation, no
+       trig call) instead of pole-pair vector math and a final atan2.
+     - Each dash keeps angular inertia: a spring + damping toward that
+       direction, so it still overshoots slightly and settles.
 
-   Each dash has angular inertia — spring + damping toward whatever
-   direction the combined field points at its cell.
+   What actually costs GPU/CPU, and what was done about it:
+     - strokes are batched into NB alpha buckets, one Path2D + one
+       stroke() per bucket, instead of one stroke() per dash (was ~2400
+       per frame);
+     - capped at ~30fps — the spring reads the same at half the frames;
+     - canvas at 1x pixel ratio (was up to 1.5x, ~2.25x the pixels for
+       a full-screen layer of faint 1px lines);
+     - coarser grid (40px, 34px on phones; was 30px) — dash length
+       scales with it;
+     - squared-distance early-outs, so sqrt only runs inside a
+       source's reach.
+   The loop still stops itself once every spring has settled.
 
-   Each frame also derives an entropy value from the resulting angles
-   — the sum of each rod's absolute deviation from the field's own
-   circular mean, so it's zero whenever every rod agrees on a
-   direction (any direction) and grows with how much they disagree —
-   and publishes it to window.__fieldEntropy and the top-left HUD
-   (#entropyValue). It's a raw sum over every grid cell, so its scale
-   depends on viewport size (more cells, larger number) — fine for a
-   HUD reading, but not something to feed into anything calibrated to
-   a specific range without rescaling. (droneEngine()'s getEntropy()
-   already reads a different, always-zero window.__hero.poly stub —
-   left untouched here, since wiring it to this raw sum would blow out
-   its filter/gain formulas, which expect a small bounded number.)
+   Each frame also derives an entropy value from the dash angles — the
+   sum of each dash's absolute deviation from the field's own circular
+   mean, so it is zero whenever every dash agrees on a direction (any
+   direction) and grows with how much they disagree — and publishes it
+   to window.__fieldEntropy and the top-left HUD (#entropyValue). It is
+   scaled by (STEP/30)^2 so its magnitude stays comparable to what the
+   old 30px grid produced (the drone's chorus mapping is tuned to that);
+   without it a coarser grid would just report smaller numbers.
    ============================================================ */
 (function magneticFieldLayer() {
   'use strict';
   var canvas = document.getElementById('field-canvas');
   if (!canvas) return;
   var ctx = canvas.getContext('2d');
-  var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   var W = 0, H = 0;
   var entropyEl = document.getElementById('entropyValue');
+  var PI = Math.PI, TAU = 2 * Math.PI;
 
-  var STEP = 30;   // grid spacing px
-  var HALF = 9;    // half-length of each dash
-  var DIPOLE = 65; // half-separation between N and S poles
-  var REACH  = 400; // pointer influence radius
-  var CARD_DIPOLE = 30;  // each card is a small dipole too — same physics as the pointer, smaller scale
-  var CARD_REACH  = 180; // per-card influence radius — local, so field lines gather around each card rather than washing over the whole grid
+  var STEP = 40;   // grid spacing px — set in resize()
+  var HALF = 12;   // half-length of each dash — set in resize()
+  var REACH = 400;      // pointer / WORKS-HOME influence radius
+  var CARD_REACH = 180; // per-card influence radius
+  var entropyScale = 1;
 
-  var cols, rows, angles, angVels;
+  var cols = 0, rows = 0, angles, angVels;
 
-  // Precomputed palette: index = Math.round(alpha * 100), alpha 0..0.31
+  // NB alpha buckets: 0 is the faint always-on baseline, 1..NB-1 span the
+  // bloom near a source. Same alpha range as before (0.025 .. ~0.3).
+  var NB = 13;
   var PAL = [];
-  for (var pi = 0; pi < 32; pi++) {
-    PAL[pi] = 'rgba(196,98,71,' + (pi * 0.01).toFixed(2) + ')';
+  for (var pb = 0; pb < NB; pb++) {
+    var pa = pb === 0 ? 0.025 : 0.025 + ((pb - 0.5) / (NB - 1)) * 0.29;
+    PAL.push('rgba(196,98,71,' + pa.toFixed(3) + ')');
+  }
+
+  // Polynomial atan2 (max error ~1e-4 rad) — plenty for a dash angle.
+  function fastAtan2(y, x) {
+    var ax = x < 0 ? -x : x, ay = y < 0 ? -y : y;
+    var mx = ax > ay ? ax : ay, mn = ax > ay ? ay : ax;
+    var a = mn / (mx || 1);
+    var s = a * a;
+    var r = ((-0.0464964749 * s + 0.15931422) * s - 0.327622764) * s * a + a;
+    if (ay > ax) r = 1.57079637 - r;
+    if (x < 0) r = 3.14159274 - r;
+    if (y < 0) r = -r;
+    return r;
   }
 
   function resize() {
     W = window.innerWidth;
     H = window.innerHeight;
-    canvas.width  = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
+    if (canvas.width  !== W) canvas.width  = W;
+    if (canvas.height !== H) canvas.height = H;
     canvas.style.width  = W + 'px';
     canvas.style.height = H + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    STEP = W < 700 ? 34 : 40;
+    HALF = Math.round(STEP * 0.3);
+    entropyScale = (STEP / 30) * (STEP / 30);
 
     var newCols = Math.ceil(W / STEP) + 2;
     var newRows = Math.ceil(H / STEP) + 2;
-    // Mobile browsers fire `resize` constantly while scrolling — the
-    // address bar collapses/expands and window.innerHeight changes with
-    // it — so this runs far more often than an actual orientation change.
-    // Bail out (keep the existing angles/angVels untouched) whenever the
-    // grid didn't actually change shape; only real size changes get here.
+    // Mobile browsers fire `resize` constantly while scrolling (the
+    // address bar collapses/expands and innerHeight changes), so bail out
+    // without touching state whenever the grid didn't change shape...
     if (newCols === cols && newRows === rows) return;
 
     var newAngles  = new Float32Array(newCols * newRows);
     var newAngVels = new Float32Array(newCols * newRows);
     if (angles) {
-      // Carry over whatever overlaps instead of zeroing everything — the
-      // old code reallocated unconditionally, which snapped the whole
-      // field back to flat (and window.__fieldEntropy to 0, since it's
-      // derived from these same angles — audibly killing the drone's
-      // reverb) on every one of those address-bar-driven resizes.
+      // ...and when it did, carry the overlap over instead of zeroing —
+      // zeroing snapped the field flat and window.__fieldEntropy to 0
+      // (audibly cutting the drone's chorus) on every address-bar resize.
       var copyRows = Math.min(rows, newRows);
       var copyCols = Math.min(cols, newCols);
       for (var r = 0; r < copyRows; r++) {
         for (var c = 0; c < copyCols; c++) {
-          var oldIdx = r * cols + c;
-          var newIdx = r * newCols + c;
-          newAngles[newIdx]  = angles[oldIdx];
-          newAngVels[newIdx] = angVels[oldIdx];
+          newAngles[r * newCols + c]  = angles[r * cols + c];
+          newAngVels[r * newCols + c] = angVels[r * cols + c];
         }
       }
     }
@@ -4899,9 +4916,7 @@ class Knob {
     var dx = mx - prevMx, dy = my - prevMy;
     if (prevMx > -9000 && dx * dx + dy * dy > 9) dipTarget = Math.atan2(dy, dx);
     prevMx = mx; prevMy = my;
-    // The render loop stops itself once the spring settles (see frame()
-    // below) — a fresh move needs to restart it.
-    ensureLoop();
+    ensureLoop(); // the loop stops itself once settled — a move restarts it
   }
 
   window.addEventListener('mousemove', function(e) { onPointer(e.clientX, e.clientY); });
@@ -4909,162 +4924,111 @@ class Knob {
     var t = e.touches[0]; if (t) onPointer(t.clientX, t.clientY);
   }, { passive: true });
 
-  // Raw dipole field vector at (gx,gy) given two poles — kept as a vector
-  // (not atan2'd yet) so per-cell it can be summed with the card sources'
-  // vectors below before taking one final angle.
-  function dipoleVector(gx, gy, npx, npy, spx, spy) {
-    var dx1 = gx - npx, dy1 = gy - npy;
-    var dx2 = gx - spx, dy2 = gy - spy;
-    var r1sq = dx1*dx1 + dy1*dy1 || 1;
-    var r2sq = dx2*dx2 + dy2*dy2 || 1;
-    var r1 = Math.sqrt(r1sq), r2 = Math.sqrt(r2sq);
-    return {
-      x: dx1 / (r1 * r1sq) - dx2 / (r2 * r2sq),
-      y: dy1 / (r1 * r1sq) - dy2 / (r2 * r2sq)
-    };
-  }
+  // Per-frame source table (reused, no allocation): x, y, dipole axis,
+  // reach and reach^2.
+  var MAXS = 24;
+  var SX = new Float32Array(MAXS), SY = new Float32Array(MAXS), SA = new Float32Array(MAXS);
+  var SR = new Float32Array(MAXS), SR2 = new Float32Array(MAXS);
 
-  var lastT = 0;
+  var lastDraw = 0, lastShown = -1;
   function frame(t) {
-    var dt = Math.min((t - lastT) * 0.001, 0.05);
-    lastT = t;
+    if (t - lastDraw < 30) { requestAnimationFrame(frame); return; } // ~30fps cap
+    var dt = Math.min((t - lastDraw) * 0.001, 0.05);
+    lastDraw = t;
 
-    // Smooth dipole axis toward movement direction
+    // Smooth the pointer dipole's axis toward its movement direction.
     var da = dipTarget - dipAngle;
-    if (da >  Math.PI) da -= 2 * Math.PI;
-    if (da < -Math.PI) da += 2 * Math.PI;
+    da -= TAU * Math.round(da / TAU);
     dipAngle += da * Math.min(1, 4 * dt);
+
+    var n = 0;
+    if (mx > -9000) { SX[n] = mx; SY[n] = my; SA[n] = dipAngle; SR[n] = REACH; n++; }
+    var mag = window.__fieldMagnet;
+    if (mag) {
+      SX[n] = (mag.nx + mag.sx) * 0.5; SY[n] = (mag.ny + mag.sy) * 0.5;
+      SA[n] = Math.atan2(mag.sy - mag.ny, mag.sx - mag.nx);
+      SR[n] = REACH; n++;
+    }
+    var cards = window.__fieldCardSources || [];
+    for (var ci = 0; ci < cards.length && n < MAXS; ci++) {
+      SX[n] = cards[ci].x; SY[n] = cards[ci].y; SA[n] = 0; SR[n] = CARD_REACH; n++;
+    }
+    for (var si = 0; si < n; si++) SR2[si] = SR[si] * SR[si];
+
+    var bleed = Math.max(0, 1 - 8 * dt);
+    var paths = new Array(NB);
+    var stillMoving = false;
+    var sumSin = 0, sumCos = 0;
+
+    for (var r = 0; r < rows; r++) {
+      var gy = (r + 0.5) * STEP;
+      for (var c = 0; c < cols; c++) {
+        var gx  = (c + 0.5) * STEP;
+        var idx = r * cols + c;
+
+        // Strongest source in reach wins; falloff is (1 - d/reach)^2.
+        var best = 0, bdx = 0, bdy = 0, bax = 0;
+        for (var s = 0; s < n; s++) {
+          var dx = gx - SX[s], dy = gy - SY[s];
+          var d2 = dx * dx + dy * dy;
+          if (d2 < SR2[s]) {
+            var k = 1 - Math.sqrt(d2) / SR[s];
+            k *= k;
+            if (k > best) { best = k; bdx = dx; bdy = dy; bax = SA[s]; }
+          }
+        }
+
+        var ang = angles[idx];
+        var av  = angVels[idx];
+        if (best > 4e-4) {
+          var diff = 2 * fastAtan2(bdy, bdx) - bax - ang; // 2D dipole direction
+          diff -= TAU * Math.round(diff / TAU);
+          // spring k=9*infl, damping=3.5 — underdamped, slight overshoot
+          av += (9 * best * diff - 3.5 * av) * dt;
+        } else {
+          av *= bleed; // out of reach: velocity dies, the angle is held
+        }
+        ang += av * dt;
+        if (ang > PI) ang -= TAU; else if (ang < -PI) ang += TAU;
+        angles[idx]  = ang;
+        angVels[idx] = av;
+        if (av > 1e-3 || av < -1e-3) stillMoving = true;
+
+        var cs = Math.cos(ang), sn = Math.sin(ang);
+        sumCos += cs; sumSin += sn;
+
+        var bk = best < 0.004 ? 0 : 1 + Math.min(NB - 2, (best * (NB - 1)) | 0);
+        var p = paths[bk] || (paths[bk] = new Path2D());
+        var hx = cs * HALF, hy = sn * HALF;
+        p.moveTo(gx - hx, gy - hy);
+        p.lineTo(gx + hx, gy + hy);
+      }
+    }
 
     ctx.clearRect(0, 0, W, H);
     ctx.lineWidth = 1;
     ctx.lineCap = 'round';
-
-    var ax = mx, ay = my; // last known touch/mouse — stays fixed once set
-
-    var cdA = Math.cos(dipAngle), sdA = Math.sin(dipAngle);
-    var npx = ax + cdA * DIPOLE, npy = ay + sdA * DIPOLE;
-    var spx = ax - cdA * DIPOLE, spy = ay - sdA * DIPOLE;
-
-    // Cards feed the field, never the other way round — this is the only
-    // place their positions are read, and nothing here writes anything
-    // back to them.
-    var cardSources = window.__fieldCardSources || [];
-
-    // WORKS/HOME magnet. Its poles (two letters) sit closer together than
-    // the pointer's, and a dipole's strength scales with pole separation —
-    // so scale it up to the pointer's dipole moment, making it genuinely
-    // as strong as the pointer rather than weaker by accident of font size.
-    var mag = window.__fieldMagnet;
-    var magCx = 0, magCy = 0, magScale = 0;
-    if (mag) {
-      magCx = (mag.nx + mag.sx) / 2;
-      magCy = (mag.ny + mag.sy) / 2;
-      var mdx = mag.nx - mag.sx, mdy = mag.ny - mag.sy;
-      magScale = DIPOLE / Math.max(1, Math.sqrt(mdx * mdx + mdy * mdy) / 2);
+    for (var b = 0; b < NB; b++) {
+      if (paths[b]) { ctx.strokeStyle = PAL[b]; ctx.stroke(paths[b]); }
     }
 
-    var stillMoving = false;
-    for (var r = 0; r < rows; r++) {
-      for (var c = 0; c < cols; c++) {
-        var gx  = (c + 0.5) * STEP;
-        var gy  = (r + 0.5) * STEP;
-        var idx = r * cols + c;
-
-        var bx = 0, by = 0, maxInfl = 0;
-
-        var dist = Math.sqrt((gx - ax) * (gx - ax) + (gy - ay) * (gy - ay));
-        var pInfl = dist < REACH ? 1 - dist / REACH : 0;
-        pInfl = pInfl * pInfl;
-        if (pInfl > 4e-4) {
-          var v = dipoleVector(gx, gy, npx, npy, spx, spy);
-          bx += v.x * pInfl; by += v.y * pInfl;
-          maxInfl = pInfl;
-        }
-
-        // WORKS/HOME button magnet — same reach and falloff as the pointer.
-        if (mag) {
-          var mgx = gx - magCx, mgy = gy - magCy;
-          var mDist = Math.sqrt(mgx * mgx + mgy * mgy);
-          var mInfl = mDist < REACH ? 1 - mDist / REACH : 0;
-          mInfl = mInfl * mInfl;
-          if (mInfl > 4e-4) {
-            var mv = dipoleVector(gx, gy, mag.nx, mag.ny, mag.sx, mag.sy);
-            bx += mv.x * mInfl * magScale; by += mv.y * mInfl * magScale;
-            if (mInfl > maxInfl) maxInfl = mInfl;
-          }
-        }
-
-        // Each card is a little magnet too — same dipole physics as the
-        // pointer (see dipoleVector above), just smaller/local, and summed
-        // in with everything else before the one final atan2 below.
-        for (var s = 0; s < cardSources.length; s++) {
-          var src = cardSources[s];
-          var cdx = gx - src.x, cdy = gy - src.y;
-          var cr2 = cdx * cdx + cdy * cdy || 1;
-          var cr  = Math.sqrt(cr2);
-          var cInfl = cr < CARD_REACH ? 1 - cr / CARD_REACH : 0;
-          cInfl = cInfl * cInfl;
-          if (cInfl > 4e-4) {
-            var cv = dipoleVector(gx, gy, src.x + CARD_DIPOLE, src.y, src.x - CARD_DIPOLE, src.y);
-            bx += cv.x * cInfl; by += cv.y * cInfl;
-            if (cInfl > maxInfl) maxInfl = cInfl;
-          }
-        }
-
-        if (maxInfl > 4e-4 && (bx || by)) {
-          var tgt  = Math.atan2(by, bx);
-          var diff = tgt - angles[idx];
-          if (diff >  Math.PI) diff -= 2 * Math.PI;
-          if (diff < -Math.PI) diff += 2 * Math.PI;
-          // spring k=9*infl, damping=3.5 — underdamped → slight overshoot
-          angVels[idx] += (9 * maxInfl * diff - 3.5 * angVels[idx]) * dt;
-        } else {
-          // bleed velocity once out of reach — angle itself is left as-is,
-          // so the dash holds its last shape instead of resetting
-          angVels[idx] *= Math.max(0, 1 - 8 * dt);
-        }
-        angles[idx] += angVels[idx] * dt;
-        if (Math.abs(angVels[idx]) > 1e-3) stillMoving = true;
-
-        // alpha: faint baseline presence + bloom near whichever source is closest
-        var alpha   = 0.025 + maxInfl * 0.29;
-        var palIdx  = Math.min(31, Math.round(alpha * 100));
-        var cos = Math.cos(angles[idx]) * HALF;
-        var sin = Math.sin(angles[idx]) * HALF;
-
-        ctx.strokeStyle = PAL[palIdx];
-        ctx.beginPath();
-        ctx.moveTo(gx - cos, gy - sin);
-        ctx.lineTo(gx + cos, gy + sin);
-        ctx.stroke();
-      }
+    // Entropy: sum of |angle - circular mean| — 0 when all dashes agree.
+    var mean = fastAtan2(sumSin, sumCos);
+    var total = 0;
+    for (var i = 0; i < angles.length; i++) {
+      var dv = angles[i] - mean;
+      if (dv > PI) dv -= TAU; else if (dv < -PI) dv += TAU;
+      total += dv < 0 ? -dv : dv;
     }
-
-    // Entropy: how scattered the rods' directions are from EACH OTHER, not
-    // from any fixed reference — measured against the field's own circular
-    // mean, so it reads zero whenever every rod points the same way,
-    // whatever that way happens to be (all resting at their initial 0 rad
-    // counts too, since that's just "all the same direction").
-    var sumSin = 0, sumCos = 0;
-    for (var ei = 0; ei < angles.length; ei++) {
-      sumSin += Math.sin(angles[ei]);
-      sumCos += Math.cos(angles[ei]);
-    }
-    var meanAngle = Math.atan2(sumSin, sumCos);
-    var entropy = 0;
-    for (var ej = 0; ej < angles.length; ej++) {
-      var dev = angles[ej] - meanAngle;
-      if (dev >  Math.PI) dev -= 2 * Math.PI;
-      if (dev < -Math.PI) dev += 2 * Math.PI;
-      entropy += Math.abs(dev);
-    }
+    var entropy = total * entropyScale;
     window.__fieldEntropy = entropy;
-    if (entropyEl) entropyEl.textContent = entropy.toFixed(0);
+    if (entropyEl) {
+      var shown = Math.round(entropy);
+      if (shown !== lastShown) { lastShown = shown; entropyEl.textContent = shown; }
+    }
 
-    // Keep animating only while the spring is still easing toward the
-    // (fixed) target. Once it settles, stop requesting frames entirely —
-    // the last drawn frame just sits on the canvas until onPointer() wakes
-    // the loop back up on the next move.
+    // Keep animating only while a spring is still easing; once everything
+    // settles, stop requesting frames and let the last frame sit.
     if (stillMoving) {
       requestAnimationFrame(frame);
     } else {
