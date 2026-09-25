@@ -5061,23 +5061,27 @@ class Knob {
        dipole field angle, 2*phi - axis, where phi is the dash's angle
        around that source — one atan2 (a polynomial approximation, no
        trig call) instead of pole-pair vector math and a final atan2.
-     - Each dash keeps angular inertia: a spring + damping toward that
-       direction, so it still overshoots slightly and settles.
+     - No simulation: each dash's angle is set straight from that formula
+       (a dash out of every source's reach keeps its last angle, so the
+       field still remembers where the pointer was). There are no
+       springs, velocities or per-frame loop.
 
    What actually costs GPU/CPU, and what was done about it:
      - strokes are batched into NB alpha buckets, one Path2D + one
        stroke() per bucket, instead of one stroke() per dash (was ~2400
        per frame);
-     - capped at ~30fps — the spring reads the same at half the frames;
+     - nothing runs while idle: one draw is scheduled only when the
+       pointer moves, the WORKS/HOME magnet moves, the visible cards move
+       (scroll) or the window resizes, and there is no loop in between;
+       draws are capped at ~30fps;
      - canvas at 1x pixel ratio (was up to 1.5x, ~2.25x the pixels for
        a full-screen layer of faint 1px lines);
      - coarser grid (40px, 34px on phones; was 30px) — dash length
        scales with it;
      - squared-distance early-outs, so sqrt only runs inside a
        source's reach.
-   The loop still stops itself once every spring has settled.
 
-   Each frame also derives an entropy value from the dash angles — the
+   Each draw also derives an entropy value from the dash angles — the
    sum of each dash's absolute deviation from the field's own circular
    mean, so it is zero whenever every dash agrees on a direction (any
    direction) and grows with how much they disagree — and publishes it
@@ -5101,7 +5105,7 @@ class Knob {
   var CARD_REACH = 180; // per-card influence radius
   var entropyScale = 1;
 
-  var cols = 0, rows = 0, angles, angVels;
+  var cols = 0, rows = 0, angles;
 
   // NB alpha buckets: 0 is the faint always-on baseline, 1..NB-1 span the
   // bloom near a source. Same alpha range as before (0.025 .. ~0.3).
@@ -5145,7 +5149,6 @@ class Knob {
     if (newCols === cols && newRows === rows) return;
 
     var newAngles  = new Float32Array(newCols * newRows);
-    var newAngVels = new Float32Array(newCols * newRows);
     if (angles) {
       // ...and when it did, carry the overlap over instead of zeroing —
       // zeroing snapped the field flat and window.__fieldEntropy to 0
@@ -5154,15 +5157,13 @@ class Knob {
       var copyCols = Math.min(cols, newCols);
       for (var r = 0; r < copyRows; r++) {
         for (var c = 0; c < copyCols; c++) {
-          newAngles[r * newCols + c]  = angles[r * cols + c];
-          newAngVels[r * newCols + c] = angVels[r * cols + c];
+          newAngles[r * newCols + c] = angles[r * cols + c];
         }
       }
     }
     cols = newCols;
     rows = newRows;
-    angles  = newAngles;
-    angVels = newAngVels;
+    angles = newAngles;
   }
 
   // Starts off-screen so nothing is influenced until the first touch/move —
@@ -5170,14 +5171,14 @@ class Knob {
   // last interaction instead of reverting when the pointer lifts/leaves.
   var mx = -9999, my = -9999;
   var prevMx = -9999, prevMy = -9999;
-  var dipAngle = 0, dipTarget = 0;
+  var dipAngle = 0;
 
   function onPointer(cx, cy) {
     mx = cx; my = cy;
     var dx = mx - prevMx, dy = my - prevMy;
-    if (prevMx > -9000 && dx * dx + dy * dy > 9) dipTarget = Math.atan2(dy, dx);
+    if (prevMx > -9000 && dx * dx + dy * dy > 9) dipAngle = Math.atan2(dy, dx);
     prevMx = mx; prevMy = my;
-    ensureLoop(); // the loop stops itself once settled — a move restarts it
+    schedule(); // a pointer change is one of the few things that redraws
   }
 
   window.addEventListener('mousemove', function(e) { onPointer(e.clientX, e.clientY); });
@@ -5191,16 +5192,11 @@ class Knob {
   var SX = new Float32Array(MAXS), SY = new Float32Array(MAXS), SA = new Float32Array(MAXS);
   var SR = new Float32Array(MAXS), SR2 = new Float32Array(MAXS);
 
-  var lastDraw = 0, lastShown = -1;
-  function frame(t) {
-    if (t - lastDraw < 30) { requestAnimationFrame(frame); return; } // ~30fps cap
-    var dt = Math.min((t - lastDraw) * 0.001, 0.05);
+  var lastDraw = 0, lastShown = -1, pending = false;
+  function draw(t) {
+    if (t - lastDraw < 30) { requestAnimationFrame(draw); return; } // ~30fps cap
     lastDraw = t;
-
-    // Smooth the pointer dipole's axis toward its movement direction.
-    var da = dipTarget - dipAngle;
-    da -= TAU * Math.round(da / TAU);
-    dipAngle += da * Math.min(1, 4 * dt);
+    pending = false;
 
     var n = 0;
     if (mx > -9000) { SX[n] = mx; SY[n] = my; SA[n] = dipAngle; SR[n] = REACH; n++; }
@@ -5216,9 +5212,7 @@ class Knob {
     }
     for (var si = 0; si < n; si++) SR2[si] = SR[si] * SR[si];
 
-    var bleed = Math.max(0, 1 - 8 * dt);
     var paths = new Array(NB);
-    var stillMoving = false;
     var sumSin = 0, sumCos = 0;
 
     for (var r = 0; r < rows; r++) {
@@ -5239,21 +5233,14 @@ class Knob {
           }
         }
 
+        // In reach of a source: snap straight to its 2D dipole direction.
+        // Out of every reach: keep the last angle.
         var ang = angles[idx];
-        var av  = angVels[idx];
         if (best > 4e-4) {
-          var diff = 2 * fastAtan2(bdy, bdx) - bax - ang; // 2D dipole direction
-          diff -= TAU * Math.round(diff / TAU);
-          // spring k=9*infl, damping=3.5 — underdamped, slight overshoot
-          av += (9 * best * diff - 3.5 * av) * dt;
-        } else {
-          av *= bleed; // out of reach: velocity dies, the angle is held
+          ang = 2 * fastAtan2(bdy, bdx) - bax;
+          ang -= TAU * Math.round(ang / TAU);
+          angles[idx] = ang;
         }
-        ang += av * dt;
-        if (ang > PI) ang -= TAU; else if (ang < -PI) ang += TAU;
-        angles[idx]  = ang;
-        angVels[idx] = av;
-        if (av > 1e-3 || av < -1e-3) stillMoving = true;
 
         var cs = Math.cos(ang), sn = Math.sin(ang);
         sumCos += cs; sumSin += sn;
@@ -5288,32 +5275,28 @@ class Knob {
       if (shown !== lastShown) { lastShown = shown; entropyEl.textContent = shown; }
     }
 
-    // Keep animating only while a spring is still easing; once everything
-    // settles, stop requesting frames and let the last frame sit.
-    if (stillMoving) {
-      requestAnimationFrame(frame);
-    } else {
-      loopRunning = false;
-    }
+    // Nothing else is scheduled: the last draw just sits until a source
+    // changes.
   }
 
-  var loopRunning = false;
-  function ensureLoop() {
-    if (loopRunning) return;
-    loopRunning = true;
-    requestAnimationFrame(frame);
+  // Coalesces any number of change notifications into a single draw.
+  function schedule() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(draw);
   }
-  // Exposed so cardFieldSources() and magButton() can wake this loop after
-  // publishing new positions on scroll — one-way, nothing flows back.
-  window.__fieldEnsureLoop = ensureLoop;
+  // Exposed (under its old name) so cardFieldSources() and magButton() can
+  // request a redraw after publishing new positions — one-way, nothing
+  // flows back.
+  window.__fieldEnsureLoop = schedule;
 
   resize();
   window.addEventListener('resize', function() {
     resize();
-    ensureLoop();
+    schedule();
   });
 
-  ensureLoop();
+  schedule();
 })();
 </script>
 
