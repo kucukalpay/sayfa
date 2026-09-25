@@ -5050,12 +5050,11 @@ class Knob {
    Nobody can tell a faint background dash field from real physics, so
    this does the cheapest thing that still reads as a magnetic field:
 
-     - Sources: the pointer (a dipole that keeps its last position and
-       tracks its movement direction), the WORKS/HOME button
-       (window.__fieldMagnet: first letter N pole, last letter S pole,
-       same reach and strength as the pointer), and every visible card
-       (window.__fieldCardSources, small horizontal dipoles). One-way:
-       the field reacts to them, nothing flows back.
+     - Sources: the WORKS/HOME button (window.__fieldMagnet: first letter
+       N pole, last letter S pole) and every visible card
+       (window.__fieldCardSources, small horizontal dipoles). The pointer
+       is deliberately NOT a source. One-way: the field reacts to them,
+       nothing flows back.
      - Every source contributes to every dash: each is a dipole whose
        field falls off as 1/r^3 (B = (3(m.r^)r^ - m) / r^3, softened near
        the source), the vectors are summed and the dash points along the
@@ -5070,8 +5069,8 @@ class Knob {
        stroke() per bucket, instead of one stroke() per dash (was ~2400
        per frame);
      - nothing runs while idle: one draw is scheduled only when the
-       pointer moves, the WORKS/HOME magnet moves, the visible cards move
-       (scroll) or the window resizes, and there is no loop in between;
+       WORKS/HOME magnet moves, the visible cards move (scroll) or the
+       window resizes, and there is no loop in between;
        draws are capped at ~30fps;
      - canvas at 1x pixel ratio (was up to 1.5x, ~2.25x the pixels for
        a full-screen layer of faint 1px lines);
@@ -5101,8 +5100,8 @@ class Knob {
   var STEP = 40;   // grid spacing px — set in resize()
   var HALF = 12;   // half-length of each dash — set in resize()
   // Dipole moments (px^3 units: field magnitude at distance r is ~M / r^3).
-  // The pointer and the WORKS/HOME magnet are equal; cards are weaker.
-  var M_POINTER = 1e6;
+  // The WORKS/HOME magnet is the strong one; cards are weaker.
+  var M_MAGNET = 1e6;
   var M_CARD = 3.5e5;
   var SOFT2 = 900;      // softening (px^2) so the field is finite at a source
   var entropyScale = 1;
@@ -5168,33 +5167,6 @@ class Knob {
     angles = newAngles;
   }
 
-  // Starts off-screen so nothing is influenced until the first touch/move —
-  // then stays put permanently (never reset), so the field sticks to the
-  // last interaction instead of reverting when the pointer lifts/leaves.
-  var mx = -9999, my = -9999;
-  var prevMx = -9999, prevMy = -9999;
-  var dipAngle = 0;
-
-  function onPointer(cx, cy) {
-    mx = cx; my = cy;
-    var dx = mx - prevMx, dy = my - prevMy;
-    if (prevMx > -9000 && dx * dx + dy * dy > 9) {
-      // Low-pass the axis toward the movement direction, once per pointer
-      // event (no timer): raw per-event directions are noisy, and the
-      // whole dipole would twitch with every one of them.
-      var da = Math.atan2(dy, dx) - dipAngle;
-      da -= TAU * Math.round(da / TAU);
-      dipAngle += da * 0.2;
-    }
-    prevMx = mx; prevMy = my;
-    schedule(); // a pointer change is one of the few things that redraws
-  }
-
-  window.addEventListener('mousemove', function(e) { onPointer(e.clientX, e.clientY); });
-  window.addEventListener('touchmove', function(e) {
-    var t = e.touches[0]; if (t) onPointer(t.clientX, t.clientY);
-  }, { passive: true });
-
   // Per-draw source table (reused, no allocation): position and dipole
   // moment vector.
   var MAXS = 24;
@@ -5208,15 +5180,11 @@ class Knob {
     pending = false;
 
     var n = 0;
-    if (mx > -9000) {
-      SX[n] = mx; SY[n] = my;
-      SMX[n] = Math.cos(dipAngle) * M_POINTER; SMY[n] = Math.sin(dipAngle) * M_POINTER; n++;
-    }
     var mag = window.__fieldMagnet;
     if (mag) {
       var ma = Math.atan2(mag.sy - mag.ny, mag.sx - mag.nx);
       SX[n] = (mag.nx + mag.sx) * 0.5; SY[n] = (mag.ny + mag.sy) * 0.5;
-      SMX[n] = Math.cos(ma) * M_POINTER; SMY[n] = Math.sin(ma) * M_POINTER; n++;
+      SMX[n] = Math.cos(ma) * M_MAGNET; SMY[n] = Math.sin(ma) * M_MAGNET; n++;
     }
     var cards = window.__fieldCardSources || [];
     for (var ci = 0; ci < cards.length && n < MAXS; ci++) {
