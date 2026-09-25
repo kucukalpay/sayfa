@@ -2686,7 +2686,8 @@
     for (var i = 0; i < allEls.length; i++) {
       var r = allEls[i].getBoundingClientRect();
       if (r.bottom > 0 && r.top < window.innerHeight) {
-        sources.push({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+        sources.push({ x: r.left + r.width / 2, y: r.top + r.height / 2,
+                       w: r.width, h: r.height });
       }
     }
     window.__fieldCardSources = sources;
@@ -4644,7 +4645,8 @@ class Knob {
     var s = label.querySelector('[data-pole="s"]').getBoundingClientRect();
     window.__fieldMagnet = {
       nx: n.left + n.width / 2, ny: n.top + n.height / 2,
-      sx: s.left + s.width / 2, sy: s.top + s.height / 2
+      sx: s.left + s.width / 2, sy: s.top + s.height / 2,
+      w: (n.width + s.width) / 2, h: (n.height + s.height) / 2
     };
     if (window.__fieldEnsureLoop) window.__fieldEnsureLoop();
   }
@@ -5055,12 +5057,19 @@ class Knob {
        (window.__fieldCardSources, small horizontal dipoles). The pointer
        is deliberately NOT a source. One-way: the field reacts to them,
        nothing flows back.
-     - Every source contributes to every dash: each is a dipole whose
-       field falls off as 1/r^3 (B = (3(m.r^)r^ - m) / r^3, softened near
-       the source), the vectors are summed and the dash points along the
-       total. Summing all of them — instead of letting the nearest one
-       win — is what keeps the field continuous: nothing flips when a
-       different source becomes the closest.
+     - Every source is a uniformly magnetized box (a bar magnet): the
+       WORKS/HOME bar spans its pole letters, each card is a flat slab its
+       own size. The dashes lie in the boxes' mid-plane, where the field
+       has a closed form: outside, H is the pull of the two charged pole
+       faces (per face corner one atan and a shared log; physical
+       constants dropped); inside, B = H + M, so the lines run on through
+       the magnet S -> N and close on themselves instead of stopping at
+       two points like an electric dipole's. Far away each box falls off
+       as the old 1/r^3 point dipole of the same moment.
+     - Every source contributes to every dash; the vectors are summed and
+       the dash points along the total. Summing all of them — instead of
+       letting the nearest one win — is what keeps the field continuous:
+       nothing flips when a different source becomes the closest.
      - No simulation: each dash's angle is set straight from that sum.
        There are no springs, velocities or per-frame loop.
 
@@ -5076,8 +5085,10 @@ class Knob {
        a full-screen layer of faint 1px lines);
      - coarser grid (40px, 34px on phones; was 30px) — dash length
        scales with it;
-     - one atan2 (a polynomial approximation, no trig call) per dash,
-       for the summed vector.
+     - atan2 is a polynomial approximation, no trig call: one per dash
+       for the summed vector, four per source per dash for the box faces
+       (plus four sqrt and one log per source per dash — the price of
+       the real bar-magnet shape).
 
    Entropy is the total angle the dashes have turned, accumulated over
    every draw: each dash adds |new angle - old angle| (wrapped) at the
@@ -5099,11 +5110,12 @@ class Knob {
 
   var STEP = 40;   // grid spacing px — set in resize()
   var HALF = 12;   // half-length of each dash — set in resize()
-  // Dipole moments (px^3 units: field magnitude at distance r is ~M / r^3).
-  // The WORKS/HOME magnet is the strong one; cards are weaker.
+  // Dipole moments (px^3 units: far away the field is ~M / r^3). The
+  // WORKS/HOME magnet is the strong one; cards are weaker. Each source's
+  // magnetization is its moment spread over its box volume.
   var M_MAGNET = 1e6;
   var M_CARD = 3.5e5;
-  var SOFT2 = 900;      // softening (px^2) so the field is finite at a source
+  var FOUR_PI = 4 * Math.PI; // the one constant kept: B = H + M inside a magnet
   var entropyScale = 1;
 
   var cols = 0, rows = 0, angles;
@@ -5168,11 +5180,37 @@ class Knob {
     angles = newAngles;
   }
 
-  // Per-draw source table (reused, no allocation): position and dipole
-  // moment vector.
+  // Per-draw source table (reused, no allocation): box centre, unit axis
+  // (magnetization direction, S -> N), half-sizes along the axis (A),
+  // across it in the screen plane (B) and into the screen (C), and
+  // magnetization strength.
   var MAXS = 24;
   var SX = new Float32Array(MAXS), SY = new Float32Array(MAXS);
-  var SMX = new Float32Array(MAXS), SMY = new Float32Array(MAXS);
+  var SUX = new Float32Array(MAXS), SUY = new Float32Array(MAXS);
+  var SA = new Float32Array(MAXS), SB = new Float32Array(MAXS);
+  var SC = new Float32Array(MAXS), SM = new Float32Array(MAXS);
+  function addSource(n, x, y, ux, uy, a, b, c, moment) {
+    SX[n] = x; SY[n] = y; SUX[n] = ux; SUY[n] = uy;
+    SA[n] = a; SB[n] = b; SC[n] = c;
+    SM[n] = moment / (8 * a * b * c);
+  }
+
+  // One pole face (x = x0 in box coordinates, charge sign q) of a box
+  // magnet: its half-sizes b, c; field point (x, y) in the box's mid-plane.
+  // Returns the along-axis part and writes the log argument for the
+  // across-axis part into faceLog (one log per source, taken by the caller).
+  var faceLog = 1;
+  function faceX(X, y, b, c) {
+    var u1 = b - y, u2 = -b - y;
+    var p1 = X * X + u1 * u1 + 1e-6, p2 = X * X + u2 * u2 + 1e-6;
+    var R1 = Math.sqrt(p1 + c * c), R2 = Math.sqrt(p2 + c * c);
+    // atan(u c / (X R)) — the X sign goes on top so atan2 stays in (-pi/2, pi/2)
+    var sx = X < 0 ? -1 : 1, aX = X * sx;
+    var g = fastAtan2(sx * u1 * c, aX * R1) - fastAtan2(sx * u2 * c, aX * R2);
+    var e1 = R1 + c, e2 = R2 + c;
+    faceLog = (e1 * e1 * p2) / (e2 * e2 * p1);
+    return 2 * g;
+  }
 
   var lastDraw = 0, lastShown = -1, pending = false;
   var entropyTotal = 0, placed = false;
@@ -5184,14 +5222,22 @@ class Knob {
     var n = 0;
     var mag = window.__fieldMagnet;
     if (mag) {
-      var ma = Math.atan2(mag.sy - mag.ny, mag.sx - mag.nx);
-      SX[n] = (mag.nx + mag.sx) * 0.5; SY[n] = (mag.ny + mag.sy) * 0.5;
-      SMX[n] = Math.cos(ma) * M_MAGNET; SMY[n] = Math.sin(ma) * M_MAGNET; n++;
+      // A bar from the outer edge of the N letter to the outer edge of the
+      // S letter, as thick as the letters (and as deep as it is thick).
+      // Magnetized S -> N, so the field leaves the N letter.
+      var ax = mag.nx - mag.sx, ay = mag.ny - mag.sy;
+      var al = Math.sqrt(ax * ax + ay * ay) || 1;
+      var mb = Math.max(2, mag.h * 0.35);
+      addSource(n++, (mag.nx + mag.sx) * 0.5, (mag.ny + mag.sy) * 0.5,
+                ax / al, ay / al, al * 0.5 + mag.w * 0.5, mb, mb, M_MAGNET);
     }
     var cards = window.__fieldCardSources || [];
     for (var ci = 0; ci < cards.length && n < MAXS; ci++) {
-      SX[n] = cards[ci].x; SY[n] = cards[ci].y;
-      SMX[n] = M_CARD; SMY[n] = 0; n++;
+      // Flat slabs the card's size, magnetized the same way as the resting
+      // magnet (pointing left).
+      var cw = cards[ci].w * 0.5, ch = cards[ci].h * 0.5;
+      addSource(n++, cards[ci].x, cards[ci].y, -1, 0,
+                cw, ch, Math.min(cw, ch) * 0.5, M_CARD);
     }
 
     var paths = new Array(NB);
@@ -5203,15 +5249,22 @@ class Knob {
         var gx  = (c + 0.5) * STEP;
         var idx = r * cols + c;
 
-        // Sum every source's dipole field at this dash.
+        // Sum every source's box-magnet field at this dash.
         var bx = 0, by = 0;
         for (var q = 0; q < n; q++) {
           var dx = gx - SX[q], dy = gy - SY[q];
-          var r2 = dx * dx + dy * dy + SOFT2;
-          var inv3 = 1 / (r2 * Math.sqrt(r2));
-          var mdr = (SMX[q] * dx + SMY[q] * dy) * 3 / r2;
-          bx += (mdr * dx - SMX[q]) * inv3;
-          by += (mdr * dy - SMY[q]) * inv3;
+          var ux = SUX[q], uy = SUY[q];
+          var lx = dx * ux + dy * uy, ly = dy * ux - dx * uy; // box coords
+          var a = SA[q], bb = SB[q], cc = SC[q];
+          // N face (+a, charge +) minus S face (-a, charge -).
+          var hx = faceX(lx - a, ly, bb, cc), logN = faceLog;
+          hx -= faceX(lx + a, ly, bb, cc);
+          var hy = Math.log(logN / faceLog);
+          // Inside the magnet B = H + M: the lines run on through it, S -> N.
+          if (lx < a && lx > -a && ly < bb && ly > -bb) hx += FOUR_PI;
+          var m = SM[q];
+          bx += m * (hx * ux - hy * uy);
+          by += m * (hx * uy + hy * ux);
         }
         var fm = Math.sqrt(bx * bx + by * by);
         var ang = angles[idx];
