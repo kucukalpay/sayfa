@@ -4693,7 +4693,7 @@ class Knob {
   var REVERB_BURST_PEAK  = 0.045 * 3;   // "a lot" — a click should feel like it opens into a big wash
   var REVERB_BURST_HOLD  = 1;           // seconds spent fully wet before it starts dropping back
   var REVERB_BURST_DECAY = 2.5;         // seconds the drop-back itself takes, after the hold — matches the generated IR's own length, so the tail rings fully out
-  var CHORUS_SCALE = 1500;              // entropy at which wetness saturates (not cyclical — just rises and plateaus)
+  var CHORUS_SCALE = 20000;             // accumulated entropy at which wetness saturates (~2 passes through the works graph; not cyclical — just rises and plateaus)
   var CHORUS_PEAK  = 0.045 * 1.1;       // scaled to the dry chord's own 0.045 ceiling, not raw preGain, which is far louder
   // A7b5 (A, C#, Eb, G) — root, major 3rd, flat 5, dominant 7th, all within
   // one octave above the root. Root at A2, not A0 — A0 (27.5Hz) sits below
@@ -5079,14 +5079,14 @@ class Knob {
      - one atan2 (a polynomial approximation, no trig call) per dash,
        for the summed vector.
 
-   Each draw also derives an entropy value from the dash angles — the
-   sum of each dash's absolute deviation from the field's own circular
-   mean, so it is zero whenever every dash agrees on a direction (any
-   direction) and grows with how much they disagree — and publishes it
-   to window.__fieldEntropy and the top-left HUD (#entropyValue). It is
-   scaled by (STEP/30)^2 so its magnitude stays comparable to what the
-   old 30px grid produced (the drone's chorus mapping is tuned to that);
-   without it a coarser grid would just report smaller numbers.
+   Entropy is the total angle the dashes have turned, accumulated over
+   every draw: each dash adds |new angle - old angle| (wrapped) at the
+   moment it is re-aimed, in the same loop, so it costs one subtract per
+   dash and no extra pass. It only ever grows, and is published to
+   window.__fieldEntropy and the top-left HUD (#entropyValue). It is
+   scaled by (STEP/30)^2 so a coarser grid doesn't report smaller
+   numbers. The first draw (and the first after the grid changes shape)
+   doesn't count: those dashes are just being placed, not moved.
    ============================================================ */
 (function magneticFieldLayer() {
   'use strict';
@@ -5164,6 +5164,7 @@ class Knob {
     }
     cols = newCols;
     rows = newRows;
+    placed = false; // new cells start at 0 and would count as a big turn
     angles = newAngles;
   }
 
@@ -5174,6 +5175,7 @@ class Knob {
   var SMX = new Float32Array(MAXS), SMY = new Float32Array(MAXS);
 
   var lastDraw = 0, lastShown = -1, pending = false;
+  var entropyTotal = 0, placed = false;
   function draw(t) {
     if (t - lastDraw < 30) { requestAnimationFrame(draw); return; } // ~30fps cap
     lastDraw = t;
@@ -5193,7 +5195,7 @@ class Knob {
     }
 
     var paths = new Array(NB);
-    var sumSin = 0, sumCos = 0;
+    var turned = 0;
 
     for (var r = 0; r < rows; r++) {
       var gy = (r + 0.5) * STEP;
@@ -5214,14 +5216,17 @@ class Knob {
         var fm = Math.sqrt(bx * bx + by * by);
         var ang = angles[idx];
         if (fm > 1e-9) {
-          ang = fastAtan2(by, bx);
+          var na = fastAtan2(by, bx);
+          var dturn = na - ang;
+          if (dturn > PI) dturn -= TAU; else if (dturn < -PI) dturn += TAU;
+          turned += dturn < 0 ? -dturn : dturn;
+          ang = na;
           angles[idx] = ang;
         }
         // Opacity follows the field strength.
         var best = fm * 3; if (best > 1) best = 1;
 
         var cs = Math.cos(ang), sn = Math.sin(ang);
-        sumCos += cs; sumSin += sn;
 
         var bk = best < 0.004 ? 0 : 1 + Math.min(NB - 2, (best * (NB - 1)) | 0);
         var p = paths[bk] || (paths[bk] = new Path2D());
@@ -5238,18 +5243,13 @@ class Knob {
       if (paths[b]) { ctx.strokeStyle = PAL[b]; ctx.stroke(paths[b]); }
     }
 
-    // Entropy: sum of |angle - circular mean| — 0 when all dashes agree.
-    var mean = fastAtan2(sumSin, sumCos);
-    var total = 0;
-    for (var i = 0; i < angles.length; i++) {
-      var dv = angles[i] - mean;
-      if (dv > PI) dv -= TAU; else if (dv < -PI) dv += TAU;
-      total += dv < 0 ? -dv : dv;
-    }
-    var entropy = total * entropyScale;
-    window.__fieldEntropy = entropy;
+    // Entropy: accumulated turning (see the header). Skipped while the
+    // dashes are only being placed for the first time.
+    if (placed) entropyTotal += turned * entropyScale;
+    placed = true;
+    window.__fieldEntropy = entropyTotal;
     if (entropyEl) {
-      var shown = Math.round(entropy);
+      var shown = Math.round(entropyTotal);
       if (shown !== lastShown) { lastShown = shown; entropyEl.textContent = shown; }
     }
 
