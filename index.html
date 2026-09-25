@@ -5056,15 +5056,14 @@ class Knob {
        same reach and strength as the pointer), and every visible card
        (window.__fieldCardSources, small horizontal dipoles). One-way:
        the field reacts to them, nothing flows back.
-     - Per dash, only the STRONGEST nearby source counts (no vector
-       summing across sources). Its direction is the closed-form 2D
-       dipole field angle, 2*phi - axis, where phi is the dash's angle
-       around that source — one atan2 (a polynomial approximation, no
-       trig call) instead of pole-pair vector math and a final atan2.
-     - No simulation: each dash's angle is set straight from that formula
-       (a dash out of every source's reach keeps its last angle, so the
-       field still remembers where the pointer was). There are no
-       springs, velocities or per-frame loop.
+     - Every source contributes to every dash: each is a dipole whose
+       field falls off as 1/r^3 (B = (3(m.r^)r^ - m) / r^3, softened near
+       the source), the vectors are summed and the dash points along the
+       total. Summing all of them — instead of letting the nearest one
+       win — is what keeps the field continuous: nothing flips when a
+       different source becomes the closest.
+     - No simulation: each dash's angle is set straight from that sum.
+       There are no springs, velocities or per-frame loop.
 
    What actually costs GPU/CPU, and what was done about it:
      - strokes are batched into NB alpha buckets, one Path2D + one
@@ -5078,8 +5077,8 @@ class Knob {
        a full-screen layer of faint 1px lines);
      - coarser grid (40px, 34px on phones; was 30px) — dash length
        scales with it;
-     - squared-distance early-outs, so sqrt only runs inside a
-       source's reach.
+     - one atan2 (a polynomial approximation, no trig call) per dash,
+       for the summed vector.
 
    Each draw also derives an entropy value from the dash angles — the
    sum of each dash's absolute deviation from the field's own circular
@@ -5101,8 +5100,11 @@ class Knob {
 
   var STEP = 40;   // grid spacing px — set in resize()
   var HALF = 12;   // half-length of each dash — set in resize()
-  var REACH = 400;      // pointer / WORKS-HOME influence radius
-  var CARD_REACH = 180; // per-card influence radius
+  // Dipole moments (px^3 units: field magnitude at distance r is ~M / r^3).
+  // The pointer and the WORKS/HOME magnet are equal; cards are weaker.
+  var M_POINTER = 1e6;
+  var M_CARD = 3.5e5;
+  var SOFT2 = 900;      // softening (px^2) so the field is finite at a source
   var entropyScale = 1;
 
   var cols = 0, rows = 0, angles;
@@ -5176,7 +5178,14 @@ class Knob {
   function onPointer(cx, cy) {
     mx = cx; my = cy;
     var dx = mx - prevMx, dy = my - prevMy;
-    if (prevMx > -9000 && dx * dx + dy * dy > 9) dipAngle = Math.atan2(dy, dx);
+    if (prevMx > -9000 && dx * dx + dy * dy > 9) {
+      // Low-pass the axis toward the movement direction, once per pointer
+      // event (no timer): raw per-event directions are noisy, and the
+      // whole dipole would twitch with every one of them.
+      var da = Math.atan2(dy, dx) - dipAngle;
+      da -= TAU * Math.round(da / TAU);
+      dipAngle += da * 0.2;
+    }
     prevMx = mx; prevMy = my;
     schedule(); // a pointer change is one of the few things that redraws
   }
@@ -5186,11 +5195,11 @@ class Knob {
     var t = e.touches[0]; if (t) onPointer(t.clientX, t.clientY);
   }, { passive: true });
 
-  // Per-frame source table (reused, no allocation): x, y, dipole axis,
-  // reach and reach^2.
+  // Per-draw source table (reused, no allocation): position and dipole
+  // moment vector.
   var MAXS = 24;
-  var SX = new Float32Array(MAXS), SY = new Float32Array(MAXS), SA = new Float32Array(MAXS);
-  var SR = new Float32Array(MAXS), SR2 = new Float32Array(MAXS);
+  var SX = new Float32Array(MAXS), SY = new Float32Array(MAXS);
+  var SMX = new Float32Array(MAXS), SMY = new Float32Array(MAXS);
 
   var lastDraw = 0, lastShown = -1, pending = false;
   function draw(t) {
@@ -5199,18 +5208,21 @@ class Knob {
     pending = false;
 
     var n = 0;
-    if (mx > -9000) { SX[n] = mx; SY[n] = my; SA[n] = dipAngle; SR[n] = REACH; n++; }
+    if (mx > -9000) {
+      SX[n] = mx; SY[n] = my;
+      SMX[n] = Math.cos(dipAngle) * M_POINTER; SMY[n] = Math.sin(dipAngle) * M_POINTER; n++;
+    }
     var mag = window.__fieldMagnet;
     if (mag) {
+      var ma = Math.atan2(mag.sy - mag.ny, mag.sx - mag.nx);
       SX[n] = (mag.nx + mag.sx) * 0.5; SY[n] = (mag.ny + mag.sy) * 0.5;
-      SA[n] = Math.atan2(mag.sy - mag.ny, mag.sx - mag.nx);
-      SR[n] = REACH; n++;
+      SMX[n] = Math.cos(ma) * M_POINTER; SMY[n] = Math.sin(ma) * M_POINTER; n++;
     }
     var cards = window.__fieldCardSources || [];
     for (var ci = 0; ci < cards.length && n < MAXS; ci++) {
-      SX[n] = cards[ci].x; SY[n] = cards[ci].y; SA[n] = 0; SR[n] = CARD_REACH; n++;
+      SX[n] = cards[ci].x; SY[n] = cards[ci].y;
+      SMX[n] = M_CARD; SMY[n] = 0; n++;
     }
-    for (var si = 0; si < n; si++) SR2[si] = SR[si] * SR[si];
 
     var paths = new Array(NB);
     var sumSin = 0, sumCos = 0;
@@ -5221,26 +5233,24 @@ class Knob {
         var gx  = (c + 0.5) * STEP;
         var idx = r * cols + c;
 
-        // Strongest source in reach wins; falloff is (1 - d/reach)^2.
-        var best = 0, bdx = 0, bdy = 0, bax = 0;
-        for (var s = 0; s < n; s++) {
-          var dx = gx - SX[s], dy = gy - SY[s];
-          var d2 = dx * dx + dy * dy;
-          if (d2 < SR2[s]) {
-            var k = 1 - Math.sqrt(d2) / SR[s];
-            k *= k;
-            if (k > best) { best = k; bdx = dx; bdy = dy; bax = SA[s]; }
-          }
+        // Sum every source's dipole field at this dash.
+        var bx = 0, by = 0;
+        for (var q = 0; q < n; q++) {
+          var dx = gx - SX[q], dy = gy - SY[q];
+          var r2 = dx * dx + dy * dy + SOFT2;
+          var inv3 = 1 / (r2 * Math.sqrt(r2));
+          var mdr = (SMX[q] * dx + SMY[q] * dy) * 3 / r2;
+          bx += (mdr * dx - SMX[q]) * inv3;
+          by += (mdr * dy - SMY[q]) * inv3;
         }
-
-        // In reach of a source: snap straight to its 2D dipole direction.
-        // Out of every reach: keep the last angle.
+        var fm = Math.sqrt(bx * bx + by * by);
         var ang = angles[idx];
-        if (best > 4e-4) {
-          ang = 2 * fastAtan2(bdy, bdx) - bax;
-          ang -= TAU * Math.round(ang / TAU);
+        if (fm > 1e-9) {
+          ang = fastAtan2(by, bx);
           angles[idx] = ang;
         }
+        // Opacity follows the field strength.
+        var best = fm * 3; if (best > 1) best = 1;
 
         var cs = Math.cos(ang), sn = Math.sin(ang);
         sumCos += cs; sumSin += sn;
