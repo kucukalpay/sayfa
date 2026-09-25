@@ -1421,15 +1421,15 @@
      Each major section is a card on the page; clicking opens a fullscreen
      modal containing the full functional UI. */
 
-  /* Work as a node graph. Each work is a small polygon node (3-5 sides,
-     its image clipped inside) placed by how related the works are
+  /* Work as a node graph. Each work is a small hexagon node (its
+     image clipped inside) placed by how related the works are
      (--x/--y = centre in % of the stage, --s = size). 3D is the hub and by
      far the largest. Relationships are unlabelled dashed edges, drawn by
      the workGraph script from real node positions on load/resize only. */
   .card-streams {
     position: relative;
     z-index: 1;
-    height: 2100px;
+    height: 1400px;
     margin: 0 auto;
     max-width: 1400px;
   }
@@ -1438,21 +1438,24 @@
     position: absolute;
     left: calc(var(--x) * 1%);
     top: calc(var(--y) * 1%);
-    width: var(--s);
-    height: var(--s);
+    --k: 1;
+    width: calc(var(--s) * var(--k));
+    height: calc(var(--s) * var(--k));
     transform: translate(-50%, -50%);
     z-index: 2;
     transition: opacity 300ms;
   }
-  #three-d       { --x: 50; --y: 11; --s: 300px; }
-  #procedural    { --x: 80; --y: 24; --s: 140px; }
-  #synths        { --x: 30; --y: 34; --s: 170px; }
-  #stray-voltage { --x: 10; --y: 30; --s: 110px; }
-  #pedals        { --x: 18; --y: 52; --s: 120px; }
-  #music         { --x: 80; --y: 55; --s: 130px; }
-  #loops         { --x: 91; --y: 69; --s: 115px; }
-  #tracks        { --x: 66; --y: 74; --s: 150px; }
-  #photography   { --x: 30; --y: 84; --s: 140px; }
+  #three-d       { --x: 50; --y: 13.6; --s: 300px; }
+  #procedural    { --x: 72; --y: 25.7; --s: 140px; }
+  #synths        { --x: 46; --y: 42.9; --s: 170px; }
+  #pedals        { --x: 42; --y: 60;   --s: 120px; }
+  #stray-voltage { --x: 60; --y: 62.1; --s: 110px; }
+  #music         { --x: 84; --y: 49.3; --s: 130px; }
+  #loops         { --x: 88; --y: 62.1; --s: 115px; }
+  #tracks        { --x: 72; --y: 72.5; --s: 150px; }
+  #photography   { --x: 24; --y: 77.1; --s: 140px; }
+  @media (max-width: 1200px) { .section-shell { --k: 0.8; } }
+  @media (max-width: 1000px) { .section-shell { --k: 0.68; } }
 
   .graph-layer { position: absolute; inset: 0; pointer-events: none; }
   .graph-layer svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
@@ -1508,7 +1511,8 @@
     pointer-events: none;
   }
   #workStreams .section-card .card-title {
-    margin: 0;
+    width: fit-content;
+    margin: 0 auto;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.8rem;
     font-weight: 500;
@@ -1534,18 +1538,21 @@
 
   /* Phones: a compact version of the same graph. */
   @media (max-width: 900px) {
-    .card-streams { height: 1700px; }
-    #workStreams #three-d       { --x: 50; --y: 8;  --s: 170px; }
-    #workStreams #procedural    { --x: 80; --y: 20; --s: 96px; }
-    #workStreams #synths        { --x: 26; --y: 25; --s: 110px; }
-    #workStreams #stray-voltage { --x: 11; --y: 40; --s: 76px; }
-    #workStreams #pedals        { --x: 15; --y: 57; --s: 90px; }
-    #workStreams #music         { --x: 80; --y: 47; --s: 96px; }
-    #workStreams #loops         { --x: 72; --y: 62; --s: 86px; }
-    #workStreams #tracks        { --x: 44; --y: 72; --s: 108px; }
-    #workStreams #photography   { --x: 22; --y: 86; --s: 100px; }
+    .card-streams { height: 700px; }
+    #workStreams .section-shell { --k: 1; }
+    #workStreams #three-d       { --x: 50.0; --y: 15.7; --s: 160px; }
+    #workStreams #procedural    { --x: 39.4; --y: 38.8; --s: 84px; }
+    #workStreams #synths        { --x: 21.5; --y: 77.4; --s: 96px; }
+    #workStreams #stray-voltage { --x: 42.7; --y: 59.4; --s: 74px; }
+    #workStreams #pedals        { --x: 14.6; --y: 59.1; --s: 82px; }
+    #workStreams #music         { --x: 51.0; --y: 76.1; --s: 84px; }
+    #workStreams #loops         { --x: 76.8; --y: 70.5; --s: 78px; }
+    #workStreams #tracks        { --x: 67.2; --y: 52.5; --s: 94px; }
+    #workStreams #photography   { --x: 78.4; --y: 33.7; --s: 88px; }
     #workStreams .card-text { width: 200px; margin-left: -100px; }
   }
+  @media (max-width: 410px) { #workStreams .section-shell { --k: 0.86; } }
+  @media (max-width: 370px) { #workStreams .section-shell { --k: 0.74; } }
   .section-card {
     margin: 0;
     position: relative;
@@ -2705,7 +2712,7 @@
 /* ============================================================
    WORK GRAPH
    The work cards are nodes of one network. This gives each a polygon
-   shape (3-5 sides, its hero image clipped inside) and draws the
+   hexagon shape (its hero image clipped inside) and draws the
    unlabelled edges between related nodes as SVG curves from their real
    positions, so one code path serves the desktop and phone layouts. It
    runs on load/resize only. Hovering or focusing a node lights its edges
@@ -2728,10 +2735,10 @@
     ['loops',         'tracks'],
     ['tracks',        'photography']
   ];
-  // sides (3-5) and rotation in degrees; 0 = a vertex pointing up
+  // sides and rotation in degrees; all hexagons, unrotated (vertex up)
   var SHAPES = {
-    'three-d': [5, 0], 'procedural': [3, 20], 'synths': [4, 45], 'stray-voltage': [3, 180],
-    'pedals': [3, 0], 'music': [4, 20], 'loops': [5, 36], 'tracks': [3, 90], 'photography': [4, 0]
+    'three-d': [6, 0], 'procedural': [6, 0], 'synths': [6, 0], 'stray-voltage': [6, 0],
+    'pedals': [6, 0], 'music': [6, 0], 'loops': [6, 0], 'tracks': [6, 0], 'photography': [6, 0]
   };
   var NS = 'http://www.w3.org/2000/svg';
 
@@ -2807,7 +2814,7 @@
       var dx = bx - ax, dy = by - ay;
       var len = Math.sqrt(dx * dx + dy * dy) || 1;
       // A gentle sideways bow keeps neighbouring links from overlapping.
-      var bow = (i % 2 ? 1 : -1) * Math.min(60, len * 0.08);
+      var bow = (i % 2 ? 1 : -1) * Math.min(stage.offsetWidth < 600 ? 8 : 60, len * 0.08);
       var cx = (ax + bx) / 2 - dy / len * bow, cy = (ay + by) / 2 + dx / len * bow;
       paths[i].setAttribute('d', 'M' + ax + ' ' + ay + ' Q' + cx + ' ' + cy + ' ' + bx + ' ' + by);
     });
