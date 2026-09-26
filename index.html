@@ -18,6 +18,7 @@
     --accent: #c46247;
     --accent-2: #52a882;
     --idle: #264364;      /* steel blue for resting, unaccented states */
+    --lit: #ebe6e1;       /* broken white for text on an active (hovered/focused) element */
     --line: transparent;
   }
   /* ANE keeps its 1px white frames — restore the original --line value
@@ -1494,6 +1495,8 @@
   #workStreams .section-card:hover .node-shape polygon.rim,
   #workStreams .section-card:focus-visible .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.2; }
   #workStreams .section-card:focus-visible { outline: none; }
+  #workStreams .section-card:hover .card-title,
+  #workStreams .section-card:focus-visible .card-title { color: var(--lit); }
   #workStreams .card-text {
     position: absolute;
     top: 100%;
@@ -1522,7 +1525,7 @@
     font-size: 0.78rem;
     line-height: 1.45;
     opacity: 1;
-    color: rgba(235,230,225,0.85);
+    color: rgba(235,230,225,0.85);  /* --lit at 85% */
     background: rgba(10,10,12,0.92);
     border: 1px solid rgba(196,98,71,0.3);
   }
@@ -1776,6 +1779,8 @@
     display: inline-flex;
     align-items: center;
   }
+  .mag-btn:hover,
+  .mag-btn:focus-visible { color: var(--lit); }
   .mag-label { display: inline-flex; align-items: center; gap: 20px; }
   .mag-label-home,
   .mag-btn.docked .mag-label-works { display: none; }
