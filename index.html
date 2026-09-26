@@ -2778,6 +2778,11 @@
   var wrap = document.getElementById('workStreams');
   if (!wrap) return;
   var allEls = Array.prototype.slice.call(wrap.querySelectorAll('.section-shell'));
+  // Each node's magnet points one of three ways (0, 120 or 240 degrees
+  // from the default), picked at random once per page load.
+  var rots = allEls.map(function() {
+    return [0, 120, 240][Math.floor(Math.random() * 3)] * Math.PI / 180;
+  });
 
   var ticking = false;
 
@@ -2787,7 +2792,7 @@
       var r = allEls[i].getBoundingClientRect();
       if (r.bottom > 0 && r.top < window.innerHeight) {
         sources.push({ x: r.left + r.width / 2, y: r.top + r.height / 2,
-                       w: r.width, h: r.height });
+                       w: r.width, h: r.height, rot: rots[i] });
       }
     }
     window.__fieldCardSources = sources;
@@ -5372,10 +5377,10 @@ class Knob {
     }
     var cards = window.__fieldCardSources || [];
     for (var ci = 0; ci < cards.length && n < MAXS; ci++) {
-      // Flat slabs the card's size, magnetized the same way as the resting
-      // magnet (pointing left).
-      var cw = cards[ci].w * 0.5, ch = cards[ci].h * 0.5;
-      addSource(n++, cards[ci].x, cards[ci].y, -1, 0,
+      // Flat slabs the card's size, magnetized pointing left like the
+      // resting magnet, then turned by the card's random rotation.
+      var cw = cards[ci].w * 0.5, ch = cards[ci].h * 0.5, th = cards[ci].rot || 0;
+      addSource(n++, cards[ci].x, cards[ci].y, -Math.cos(th), -Math.sin(th),
                 cw, ch, Math.min(cw, ch) * 0.5, M_CARD);
     }
 
