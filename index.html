@@ -1990,6 +1990,59 @@
     z-index: 7500;
   }
   .hero-controls-left { left: 24px; }
+  .hero-controls-right { right: 24px; }
+
+  /* ----- Background-field settings --------------------------------------
+     A gear toggles a small panel that opens upward from the bottom-right
+     corner, with sliders for the magnetic field layer's glow radius, glow
+     falloff and grid density (window.__fieldSettings). */
+  .field-settings { flex-direction: column; align-items: flex-end; gap: 12px; }
+  body.modal-open .field-settings { display: none; }
+  .field-settings .hero-btn[aria-expanded="true"] { opacity: 1; color: var(--accent-2); }
+  #fieldToggle { display: inline-flex; line-height: 0; }
+  .field-gear {
+    width: 20px; height: 20px;
+    fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round;
+    transition: transform 300ms;
+  }
+  #fieldToggle[aria-expanded="true"] .field-gear { transform: rotate(45deg); }
+  .field-panel {
+    width: min(240px, calc(100vw - 32px));
+    padding: 14px 16px 12px;
+    background: rgba(17, 17, 20, 0.92);
+    border: 1px solid var(--ink-faint);
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .field-panel[hidden] { display: none; }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    row-gap: 6px;
+    margin-bottom: 12px;
+  }
+  .field-val { color: var(--accent-2); font-variant-numeric: tabular-nums; }
+  .field-row input {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 0;
+    accent-color: var(--accent-2);
+    cursor: pointer;
+  }
+  .field-reset {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: var(--ink-faint);
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+  }
+  .field-reset:hover { color: var(--ink); }
   .hero-btn {
     background: transparent;
     color: rgba(255,255,255,0.95);
@@ -2017,6 +2070,7 @@
     .hero-nav { top: 56px; left: 16px; gap: 10px; font-size: 0.7rem; }
     .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
+    .hero-controls-right { right: 16px; }
     .hero-center { top: 110px; left: 16px; max-width: 240px; }
   }
 </style>
@@ -2047,6 +2101,28 @@
   </div>
   <div class="hero-controls hero-controls-left">
     <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
+  </div>
+  <!-- Background-field settings (see fieldSettingsPanel()). -->
+  <div class="hero-controls hero-controls-right field-settings">
+    <div class="field-panel" id="fieldPanel" hidden>
+      <label class="field-row">
+        <span class="field-name">Glow radius</span>
+        <span class="field-val" data-for="glowRadius"></span>
+        <input type="range" data-key="glowRadius" min="0.25" max="2" step="0.05">
+      </label>
+      <label class="field-row">
+        <span class="field-name">Glow falloff</span>
+        <span class="field-val" data-for="glowFalloff"></span>
+        <input type="range" data-key="glowFalloff" min="1" max="8" step="0.25">
+      </label>
+      <label class="field-row">
+        <span class="field-name">Grid density</span>
+        <span class="field-val" data-for="density"></span>
+        <input type="range" data-key="density" min="0.5" max="2" step="0.05">
+      </label>
+      <button class="field-reset" id="fieldReset" type="button">Reset</button>
+    </div>
+    <button class="hero-btn" id="fieldToggle" type="button" aria-expanded="false" aria-controls="fieldPanel" aria-label="Background settings"><svg class="field-gear" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 2.5h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z"/><circle cx="12" cy="12" r="3.2"/></svg></button>
   </div>
 </section>
 
@@ -5104,6 +5180,27 @@ class Knob {
   var M_MAGNET = 1e6;
   var M_CARD = 3.5e5;
   var FOUR_PI = 4 * Math.PI; // the one constant kept: B = H + M inside a magnet
+  // User-tunable from the settings panel (window.__fieldSettings):
+  //   glowRadius  — the field falls off as 1/r^3, so scaling the opacity
+  //                 gain by k^3 scales the glow's radius by k;
+  //   glowFalloff — how fast the glow fades past that radius, as the
+  //                 power of distance it fades with (3 = the field's own);
+  //   density     — dashes per unit length, relative to the default grid.
+  // None of them touch the dash directions; only density changes the
+  // grid, and that re-grid isn't counted as entropy.
+  var DEFAULTS = { glowRadius: 0.75, glowFalloff: 3, density: 1 };
+  var settings = { glowRadius: DEFAULTS.glowRadius, glowFalloff: DEFAULTS.glowFalloff, density: DEFAULTS.density };
+  try {
+    var saved = JSON.parse(localStorage.getItem('fieldSettings') || '{}');
+    for (var sk in DEFAULTS) if (typeof saved[sk] === 'number') settings[sk] = saved[sk];
+  } catch (e) {}
+  var glowGain = 3, glowPow = 1;
+  function applyGlow() {
+    var k = settings.glowRadius;
+    glowGain = 3 * k * k * k;
+    glowPow = settings.glowFalloff / 3;
+  }
+  applyGlow();
   var entropyScale = 1;
 
   var cols = 0, rows = 0, angles;
@@ -5138,9 +5235,11 @@ class Knob {
     canvas.style.width  = W + 'px';
     canvas.style.height = H + 'px';
 
-    STEP = W < 700 ? 34 : 40;
+    var oldStep = STEP;
+    STEP = Math.round((W < 700 ? 34 : 40) / settings.density);
     HALF = Math.round(STEP * 0.3);
     entropyScale = (STEP / 30) * (STEP / 30);
+    if (STEP !== oldStep) placed = false; // every dash moves to a new spot
 
     var newCols = Math.ceil(W / STEP) + 2;
     var newRows = Math.ceil(H / STEP) + 2;
@@ -5265,7 +5364,8 @@ class Knob {
           angles[idx] = ang;
         }
         // Opacity follows the field strength.
-        var best = fm * 3; if (best > 1) best = 1;
+        var best = fm * glowGain;
+        if (best > 1) best = 1; else if (glowPow !== 1) best = Math.pow(best, glowPow);
 
         var cs = Math.cos(ang), sn = Math.sin(ang);
 
@@ -5309,6 +5409,22 @@ class Knob {
   // flows back.
   window.__fieldEnsureLoop = schedule;
 
+  // Read/write for the settings panel. set() takes any subset of the
+  // keys, saves them for this viewer and redraws once.
+  window.__fieldSettings = {
+    defaults: DEFAULTS,
+    get: function() {
+      return { glowRadius: settings.glowRadius, glowFalloff: settings.glowFalloff, density: settings.density };
+    },
+    set: function(patch) {
+      for (var k in patch) if (k in DEFAULTS && typeof patch[k] === 'number') settings[k] = patch[k];
+      try { localStorage.setItem('fieldSettings', JSON.stringify(settings)); } catch (e) {}
+      applyGlow();
+      resize();
+      schedule();
+    }
+  };
+
   resize();
   window.addEventListener('resize', function() {
     resize();
@@ -5316,6 +5432,56 @@ class Knob {
   });
 
   schedule();
+})();
+
+(function fieldSettingsPanel() {
+  // Bottom-right gear toggle and its sliders for the field layer
+  // above. Values live in magneticFieldLayer(); this only reads and
+  // writes them through window.__fieldSettings.
+  var api = window.__fieldSettings;
+  var toggle = document.getElementById('fieldToggle');
+  var panel = document.getElementById('fieldPanel');
+  if (!api || !toggle || !panel) return;
+  var inputs = panel.querySelectorAll('input[data-key]');
+  var FORMAT = {
+    glowRadius:  function(v) { return v.toFixed(2) + '×'; },
+    glowFalloff: function(v) { return '1/r^' + v; },
+    density:     function(v) { return v.toFixed(2) + '×'; }
+  };
+
+  function show(values) {
+    for (var i = 0; i < inputs.length; i++) {
+      var key = inputs[i].dataset.key;
+      inputs[i].value = values[key];
+      panel.querySelector('[data-for="' + key + '"]').textContent = FORMAT[key](values[key]);
+    }
+  }
+  show(api.get());
+
+  panel.addEventListener('input', function(e) {
+    var key = e.target.dataset && e.target.dataset.key;
+    if (!key) return;
+    var patch = {};
+    patch[key] = parseFloat(e.target.value);
+    api.set(patch);
+    show(api.get());
+  });
+  document.getElementById('fieldReset').addEventListener('click', function() {
+    api.set(api.defaults);
+    show(api.get());
+  });
+
+  function setOpen(open) {
+    panel.hidden = !open;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  toggle.addEventListener('click', function() { setOpen(panel.hidden); });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !panel.hidden) { setOpen(false); toggle.focus(); }
+  });
+  document.addEventListener('click', function(e) {
+    if (!panel.hidden && !e.target.closest('.field-settings')) setOpen(false);
+  });
 })();
 </script>
 
