@@ -17,6 +17,7 @@
     --ink-faint: #52525b;
     --accent: #c46247;
     --accent-2: #52a882;
+    --idle: #264364;      /* steel blue for resting, unaccented states */
     --line: transparent;
   }
   /* ANE keeps its 1px white frames — restore the original --line value
@@ -1454,7 +1455,7 @@
   .graph-layer svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .graph-edge {
     fill: none;
-    stroke: rgba(196,98,71,0.3);
+    stroke: var(--idle);
     stroke-width: 1;
     stroke-dasharray: 2 5;
     transition: stroke 300ms, stroke-width 300ms;
@@ -1462,7 +1463,7 @@
   .graph-edge.on { stroke: rgba(196,98,71,0.95); stroke-width: 1.6; stroke-dasharray: none; }
   .card-streams.has-focus .section-shell { opacity: 0.3; }
   .card-streams.has-focus .section-shell.is-linked { opacity: 1; }
-  .card-streams.has-focus .graph-edge:not(.on) { stroke: rgba(196,98,71,0.07); }
+  .card-streams.has-focus .graph-edge:not(.on) { stroke: rgba(38,67,100,0.3); }
 
   /* The card itself becomes the node: no box, just the shape + a title.
      The hero <img> stays in the DOM (the script reads its src) but is
@@ -1485,7 +1486,7 @@
   #workStreams .section-card .card-hero,
   #workStreams .section-card .card-cta { display: none; }
   .node-shape { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: rgba(196,98,71,0.65); stroke-width: 1.4; transition: stroke 250ms, stroke-width 250ms; }
+  .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 1.4; transition: stroke 250ms, stroke-width 250ms; }
   .node-shape polygon.rim { fill: none; }
   .node-shape image { filter: grayscale(0.4) brightness(0.8); opacity: 0.55; transition: opacity 300ms, filter 300ms; }
   #workStreams .section-card:hover .node-shape image,
@@ -2010,7 +2011,7 @@
     width: min(240px, calc(100vw - 32px));
     padding: 14px 16px 12px;
     background: rgba(17, 17, 20, 0.92);
-    border: 1px solid var(--ink-faint);
+    border: 1px solid var(--idle);
     border-radius: 3px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.65rem;
