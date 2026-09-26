@@ -1988,22 +1988,59 @@
   }
   .hero-nav.open:hover { opacity: 1; }
 
+  /* Who this is, top-left: a small status label, the name as the one
+     large element, the role in muted mono, then contact. Green marks the
+     one interactive line, as elsewhere on the page. */
   .hero-center {
     position: absolute;
     top: 132px;
     left: 24px;
     text-align: left;
     pointer-events: none;
-    max-width: 320px;
+    max-width: 560px;
   }
-  .hero-title {
-    margin: 0;
+  .hero-status {
+    margin: 0 0 14px;
     font-size: clamp(0.7rem, 1.2vw, 0.9rem);
     letter-spacing: 0.3em;
     line-height: 1.1;
     text-transform: uppercase;
     opacity: 0.5;
   }
+  .hero-name {
+    margin: 0;
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--ink);
+  }
+  .hero-role {
+    margin: 12px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.72rem, 1.1vw, 0.85rem);
+    letter-spacing: 0.08em;
+    color: var(--ink-dim);
+  }
+  .hero-contact {
+    margin: 22px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.75rem, 1.1vw, 0.85rem);
+  }
+  .hero-contact a {
+    pointer-events: auto;
+    padding: 12px 0;          /* taller tap area, same visual spacing */
+    margin: -12px 0;
+    transition: color 200ms;
+  }
+  .hero-email { color: var(--accent-2); }
+  .hero-jump { color: var(--ink-dim); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.9em; }
+  .hero-contact a:hover,
+  .hero-contact a:focus-visible { color: var(--lit); }
 
   .hero-controls {
     /* Fixed (not absolute) so DRONE survives past the hero — it lives at the
@@ -2103,7 +2140,7 @@
     .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
     .hero-controls-right { right: 16px; }
-    .hero-center { top: 110px; left: 16px; max-width: 240px; }
+    .hero-center { top: 110px; left: 16px; right: 16px; max-width: none; }
   }
 </style>
 </head>
@@ -2129,7 +2166,13 @@
     <a href="#contact" data-target="contact">Contact</a>
   </nav>
   <div class="hero-center">
-    <h1 class="hero-title">UNDER CONSTRUCTION</h1>
+    <p class="hero-status">Under construction</p>
+    <h1 class="hero-name">Alpay Küçük</h1>
+    <p class="hero-role">3D artist · instrument maker · musician</p>
+    <p class="hero-contact">
+      <a class="hero-email" href="mailto:kucukalpay@gmail.com">kucukalpay@gmail.com</a>
+      <a class="hero-jump" href="#contact">Contact ↓</a>
+    </p>
   </div>
   <div class="hero-controls hero-controls-left">
     <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
