@@ -111,7 +111,7 @@
   .section-head h2 { min-width: 0; flex: 1 1 auto; }
   .section-head .num {
     font-family: 'JetBrains Mono', monospace;
-    color: var(--accent);
+    color: var(--accent-2);
     font-size: 0.8rem;
   }
   .section-head h2 {
@@ -1138,7 +1138,7 @@
     flex-wrap: wrap;
   }
   .socials a {
-    color: var(--ink-faint);
+    color: var(--ink-dim);
     transition: all 0.2s;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -1424,7 +1424,7 @@
   .card-streams {
     position: relative;
     z-index: 1;
-    height: 1400px;
+    height: 1200px;
     margin: 0 auto;
     max-width: 1400px;
   }
@@ -1440,15 +1440,15 @@
     z-index: 2;
     transition: opacity 300ms;
   }
-  #three-d       { --x: 50; --y: 13.6; --s: 300px; }
-  #procedural    { --x: 72; --y: 25.7; --s: 140px; }
-  #synths        { --x: 60; --y: 62.1; --s: 170px; }
-  #pedals        { --x: 42; --y: 60;   --s: 120px; }
-  #stray-voltage { --x: 46; --y: 42.9; --s: 110px; }
-  #music         { --x: 84; --y: 49.3; --s: 130px; }
-  #loops         { --x: 88; --y: 62.1; --s: 115px; }
-  #tracks        { --x: 72; --y: 72.5; --s: 150px; }
-  #photography   { --x: 24; --y: 77.1; --s: 140px; }
+  #three-d       { --x: 50; --y: 15.9; --s: 300px; }
+  #procedural    { --x: 72; --y: 30; --s: 140px; }
+  #synths        { --x: 60; --y: 72.5; --s: 170px; }
+  #pedals        { --x: 42; --y: 70;   --s: 120px; }
+  #stray-voltage { --x: 46; --y: 50; --s: 110px; }
+  #music         { --x: 84; --y: 57.5; --s: 130px; }
+  #loops         { --x: 88; --y: 72.5; --s: 115px; }
+  #tracks        { --x: 72; --y: 84.6; --s: 150px; }
+  #photography   { --x: 24; --y: 89.9; --s: 140px; }
   @media (max-width: 1200px) { .section-shell { --k: 0.8; } }
   @media (max-width: 1000px) { .section-shell { --k: 0.68; } }
 
@@ -1457,8 +1457,8 @@
   .graph-edge {
     fill: none;
     stroke: var(--idle);
-    stroke-width: 1;
-    stroke-dasharray: 2 5;
+    stroke-width: 1.5;
+    stroke-dasharray: 3 4;
     transition: stroke 300ms, stroke-width 300ms;
   }
   .graph-edge.on { stroke: rgba(196,98,71,0.95); stroke-width: 1.6; stroke-dasharray: none; }
@@ -1490,13 +1490,19 @@
   .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 1.4; transition: stroke 250ms, stroke-width 250ms; }
   .node-shape polygon.rim { fill: none; }
   .node-shape image { filter: grayscale(0.4) brightness(0.8); opacity: 0.55; transition: opacity 300ms, filter 300ms; }
+  /* .is-preview is the touch version of hover: the first tap on a node
+     (see modalController()). */
   #workStreams .section-card:hover .node-shape image,
-  #workStreams .section-card:focus-visible .node-shape image { opacity: 1; filter: none; }
+  #workStreams .section-card:focus-visible .node-shape image,
+  #workStreams .section-card.is-preview .node-shape image { opacity: 1; filter: none; }
   #workStreams .section-card:hover .node-shape polygon.rim,
-  #workStreams .section-card:focus-visible .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.2; }
-  #workStreams .section-card:focus-visible { outline: none; }
+  #workStreams .section-card:focus-visible .node-shape polygon.rim,
+  #workStreams .section-card.is-preview .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.2; }
+  #workStreams .section-card:focus-visible,
+  #workStreams .section-card.is-preview { outline: none; }
   #workStreams .section-card:hover .card-title,
-  #workStreams .section-card:focus-visible .card-title { color: var(--lit); }
+  #workStreams .section-card:focus-visible .card-title,
+  #workStreams .section-card.is-preview .card-title { color: var(--lit); }
   #workStreams .card-text {
     position: absolute;
     top: 100%;
@@ -1529,9 +1535,22 @@
     background: rgba(10,10,12,0.92);
     border: 1px solid rgba(196,98,71,0.3);
   }
-  .section-shell:hover { z-index: 6; }
+  .section-shell:hover,
+  .section-shell:focus-within { z-index: 6; }
   #workStreams .section-card:hover .card-desc,
-  #workStreams .section-card:focus-visible .card-desc { display: block; }
+  #workStreams .section-card:focus-visible .card-desc,
+  #workStreams .section-card.is-preview .card-desc { display: block; }
+  #workStreams .section-card.is-preview .card-text { pointer-events: auto; }
+  #workStreams .section-card.is-preview .card-desc::after {
+    content: 'Tap again to open ↗';
+    display: block;
+    margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+  }
 
   /* Phones: a compact version of the same graph. */
   @media (max-width: 900px) {
@@ -1634,8 +1653,8 @@
     background: rgba(0, 0, 0, 0.6);
     color: #fff;
     border: 0;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     font-size: 22px;
     line-height: 1;
@@ -1819,7 +1838,7 @@
     letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--accent-2);
-    opacity: 0.7;
+    opacity: 0.85;   /* lowest that keeps the green at 4.5:1 on the background */
     pointer-events: none;
   }
   .entropy-value {
@@ -2006,10 +2025,10 @@
      A gear toggles a small panel that opens upward from the bottom-right
      corner, with sliders for the magnetic field layer's glow radius, glow
      falloff and grid density (window.__fieldSettings). */
-  .field-settings { flex-direction: column; align-items: flex-end; gap: 12px; }
+  .field-settings { flex-direction: column; align-items: flex-end; gap: 24px; }
   body.modal-open .field-settings { display: none; }
   .field-settings .hero-btn[aria-expanded="true"] { opacity: 1; color: var(--accent-2); }
-  #fieldToggle { display: inline-flex; line-height: 0; }
+  #fieldToggle { display: inline-flex; line-height: 0; padding: 12px; margin: -12px; }
   .field-gear {
     width: 20px; height: 20px;
     fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round;
@@ -2047,7 +2066,7 @@
     background: transparent;
     border: 0;
     padding: 0;
-    color: var(--ink-faint);
+    color: var(--ink-dim);
     font: inherit;
     letter-spacing: inherit;
     text-transform: inherit;
@@ -2057,7 +2076,10 @@
     background: transparent;
     color: rgba(255,255,255,0.95);
     border: 0;
-    padding: 0;
+    /* ~44px tap area; the negative margin gives the space back so the
+       text sits where it did */
+    padding: 15px 8px;
+    margin: -15px -8px;
     font: inherit;
     font-size: clamp(0.7rem, 1.2vw, 0.9rem);
     letter-spacing: 0.3em;
@@ -4637,10 +4659,27 @@ class Knob {
     document.dispatchEvent(new CustomEvent('modal:closed', { detail: { id: id } }));
   }
 
+  // Touch has no hover, so on touch the first tap on a graph node only
+  // previews it (description shown, links lit — the hover look, via
+  // .is-preview and the graph's focusin) and a second tap opens it.
+  // Tapping anywhere else blurs the node and ends the preview.
+  var lastPointer = 'mouse';
+  document.addEventListener('pointerdown', function(e) {
+    lastPointer = e.pointerType;
+    var open = document.querySelector('#workStreams .section-card.is-preview');
+    if (open && !open.contains(e.target)) open.blur(); // focusout clears it
+  }, true);
+
   openTriggers.forEach(function(card) {
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
+    card.addEventListener('focusout', function() { card.classList.remove('is-preview'); });
     card.addEventListener('click', function() {
+      if (lastPointer === 'touch' && card.closest('#workStreams') && !card.classList.contains('is-preview')) {
+        card.classList.add('is-preview');
+        card.focus({ preventScroll: true });
+        return;
+      }
       var id = card.getAttribute('data-modal-target');
       var m = document.getElementById(id);
       if (m) open(m, card.getAttribute('data-modal-scroll'));
