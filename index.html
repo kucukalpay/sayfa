@@ -1643,6 +1643,10 @@
   }
   .modal-close:hover { background: rgba(0, 0, 0, 0.85); }
   body.modal-open { overflow: hidden; }
+  /* The page's own fixed chrome would show through the modal's translucent
+     backdrop and crowd its top line, so it steps aside while one is open. */
+  body.modal-open .mag-dock,
+  body.modal-open .entropy-hud { visibility: hidden; }
 
   .works-grid {
     display: grid;
@@ -2176,8 +2180,10 @@
   </div>
 </nav>
 
-<!-- Works: one centered column of cards. Modals live at the end of this
-     wrapper — they're position:fixed, so their DOM position doesn't matter. -->
+<!-- Works: one centered column of cards. The modals follow it at the top
+     level, not inside it: this wrapper's z-index makes a stacking context,
+     which would sink them below every fixed layer (HOME, DRONE, the top bar)
+     and leave their close buttons covered. -->
 <div class="card-streams" id="workStreams">
 <section id="three-d" class="section-shell">
   <div class="section-card" data-modal-target="modal-3d">
@@ -2277,6 +2283,8 @@
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
 </section>
+
+</div><!-- /.card-streams -->
 
 <div class="modal" id="modal-3d" role="dialog" aria-modal="true" aria-hidden="true" aria-label="3D">
   <button class="modal-close" aria-label="Close">×</button>
@@ -2733,7 +2741,6 @@
   </div><!-- /.modal-content -->
 </div><!-- /#modal-photography -->
 
-</div><!-- /.card-streams -->
 
 <script>
 /* ============================================================
