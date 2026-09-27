@@ -14,7 +14,7 @@
     --bg-2: #111114;
     --ink: #f4f4f5;
     --ink-dim: #a1a1aa;
-    --ink-faint: #52525b;
+    --ink-faint: #80808a;   /* lightest muted grey that still passes 4.5:1 on #18181b */
     --accent: #c46247;
     --accent-2: #52a882;
     --idle: #264364;      /* steel blue for resting, unaccented states */
@@ -406,6 +406,9 @@
     outline: none;
   }
   .mod-select:hover { color: var(--ink-dim); border-color: var(--ink-dim); }
+  .mod-select:focus-visible,
+  .knob:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+  .knob:focus-visible { border-radius: 50%; }
   .mod-select.on {
     color: #e8a070;
     border-color: #b8673a;
@@ -854,6 +857,8 @@
   .track-row .track-num { font-family: 'JetBrains Mono', monospace; color: var(--ink-faint); font-size: 0.75rem; }
   .track-meta { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
   .track-name { font-weight: 500; font-size: 0.95rem; letter-spacing: -0.01em; }
+  button.track-name { background: none; border: 0; padding: 0; color: inherit; font-family: inherit; text-align: left; cursor: pointer; }
+  button.track-name:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
   .track-sub {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.65rem;
@@ -863,7 +868,7 @@
   .track-tag {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.65rem;
-    color: var(--accent);
+    color: var(--accent-2);
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
@@ -1487,7 +1492,7 @@
   #workStreams .section-card .card-hero,
   #workStreams .section-card .card-cta { display: none; }
   .node-shape { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 1.4; transition: stroke 250ms, stroke-width 250ms; }
+  .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 2; transition: stroke 250ms, stroke-width 250ms; }
   .node-shape polygon.rim { fill: none; }
   .node-shape image { filter: grayscale(0.4) brightness(0.8); opacity: 0.55; transition: opacity 300ms, filter 300ms; }
   /* .is-preview is the touch version of hover: the first tap on a node
@@ -1497,7 +1502,7 @@
   #workStreams .section-card.is-preview .node-shape image { opacity: 1; filter: none; }
   #workStreams .section-card:hover .node-shape polygon.rim,
   #workStreams .section-card:focus-visible .node-shape polygon.rim,
-  #workStreams .section-card.is-preview .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.2; }
+  #workStreams .section-card.is-preview .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.8; }
   #workStreams .section-card:focus-visible,
   #workStreams .section-card.is-preview { outline: none; }
   #workStreams .section-card:hover .card-title,
@@ -2157,6 +2162,7 @@
   <span class="entropy-value" id="entropyValue">0</span>
 </div>
 
+<main id="main">
 <section class="hero" id="hero" aria-label="Welcome">
   <nav class="hero-nav" id="heroNav" aria-label="Sections">
     <a href="#three-d" data-target="three-d">3D SHOWREEL</a>
@@ -2218,20 +2224,7 @@
   <span class="play-icon" aria-hidden="true"></span>
   <span>Showreel</span>
 </button>
-<div class="showreel-lightbox" id="showreelLightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Latest showreel">
-  <button class="showreel-lightbox-close" id="showreelClose" type="button" aria-label="Close">×</button>
-  <div class="showreel-lightbox-inner">
-    <iframe id="showreelFrame" data-src="https://www.youtube.com/embed/TzZFn1TwO70" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen title="Latest showreel"></iframe>
-  </div>
-</div>
 
-<!-- Mini hovering music player (only visible when "Keep playing" is on
-     and the music modal has been closed mid-playback). -->
-<div class="mini-player" id="miniPlayer" aria-hidden="true">
-  <button class="mini-play" id="miniPlay" type="button" aria-label="Play / Pause">▶</button>
-  <span class="mini-name" id="miniName">—</span>
-  <button class="mini-close" id="miniClose" type="button" aria-label="Close player">×</button>
-</div>
 
 
 <nav>
@@ -2350,6 +2343,37 @@
 </section>
 
 </div><!-- /.card-streams -->
+
+<!-- CONTACT -->
+<section class="contact reveal" id="contact">
+  <p class="contact-eyebrow">// COMM LINK</p>
+  <a class="contact-email" href="mailto:kucukalpay@gmail.com">kucukalpay@gmail.com</a>
+  <div class="socials">
+    <a href="#">Instagram</a>
+    <a href="#">Vimeo</a>
+    <a href="#">ArtStation</a>
+    <a href="#">SoundCloud</a>
+  </div>
+</section>
+</main>
+
+<!-- Dialogs and floating players live outside <main> so an open dialog
+     can make the page behind it inert (see dialogFocus()). -->
+<div class="showreel-lightbox" id="showreelLightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Latest showreel">
+  <button class="showreel-lightbox-close" id="showreelClose" type="button" aria-label="Close">×</button>
+  <div class="showreel-lightbox-inner">
+    <iframe id="showreelFrame" data-src="https://www.youtube.com/embed/TzZFn1TwO70" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen title="Latest showreel"></iframe>
+  </div>
+</div>
+
+<!-- Mini hovering music player (only visible when "Keep playing" is on
+     and the music modal has been closed mid-playback). -->
+<div class="mini-player" id="miniPlayer" aria-hidden="true">
+  <button class="mini-play" id="miniPlay" type="button" aria-label="Play / Pause">▶</button>
+  <span class="mini-name" id="miniName">—</span>
+  <button class="mini-close" id="miniClose" type="button" aria-label="Close player">×</button>
+</div>
+
 
 <div class="modal" id="modal-3d" role="dialog" aria-modal="true" aria-hidden="true" aria-label="3D">
   <button class="modal-close" aria-label="Close">×</button>
@@ -2759,7 +2783,7 @@
       <li class="track-row" data-track="0" data-src="assets/Tracks/Bul_uzun15-4.mp3">
         <span class="track-num">01</span>
         <div class="track-meta">
-          <span class="track-name">Bul Uzun 15-4</span>
+          <button class="track-name" type="button">Bul Uzun 15-4</button>
           <span class="track-sub">hardware jam · ambient</span>
         </div>
         <span class="track-tag">Ambient</span>
@@ -2769,7 +2793,7 @@
       <li class="track-row" data-track="1" data-src="assets/Tracks/tambirbiyans.mp3">
         <span class="track-num">02</span>
         <div class="track-meta">
-          <span class="track-name">Tambirbiyans</span>
+          <button class="track-name" type="button">Tambirbiyans</button>
           <span class="track-sub">hardware jam · ambient</span>
         </div>
         <span class="track-tag">Ambient</span>
@@ -3000,17 +3024,6 @@
 })();
 </script>
 
-<!-- CONTACT -->
-<section class="contact reveal" id="contact">
-  <p class="contact-eyebrow">// COMM LINK</p>
-  <a class="contact-email" href="mailto:kucukalpay@gmail.com">kucukalpay@gmail.com</a>
-  <div class="socials">
-    <a href="#">Instagram</a>
-    <a href="#">Vimeo</a>
-    <a href="#">ArtStation</a>
-    <a href="#">SoundCloud</a>
-  </div>
-</section>
 
 <footer>
   <div>© <span id="year"></span> Albay.</div>
@@ -3044,12 +3057,16 @@
     lb.classList.add('open');
     lb.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
+    window.__dialogFocus.open(lb);
+    if (close) close.focus();
   }
   function dismiss() {
+    if (!lb.classList.contains('open')) return;
     lb.classList.remove('open');
     lb.setAttribute('aria-hidden', 'true');
     frame.src = ''; // hard stop
     document.body.classList.remove('modal-open');
+    window.__dialogFocus.close(lb);
   }
 
   btn.addEventListener('click', open);
@@ -3235,6 +3252,17 @@ class Knob {
     this.onChange = opts.onChange || (() => {});
     this.dial = el.querySelector('.knob-dial');
     this.valueEl = el.parentElement.querySelector('.knob-value');
+    // Exposed as a slider over 0-100 % of its travel (log knobs aren't
+    // linear in their unit), with the real value as the spoken text.
+    const label = el.parentElement.querySelector('.knob-label');
+    const pedal = el.closest('.pedal');
+    const pedalName = pedal && pedal.querySelector('.name');
+    el.setAttribute('role', 'slider');
+    el.tabIndex = 0;
+    el.setAttribute('aria-label', (pedalName ? pedalName.textContent.trim() + ' ' : '') +
+                    (label ? label.textContent.trim() : el.dataset.param));
+    el.setAttribute('aria-valuemin', '0');
+    el.setAttribute('aria-valuemax', '100');
     this.setValue(opts.value, false);
     this._bind();
   }
@@ -3253,6 +3281,8 @@ class Knob {
     const angle = -135 + n * 270;
     this.dial.style.transform = `rotate(${angle}deg)`;
     if (this.valueEl) this.valueEl.textContent = this._fmt();
+    this.el.setAttribute('aria-valuenow', Math.round(n * 100));
+    this.el.setAttribute('aria-valuetext', this._fmt() + (this.unit === '%' ? '%' : this.unit ? ' ' + this.unit : ''));
     if (fire) this.onChange(this.value);
   }
   _fmt() {
@@ -3291,6 +3321,22 @@ class Knob {
     };
     this.el.addEventListener('mousedown', onDown);
     this.el.addEventListener('touchstart', onDown, { passive: false });
+    // Keyboard: arrows step 2 % of the travel (Shift for fine), Page keys
+    // 10 %, Home/End the ends -- the same steps as the mouse wheel.
+    this.el.addEventListener('keydown', (e) => {
+      const n = this._norm(this.value);
+      const step = e.shiftKey ? 0.003 : 0.02;
+      let next = null;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') next = n + step;
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') next = n - step;
+      else if (e.key === 'PageUp') next = n + 0.1;
+      else if (e.key === 'PageDown') next = n - 0.1;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = 1;
+      if (next === null) return;
+      e.preventDefault();
+      this.setValue(this._denorm(next));
+    });
     this.el.addEventListener('wheel', (e) => {
       e.preventDefault();
       const n = this._norm(this.value);
@@ -3945,6 +3991,9 @@ class Knob {
 
   // Dropdown change — pick/clear sensor for a knob, lazy-init sensor on first use
   document.querySelectorAll('.mod-select').forEach(sel => {
+    // A real name ("Sensor for Overdrive Drive") instead of the tooltip.
+    const knob = sel.parentElement.querySelector('.knob');
+    sel.setAttribute('aria-label', 'Sensor for ' + ((knob && knob.getAttribute('aria-label')) || sel.dataset.param));
     sel.addEventListener('change', async () => {
       const p = sel.dataset.param;
       const src = sel.value;
@@ -4611,12 +4660,14 @@ class Knob {
     lb.classList.add('open');
     lb.setAttribute('aria-hidden', 'false');
     document.body.classList.add('lightbox-open');
+    window.__dialogFocus.open(lb);
     closeBtn.focus();
   }
   function close() {
     lb.classList.remove('open');
     lb.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('lightbox-open');
+    window.__dialogFocus.close(lb);
     // Clear stage on close to drop GIF decode memory
     setTimeout(() => { if (!lb.classList.contains('open')) stage.innerHTML = ''; }, 300);
   }
@@ -4664,6 +4715,37 @@ class Knob {
 </script>
 
 <script>
+/* ================= DIALOG FOCUS =================
+   While a dialog (work modal, showreel, photo lightbox) is open, every
+   other top-level element is inert, so Tab and screen readers stay inside
+   it; closing it returns focus to whatever opened it. Dialogs can stack
+   (the photo lightbox opens over a modal), so this keeps a stack and the
+   top one wins. Dialogs must be direct children of <body>. */
+(function dialogFocus() {
+  var stack = [];
+  function apply() {
+    var top = stack.length ? stack[stack.length - 1].el : null;
+    Array.prototype.forEach.call(document.body.children, function(c) {
+      c.inert = !!top && !c.contains(top);
+    });
+  }
+  window.__dialogFocus = {
+    open: function(el) {
+      if (stack.some(function(s) { return s.el === el; })) return;
+      stack.push({ el: el, back: document.activeElement });
+      apply();
+    },
+    close: function(el) {
+      var i = stack.findIndex(function(s) { return s.el === el; });
+      if (i < 0) return;
+      var back = stack[i].back;
+      stack.splice(i, 1);
+      apply();
+      if (back && back.focus && document.contains(back)) back.focus({ preventScroll: true });
+    }
+  };
+})();
+
 /* ================= MODAL CONTROLLER =================
    Cards open modals; modals close via X, Esc, or backdrop click. */
 (function modalController() {
@@ -4680,6 +4762,7 @@ class Knob {
       if (!f.getAttribute('src')) f.setAttribute('src', f.getAttribute('data-src'));
     });
     openModal = modal;
+    window.__dialogFocus.open(modal);
     // Several cards can share one modal (e.g. Synths/Pedals/Stray Voltage
     // all open the same rig) — data-modal-scroll deep-links to the part
     // that card is actually about.
@@ -4696,10 +4779,11 @@ class Knob {
   }
   function close() {
     if (!openModal) return;
-    var id = openModal.id;
+    var id = openModal.id, closing = openModal;
     openModal.classList.remove('open');
     openModal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
+    window.__dialogFocus.close(closing);
     document.querySelectorAll('.modal iframe[data-src]').forEach(function(f) {
       f.setAttribute('src', '');
     });
@@ -4714,13 +4798,21 @@ class Knob {
   var lastPointer = 'mouse';
   document.addEventListener('pointerdown', function(e) {
     lastPointer = e.pointerType;
-    var open = document.querySelector('#workStreams .section-card.is-preview');
-    if (open && !open.contains(e.target)) open.blur(); // focusout clears it
+    var open = document.activeElement;
+    if (open && open.matches && open.matches('#workStreams .section-card') && !open.contains(e.target)) {
+      open.blur(); // focusout clears the preview and the lit links
+    }
   }, true);
 
   openTriggers.forEach(function(card) {
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
+    var title = card.querySelector('.card-title'), desc = card.querySelector('.card-desc');
+    if (title) card.setAttribute('aria-label', title.textContent.trim());
+    if (desc) {
+      desc.id = desc.id || card.getAttribute('data-modal-target') + '-desc';
+      card.setAttribute('aria-describedby', desc.id);
+    }
     card.addEventListener('focusout', function() { card.classList.remove('is-preview'); });
     card.addEventListener('click', function() {
       if (lastPointer === 'touch' && card.closest('#workStreams') && !card.classList.contains('is-preview')) {
@@ -4751,7 +4843,8 @@ class Knob {
   });
 
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') close();
+    // The photo lightbox opens over a modal; Esc closes only that.
+    if (e.key === 'Escape' && !document.body.classList.contains('lightbox-open')) close();
   });
 
   document.addEventListener('click', function(e) {
@@ -4821,7 +4914,7 @@ class Knob {
     if (nowDocked !== docked) {
       docked = nowDocked;
       btn.classList.toggle('docked', docked);
-      btn.setAttribute('aria-label', docked ? 'Back to top' : 'Go to works');
+      btn.setAttribute('aria-label', docked ? 'Home, back to top' : 'Go to works');
     }
     publishPoles();
   }
