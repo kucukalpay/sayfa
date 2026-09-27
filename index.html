@@ -320,14 +320,14 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 1.4rem;
     line-height: 1;
-    color: var(--accent);
-    border: 1px solid var(--accent);
+    color: var(--accent-2);
+    border: 1px solid var(--accent-2);
     border-radius: 4px;
     transition: background-color 0.2s, color 0.2s;
   }
   .synth-subcard[open] > .synth-subcard-head::after { content: '−'; }
   .synth-subcard-head:hover::after {
-    background-color: var(--accent);
+    background-color: var(--accent-2);
     color: #0a0a0b;
   }
   .synth-subcard-title {
@@ -342,7 +342,7 @@
     flex-wrap: wrap;
   }
   .synth-subcard-title .abbr {
-    color: var(--accent);
+    color: var(--accent-2);
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.85rem;
     letter-spacing: 0.18em;
@@ -528,7 +528,7 @@
   .knob-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.6rem;
-    color: var(--accent);
+    color: var(--accent-2);
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
@@ -1148,11 +1148,11 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
-  .socials a:hover { color: var(--ink); transform: translateY(-2px); }
+  @media (hover: hover) { .socials a:hover { color: var(--ink); transform: translateY(-2px); } }
 
   footer {
     border-top: 1px solid var(--line);
-    padding: 1.5rem 2rem;
+    padding: 1.5rem 2rem 96px;   /* bottom clears DRONE and the gear */
     display: flex;
     justify-content: space-between;
     font-family: 'JetBrains Mono', monospace;
@@ -1498,15 +1498,12 @@
   .node-shape image { filter: grayscale(0.4) brightness(0.8); opacity: 0.55; transition: opacity 300ms, filter 300ms; }
   /* .is-preview is the touch version of hover: the first tap on a node
      (see modalController()). */
-  #workStreams .section-card:hover .node-shape image,
   #workStreams .section-card:focus-visible .node-shape image,
   #workStreams .section-card.is-preview .node-shape image { opacity: 1; filter: none; }
-  #workStreams .section-card:hover .node-shape polygon.rim,
   #workStreams .section-card:focus-visible .node-shape polygon.rim,
   #workStreams .section-card.is-preview .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.8; }
   #workStreams .section-card:focus-visible,
   #workStreams .section-card.is-preview { outline: none; }
-  #workStreams .section-card:hover .card-title,
   #workStreams .section-card:focus-visible .card-title,
   #workStreams .section-card.is-preview .card-title { color: var(--lit); }
   #workStreams .card-text {
@@ -1528,6 +1525,9 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--accent-2);
+    /* a halo in the background colour, so graph links crossing a title
+       don't cut through its letters */
+    text-shadow: 0 0 3px #0a0a0b, 0 0 6px #0a0a0b, 0 0 10px #0a0a0b;
   }
   #three-d .card-title { font-size: 1.15rem; }
   #workStreams .section-card .card-desc {
@@ -1538,15 +1538,23 @@
     line-height: 1.45;
     opacity: 1;
     color: rgba(235,230,225,0.85);  /* --lit at 85% */
-    background: rgba(10,10,12,0.92);
+    background: #0a0a0c;
     border: 1px solid rgba(196,98,71,0.3);
   }
-  .section-shell:hover,
-  .section-shell:focus-within { z-index: 6; }
-  #workStreams .section-card:hover .card-desc,
+  .section-shell:focus-within { z-index: 20; }
   #workStreams .section-card:focus-visible .card-desc,
   #workStreams .section-card.is-preview .card-desc { display: block; }
   #workStreams .section-card.is-preview .card-text { pointer-events: auto; }
+  /* Mouse hover = the same look as keyboard focus and the touch preview.
+     Only on devices that really hover: phones keep :hover stuck after a
+     tap. */
+  @media (hover: hover) {
+    .section-shell:hover { z-index: 20; }
+    #workStreams .section-card:hover .node-shape image { opacity: 1; filter: none; }
+    #workStreams .section-card:hover .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.8; }
+    #workStreams .section-card:hover .card-title { color: var(--lit); }
+    #workStreams .section-card:hover .card-desc { display: block; }
+  }
   #workStreams .section-card.is-preview .card-desc::after {
     content: 'Tap again to open ↗';
     display: block;
@@ -1645,6 +1653,14 @@
     -webkit-overflow-scrolling: touch;
   }
   .modal.open { display: block; }
+  /* The modal box already pads its content; the synth section's own page
+     padding (7rem top) only pushed it down. */
+  .modal .synth-inner { padding: 0; }
+  @media (max-width: 640px) {
+    .modal { padding: 64px 8px 24px; }
+    .modal-content { padding: 20px 14px; }
+    .modal .synth-subcard { padding: 1rem 0.75rem; }
+  }
   .modal-content {
     max-width: 1200px;
     margin: 0 auto;
@@ -1809,8 +1825,8 @@
     display: inline-flex;
     align-items: center;
   }
-  .mag-btn:hover,
   .mag-btn:focus-visible { color: var(--lit); }
+  @media (hover: hover) { .mag-btn:hover { color: var(--lit); } }
   .mag-label { display: inline-flex; align-items: center; gap: 20px; }
   .mag-label-home,
   .mag-btn.docked .mag-label-works { display: none; }
@@ -1832,6 +1848,33 @@
      (CV jacks, connected states). Display-only: never interactive, and it
      doesn't move or animate on its own — it just reflects whatever the
      field last computed, sticky the same way the field itself is. */
+  /* Fades behind the fixed controls (entropy, Showreel, HOME at the top;
+     DRONE and the gear at the bottom): above the graph, contact and footer
+     (z-index 1), never catching taps. z-index 2 and an earlier DOM spot
+     than the hero keep them under the hero, whose own z-index 2 is what
+     DRONE and the gear are stacked inside. */
+  .edge-fade {
+    position: fixed;
+    left: 0; right: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .edge-fade-top {
+    top: 0;
+    height: 96px;
+    background: linear-gradient(to bottom, rgba(10,10,11,0.95) 0%, rgba(10,10,11,0.95) 55%, rgba(10,10,11,0) 100%);
+  }
+  .edge-fade-bottom {
+    bottom: 0;
+    height: 80px;
+    background: linear-gradient(to top, rgba(10,10,11,0.95) 0%, rgba(10,10,11,0.95) 40%, rgba(10,10,11,0) 100%);
+  }
+  @media (max-width: 420px) {
+    /* HOME docks lower here (top: 60px), so the top fade reaches further. */
+    .edge-fade-top { height: 116px; }
+  }
+  body.modal-open .edge-fade { display: none; }
+
   .entropy-hud {
     position: fixed;
     top: 24px;
@@ -2046,8 +2089,8 @@
   }
   .hero-email { color: var(--accent-2); }
   .hero-jump { color: var(--ink-dim); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.9em; }
-  .hero-contact a:hover,
   .hero-contact a:focus-visible { color: var(--lit); }
+  @media (hover: hover) { .hero-contact a:hover { color: var(--lit); } }
 
   .hero-controls {
     /* Fixed (not absolute) so DRONE survives past the hero — it lives at the
@@ -2115,7 +2158,7 @@
     letter-spacing: inherit;
     text-transform: inherit;
   }
-  .field-reset:hover { color: var(--ink); }
+  @media (hover: hover) { .field-reset:hover { color: var(--ink); } }
   .hero-btn {
     background: transparent;
     color: rgba(255,255,255,0.95);
@@ -2132,9 +2175,8 @@
     opacity: 0.5;
     transition: opacity 200ms;
   }
-  .hero-btn:hover:not(:disabled) {
-    opacity: 1;
-  }
+  .hero-btn:focus-visible { opacity: 1; }
+  @media (hover: hover) { .hero-btn:hover:not(:disabled) { opacity: 1; } }
   .hero-btn:disabled {
     opacity: 0.25;
     cursor: not-allowed;
@@ -2159,6 +2201,11 @@
      directions are from each other (see magneticFieldLayer()'s frame()
      for the calculation). Sits over the canvas it's reporting on, so it's
      a page-wide HUD, not scoped to the hero. -->
+<!-- Soft fades under the fixed controls at the top and bottom edges, so
+     content scrolling underneath doesn't collide with them. -->
+<div class="edge-fade edge-fade-top" aria-hidden="true"></div>
+<div class="edge-fade edge-fade-bottom" aria-hidden="true"></div>
+
 <div class="entropy-hud" id="entropyHud" aria-hidden="true">
   <span class="entropy-label">Entropy</span>
   <span class="entropy-value" id="entropyValue">0</span>
@@ -3043,8 +3090,8 @@
   }
   Object.keys(nodes).forEach(function(id) {
     var el = nodes[id];
-    el.addEventListener('mouseenter', function() { focusNode(id); });
-    el.addEventListener('mouseleave', clearFocus);
+    el.addEventListener('pointerenter', function(e) { if (e.pointerType === 'mouse') focusNode(id); });
+    el.addEventListener('pointerleave', function(e) { if (e.pointerType === 'mouse') clearFocus(); });
     el.addEventListener('focusin', function() { focusNode(id); });
     el.addEventListener('focusout', clearFocus);
   });
@@ -3056,7 +3103,7 @@
 
 
 <footer>
-  <div>© <span id="year"></span> Albay.</div>
+  <div>© <span id="year"></span> Alpay Küçük.</div>
   <div>Dark mode forever</div>
 </footer>
 
@@ -3803,7 +3850,7 @@ class Knob {
       const midY = Math.max(y1, y2) + 50;
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', `M${x1},${y1} C${midX},${midY} ${midX},${midY} ${x2},${y2}`);
-      path.setAttribute('stroke', '#00e5ff');
+      path.setAttribute('stroke', '#52a882'); // --accent-2: connected = live
       path.setAttribute('stroke-width', '1.8');
       path.setAttribute('fill', 'none');
       path.setAttribute('opacity', '0.55');
@@ -3812,7 +3859,7 @@ class Knob {
       [[x1,y1],[x2,y2]].forEach(([cx,cy]) => {
         const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', 3);
-        c.setAttribute('fill', '#00e5ff'); c.setAttribute('opacity', '0.85');
+        c.setAttribute('fill', '#52a882'); c.setAttribute('opacity', '0.85');
         cablesSvg.appendChild(c);
       });
     });
@@ -4184,7 +4231,7 @@ class Knob {
       sum += v;
       const bar = vizBars[i];
       bar.style.height = `${Math.max(4, v * 100)}%`;
-      const color = v > 0.6 ? '#00e5ff' : '#b5b5ba';
+      const color = v > 0.6 ? '#52a882' : '#b5b5ba';
       if (_prevBarColor[i] !== color) { bar.style.background = color; _prevBarColor[i] = color; }
       bar.style.opacity = 0.25 + v * 0.75;
     }
@@ -4524,7 +4571,7 @@ class Knob {
     if (_barGrad && _barGradH === h) return _barGrad;
     const g = ctx2d.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, '#b5b5ba');
-    g.addColorStop(1, '#00e5ff');
+    g.addColorStop(1, '#52a882');
     _barGrad = g; _barGradH = h;
     return g;
   }
