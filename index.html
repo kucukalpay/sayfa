@@ -1449,6 +1449,7 @@
   #procedural    { --x: 72; --y: 30; --s: 140px; }
   #synths        { --x: 60; --y: 72.5; --s: 170px; }
   #pedals        { --x: 42; --y: 70;   --s: 120px; }
+  #ane           { --x: 24; --y: 58;   --s: 120px; }
   #stray-voltage { --x: 46; --y: 50; --s: 110px; }
   #music         { --x: 84; --y: 57.5; --s: 130px; }
   #loops         { --x: 88; --y: 72.5; --s: 115px; }
@@ -1566,6 +1567,7 @@
     #workStreams #synths        { --x: 42.7; --y: 59.4; --s: 96px; }
     #workStreams #stray-voltage { --x: 21.5; --y: 77.4; --s: 74px; }
     #workStreams #pedals        { --x: 14.6; --y: 59.1; --s: 82px; }
+    #workStreams #ane           { --x: 13.0; --y: 40.0; --s: 74px; }
     #workStreams #music         { --x: 54.0; --y: 82.0; --s: 84px; }
     #workStreams #loops         { --x: 76.8; --y: 70.5; --s: 78px; }
     #workStreams #tracks        { --x: 67.2; --y: 52.5; --s: 94px; }
@@ -2270,14 +2272,25 @@
     <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Synths</h2>
-      <p class="card-desc">Modular synth patching — cables, knobs, sensors. Tap to play.</p>
+      <p class="card-desc">Hand-built noise instruments, starting with the Annoying Noise Generator.</p>
+    </div>
+    <span class="card-cta" aria-hidden="true">Open ↗</span>
+  </div>
+</section>
+
+<section id="ane" class="section-shell">
+  <div class="section-card" data-modal-target="modal-ane">
+    <img class="card-hero" src="assets/images/mkv-pcb.webp" alt="PCB of the Annoying Noise Generator the emulator is modelled on" loading="lazy">
+    <div class="card-text">
+      <h2 class="card-title">ANE</h2>
+      <p class="card-desc">Annoying Noise Emulator — a web synth modelled on my ANG, with patch cables, sensors and pedals. Tap to play.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
 </section>
 
 <section id="pedals" class="section-shell">
-  <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="pedalsRow">
+  <div class="section-card" data-modal-target="modal-ane" data-modal-scroll="pedalsRow">
     <img class="card-hero" src="assets/images/mkv-pcbhrz.webp" alt="Hand-built pedal PCB layout" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Pedals</h2>
@@ -2428,15 +2441,15 @@
   </div><!-- /.modal-content -->
 </div><!-- /#modal-procedural -->
 
-<div class="modal" id="modal-synths" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Synths and Pedals">
+<div class="modal" id="modal-ane" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Annoying Noise Emulator">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
   <div class="synth-section">
   <div class="synth-inner">
     <div class="section-head">
       <span class="num">02 /</span>
-      <h2>Synths &amp; Pedals</h2>
-      <span class="tag">Amateur</span>
+      <h2>ANE</h2>
+      <span class="tag">Web synth</span>
     </div>
 
     <details class="synth-subcard has-pcb" open>
@@ -2447,8 +2460,7 @@
       <div class="synth-subcard-body">
     <div class="rig">
       <div class="rig-header">
-        <h3>Annoying Noise Emulator</h3>
-        <div class="rig-hint"><span class="dot"></span>CLICK LFO <span style="color:var(--accent-2)">OUT</span> · THEN ANY <span style="color:var(--accent-2)">CV</span> IN · EACH KNOB HAS A <span style="color:#e8a070">SENSOR</span> DROPDOWN</div>
+        <div class="rig-hint"><span class="dot"></span>TAP LFO <span style="color:var(--accent-2)">OUT</span> · THEN ANY <span style="color:var(--accent-2)">CV</span> IN · EACH KNOB HAS A <span style="color:#e8a070">SENSOR</span> DROPDOWN</div>
       </div>
 
       <div class="modules" id="modules">
@@ -2561,8 +2573,24 @@
     </div>
       </div><!-- /.synth-subcard-body -->
     </details><!-- /.synth-subcard ANE -->
+  </div>
+  </div><!-- /.synth-section -->
+  </div><!-- /.modal-content -->
+</div><!-- /#modal-ane -->
 
-    <details class="synth-subcard" id="angDetails">
+<div class="modal" id="modal-synths" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Synths">
+  <button class="modal-close" aria-label="Close">×</button>
+  <div class="modal-content">
+  <div class="synth-section">
+  <div class="synth-inner">
+    <div class="section-head">
+      <span class="num">02 /</span>
+      <h2>Synths</h2>
+      <span class="tag">Amateur</span>
+    </div>
+
+
+    <details class="synth-subcard" id="angDetails" open>
       <summary class="synth-subcard-head">
         <h3 class="synth-subcard-title"><span class="abbr">ANG</span> Annoying Noise Generator</h3>
         <p class="synth-subcard-desc">Annoying Noise Generator and some other devices for making noise and low fidelity effects. You can buy or order from my Etsy page. You can find the sounds and samples made by these devices streamable and downloadable in the “Music: Loops and Samples” section.</p>
@@ -2901,6 +2929,8 @@
     ['three-d',       'tracks'],
     ['procedural',    'synths'],
     ['synths',        'pedals'],
+    ['synths',        'ane'],
+    ['ane',           'pedals'],
     ['synths',        'stray-voltage'],
     ['pedals',        'stray-voltage'],
     ['synths',        'music'],
@@ -2911,7 +2941,7 @@
   // sides and rotation in degrees; all hexagons, unrotated (vertex up)
   var SHAPES = {
     'three-d': [6, 0], 'procedural': [6, 0], 'synths': [6, 0], 'stray-voltage': [6, 0],
-    'pedals': [6, 0], 'music': [6, 0], 'loops': [6, 0], 'tracks': [6, 0], 'photography': [6, 0]
+    'pedals': [6, 0], 'ane': [6, 0], 'music': [6, 0], 'loops': [6, 0], 'tracks': [6, 0], 'photography': [6, 0]
   };
   var NS = 'http://www.w3.org/2000/svg';
 
@@ -3727,10 +3757,10 @@ class Knob {
     gate.gain.setTargetAtTime(dronePlaying ? 0.55 : 0, now, 0.04);
     kickVizLoop();
   });
-  // Auto-stop the drone when the Synths popup closes — otherwise it keeps
+  // Auto-stop the drone when the ANE popup closes — otherwise it keeps
   // humming behind the rest of the page.
   document.addEventListener('modal:closed', (e) => {
-    if (e.detail && e.detail.id === 'modal-synths') stopDrone();
+    if (e.detail && e.detail.id === 'modal-ane') stopDrone();
   });
 
   // pedals — only the stomp switch toggles; knob drags don't bubble here
@@ -4075,7 +4105,9 @@ class Knob {
 
   // Visibility gating for this section's rAF loops. Shared between modLoop and vizLoop
   // so we don't pay DOM-thrash costs while the synth section is off-screen.
-  const synthsSection = document.getElementById('synths');
+  // Watches the rig itself (in the ANE modal): off-screen whenever the
+  // modal is closed.
+  const synthsSection = document.getElementById('synthViz') && document.getElementById('synthViz').closest('.rig');
   let synthsVisible = false;
   let modLoopRunning = false;
   let vizLoopRunning = false;
