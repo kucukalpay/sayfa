@@ -2038,9 +2038,7 @@
   }
   .hero-nav.open:hover { opacity: 1; }
 
-  /* Who this is, top-left: a small status label, the name (kept modest
-     and muted on purpose, footer-sized), the role in muted mono, then contact. Green marks the
-     one interactive line, as elsewhere on the page. */
+  /* Who this is, top-left: just the name, footer-sized. */
   .hero-center {
     position: absolute;
     top: 132px;
@@ -2049,16 +2047,7 @@
     pointer-events: none;
     max-width: 560px;
   }
-  .hero-status {
-    margin: 0 0 10px;
-    font-size: clamp(0.62rem, 1vw, 0.75rem);
-    letter-spacing: 0.3em;
-    line-height: 1.1;
-    text-transform: uppercase;
-    opacity: 0.5;
-  }
-  /* Name reads like a footer credit, not a headline: same small mono as
-     the role line, just a touch brighter so it still leads the block. */
+  /* Name reads like a footer credit, not a headline. */
   .hero-name {
     margin: 0;
     font-family: 'JetBrains Mono', monospace;
@@ -2069,32 +2058,6 @@
     color: var(--ink);
     opacity: 0.8;
   }
-  .hero-role {
-    margin: 2px 0 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: clamp(0.72rem, 1.1vw, 0.85rem);
-    letter-spacing: 0.08em;
-    color: var(--ink-dim);
-  }
-  .hero-contact {
-    margin: 12px 0 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 6px 22px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: clamp(0.75rem, 1.1vw, 0.85rem);
-  }
-  .hero-contact a {
-    pointer-events: auto;
-    padding: 12px 0;          /* taller tap area, same visual spacing */
-    margin: -12px 0;
-    transition: color 200ms;
-  }
-  .hero-email { color: var(--accent-2); }
-  .hero-jump { color: var(--ink-dim); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.9em; }
-  .hero-contact a:focus-visible { color: var(--lit); }
-  @media (hover: hover) { .hero-contact a:hover { color: var(--lit); } }
 
   .hero-controls {
     /* Fixed (not absolute) so DRONE survives past the hero — it lives at the
@@ -2225,13 +2188,7 @@
     <a href="#contact" data-target="contact">Contact</a>
   </nav>
   <div class="hero-center">
-    <p class="hero-status">Under construction</p>
     <h1 class="hero-name">Alpay Küçük</h1>
-    <p class="hero-role">3D artist · not instrument maker · not musician</p>
-    <p class="hero-contact">
-      <a class="hero-email" href="mailto:kucukalpay@gmail.com">kucukalpay@gmail.com</a>
-      <a class="hero-jump" href="#contact">Contact ↓</a>
-    </p>
   </div>
   <div class="hero-controls hero-controls-left">
     <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
