@@ -2039,7 +2039,7 @@
   .hero-nav.open:hover { opacity: 1; }
 
   /* Who this is, top-left: a small status label, the name (kept modest
-     and muted on purpose), the role in muted mono, then contact. Green marks the
+     and muted on purpose, footer-sized), the role in muted mono, then contact. Green marks the
      one interactive line, as elsewhere on the page. */
   .hero-center {
     position: absolute;
@@ -2050,30 +2050,34 @@
     max-width: 560px;
   }
   .hero-status {
-    margin: 0 0 14px;
-    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+    margin: 0 0 10px;
+    font-size: clamp(0.62rem, 1vw, 0.75rem);
     letter-spacing: 0.3em;
     line-height: 1.1;
     text-transform: uppercase;
     opacity: 0.5;
   }
+  /* Name reads like a footer credit, not a headline: same small mono as
+     the role line, just a touch brighter so it still leads the block. */
   .hero-name {
     margin: 0;
-    font-size: clamp(1.35rem, 2.4vw, 1.9rem);
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    line-height: 1.1;
-    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.78rem, 1.15vw, 0.9rem);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    line-height: 1.4;
+    color: var(--ink);
+    opacity: 0.8;
   }
   .hero-role {
-    margin: 8px 0 0;
+    margin: 2px 0 0;
     font-family: 'JetBrains Mono', monospace;
     font-size: clamp(0.72rem, 1.1vw, 0.85rem);
     letter-spacing: 0.08em;
     color: var(--ink-dim);
   }
   .hero-contact {
-    margin: 22px 0 0;
+    margin: 12px 0 0;
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
