@@ -1842,7 +1842,7 @@
   }
 
   /* ----- Entropy HUD -----------------------------------------------------
-     Top-left readout of the background field's current entropy (see
+     Upper-left readout of the background field's current entropy (see
      magneticFieldLayer()'s frame()). Copper-oxide green — --accent-2 is
      already that color, used for the same "live circuit" reading elsewhere
      (CV jacks, connected states). Display-only: never interactive, and it
@@ -1875,9 +1875,32 @@
   }
   body.modal-open .edge-fade { display: none; }
 
+  /* ----- Under construction label ---------------------------------------
+     Small status line fixed at the top-centre. As WORKS rides up to dock
+     there as HOME it pushes the label up and fades it out (see magButton()). */
+  .construction {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    z-index: 4000;
+    margin: 0;
+    font-size: clamp(0.62rem, 1vw, 0.75rem);
+    letter-spacing: 0.3em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ink-dim);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  body.modal-open .construction { visibility: hidden; }
+  @media (max-width: 640px) {
+    .construction { top: 26px; font-size: 0.6rem; letter-spacing: 0.2em; }
+  }
+
   .entropy-hud {
     position: fixed;
-    top: 24px;
+    top: 132px;
     left: 24px;
     z-index: 4000;
     display: flex;
@@ -1896,7 +1919,7 @@
     font-variant-numeric: tabular-nums;
   }
   @media (max-width: 640px) {
-    .entropy-hud { top: 16px; left: 16px; }
+    .entropy-hud { top: 110px; left: 16px; }
   }
 
   /* ----- Quick Showreel button + lightbox -------------------------------
@@ -2038,10 +2061,11 @@
   }
   .hero-nav.open:hover { opacity: 1; }
 
-  /* Who this is, top-left: just the name, footer-sized. */
+  /* Who this is, tucked into the top-left corner and kept faint on purpose:
+     there to be found by someone looking, not announced. */
   .hero-center {
     position: absolute;
-    top: 132px;
+    top: 24px;
     left: 24px;
     text-align: left;
     pointer-events: none;
@@ -2056,7 +2080,7 @@
     letter-spacing: 0.08em;
     line-height: 1.4;
     color: var(--ink);
-    opacity: 0.8;
+    opacity: 0.28;
   }
 
   .hero-controls {
@@ -2156,7 +2180,7 @@
     .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
     .hero-controls-right { right: 16px; }
-    .hero-center { top: 110px; left: 16px; right: 16px; max-width: none; }
+    .hero-center { top: 16px; left: 16px; max-width: none; }
   }
 </style>
 </head>
@@ -2172,6 +2196,8 @@
      content scrolling underneath doesn't collide with them. -->
 <div class="edge-fade edge-fade-top" aria-hidden="true"></div>
 <div class="edge-fade edge-fade-bottom" aria-hidden="true"></div>
+
+<p class="construction" id="construction">Under construction</p>
 
 <div class="entropy-hud" id="entropyHud" aria-hidden="true">
   <span class="entropy-label">Entropy</span>
@@ -4925,6 +4951,7 @@ class Knob {
   // label's first/last letters as the magnet's poles for the field layer.
   var dock  = document.getElementById('magDock');
   var btn   = document.getElementById('magBtn');
+  var sign  = document.getElementById('construction');
   var works = document.getElementById('workStreams');
   if (!dock || !btn) return;
 
@@ -4948,6 +4975,24 @@ class Knob {
     if (window.__fieldEnsureLoop) window.__fieldEnsureLoop();
   }
 
+  // The rising button shoves the Under construction label up out of its
+  // way and fades it over the last FADE px before docking, so it is gone
+  // by the time HOME has taken its place.
+  var FADE = 120;
+  var signBottom = 0;
+  function readSign() {
+    if (!sign) return;
+    sign.style.transform = '';
+    signBottom = sign.getBoundingClientRect().bottom;
+  }
+  function pushSign() {
+    if (!sign) return;
+    var top = btn.getBoundingClientRect().top;
+    var shove = Math.min(0, top - signBottom - 12);
+    sign.style.transform = 'translateX(-50%) translateY(' + shove + 'px)';
+    sign.style.opacity = Math.max(0, Math.min(1, (top - stickyTop) / FADE));
+  }
+
   function update() {
     ticking = false;
     var nowDocked = window.scrollY > 0 && dock.getBoundingClientRect().top <= stickyTop + 0.5;
@@ -4956,6 +5001,7 @@ class Knob {
       btn.classList.toggle('docked', docked);
       btn.setAttribute('aria-label', docked ? 'Home, back to top' : 'Go to works');
     }
+    pushSign();
     publishPoles();
   }
 
@@ -4971,12 +5017,13 @@ class Knob {
   });
 
   window.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', function() { readStickyTop(); schedule(); });
+  window.addEventListener('resize', function() { readStickyTop(); readSign(); schedule(); });
   // Letter positions move once the webfont swaps in.
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function() { readSign(); schedule(); });
   window.addEventListener('load', schedule);
 
   readStickyTop();
+  readSign();
   update();
 })();
 
