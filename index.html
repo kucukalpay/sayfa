@@ -1441,9 +1441,34 @@
     --k: 1;
     width: calc(var(--s) * var(--k));
     height: calc(var(--s) * var(--k));
-    transform: translate(-50%, -50%);
+    --dx: 0px; --dy: 0px; --t: 1;
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(var(--t));
     z-index: 2;
-    transition: opacity 300ms;
+    transition: opacity 300ms, transform 450ms cubic-bezier(.2,.7,.2,1), visibility 0s;
+  }
+  /* Grouped nodes: a group's members sit tucked inside its head node
+     (--dx/--dy point back at the head, set by workGraph()) until the
+     head is clicked, then fan out to their own spots. */
+  #workStreams .section-shell.is-tucked {
+    --t: 0.25;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 300ms, transform 450ms cubic-bezier(.2,.7,.2,1), visibility 0s 450ms;
+  }
+  #workStreams .group-count {
+    display: block;
+    margin-top: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    text-shadow: 0 0 3px #0a0a0b, 0 0 6px #0a0a0b;
+  }
+  #workStreams .section-shell.is-open .group-count { display: none; }
+  #workStreams.no-anim .section-shell { transition: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .section-shell, #workStreams .section-shell.is-tucked { transition: none; }
   }
   #three-d       { --x: 50; --y: 15.9; --s: 300px; }
   #procedural    { --x: 72; --y: 30; --s: 140px; }
@@ -1465,9 +1490,10 @@
     stroke: var(--idle);
     stroke-width: 1.5;
     stroke-dasharray: 3 4;
-    transition: stroke 300ms, stroke-width 300ms;
+    transition: stroke 300ms, stroke-width 300ms, opacity 300ms;
   }
   .graph-edge.on { stroke: rgba(196,98,71,0.95); stroke-width: 1.6; stroke-dasharray: none; }
+  .graph-edge.is-hidden { opacity: 0; }
   .card-streams.has-focus .section-shell { opacity: 0.3; }
   .card-streams.has-focus .section-shell.is-linked { opacity: 1; }
   .card-streams.has-focus .graph-edge:not(.on) { stroke: rgba(38,67,100,0.3); }
@@ -2919,6 +2945,7 @@
   function publishFieldSources() {
     var sources = [];
     for (var i = 0; i < allEls.length; i++) {
+      if (allEls[i].classList.contains('is-tucked')) continue;
       var r = allEls[i].getBoundingClientRect();
       if (r.bottom > 0 && r.top < window.innerHeight) {
         sources.push({ x: r.left + r.width / 2, y: r.top + r.height / 2,
@@ -2942,6 +2969,7 @@
 
   window.addEventListener('scroll', onScrollOrResize, { passive: true });
   window.addEventListener('resize', onScrollOrResize);
+  document.addEventListener('graph:moved', onScrollOrResize); // groups opening/closing
   publishFieldSources();
 })();
 
@@ -2973,6 +3001,17 @@
     ['loops',         'tracks'],
     ['tracks',        'photography']
   ];
+  // Each head node holds its members tucked inside it until clicked.
+  var GROUPS = {
+    'three-d': ['procedural'],
+    'synths':  ['pedals', 'ane', 'stray-voltage'],
+    'music':   ['loops', 'tracks']
+  };
+  var headOf = {};
+  Object.keys(GROUPS).forEach(function(h) {
+    GROUPS[h].forEach(function(m) { headOf[m] = h; });
+  });
+  var openGroup = null;
   // sides and rotation in degrees; all hexagons, unrotated (vertex up)
   var SHAPES = {
     'three-d': [6, 0], 'procedural': [6, 0], 'synths': [6, 0], 'stray-voltage': [6, 0],
@@ -3043,12 +3082,46 @@
     paths.push(p);
   });
 
+  function isTucked(id) { return !!headOf[id] && openGroup !== headOf[id]; }
+  // A tucked member stands in for its head: its links are drawn from the
+  // head, and links inside a closed group aren't drawn at all.
+  function shown(id) { return isTucked(id) ? headOf[id] : id; }
+
+  // A node's centre relative to the stage: where it is drawn right now
+  // (live, mid-slide included), or where it comes to rest (nodes are
+  // centred on their left/top; a tucked one rests on its head).
+  function centre(id, live) {
+    var el = document.getElementById(isTucked(id) && !live ? headOf[id] : id);
+    if (!live) return [el.offsetLeft, el.offsetTop];
+    var r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+    return [r.left + r.width / 2 - sr.left, r.top + r.height / 2 - sr.top];
+  }
+
   function layout() {
+    // Point every tucked member back at its head (nodes are centred on
+    // their left/top, so those are the centres).
+    Object.keys(headOf).forEach(function(m) {
+      var me = document.getElementById(m), he = document.getElementById(headOf[m]);
+      if (!me || !he) return;
+      var t = isTucked(m);
+      me.style.setProperty('--dx', t ? (he.offsetLeft - me.offsetLeft) + 'px' : '0px');
+      me.style.setProperty('--dy', t ? (he.offsetTop - me.offsetTop) + 'px' : '0px');
+    });
+    drawEdges();
+  }
+  function drawEdges(live) {
+    var drawn = {};
     EDGES.forEach(function(e, i) {
-      var a = nodes[e[0]], b = nodes[e[1]];
-      if (!a || !b) return;
-      // Nodes are centred on their left/top, so those are the centres.
-      var ax = a.offsetLeft, ay = a.offsetTop, bx = b.offsetLeft, by = b.offsetTop;
+      if (!paths[i]) return;
+      var sa = shown(e[0]), sb = shown(e[1]);
+      // Hidden: inside a closed group, or a rerouted copy of a link
+      // an earlier edge already draws.
+      var key = sa < sb ? sa + '|' + sb : sb + '|' + sa;
+      var hide = sa === sb || drawn[key];
+      drawn[key] = true;
+      paths[i].classList.toggle('is-hidden', !!hide);
+      var ca = centre(e[0], live), cb = centre(e[1], live);
+      var ax = ca[0], ay = ca[1], bx = cb[0], by = cb[1];
       var dx = bx - ax, dy = by - ay;
       var len = Math.sqrt(dx * dx + dy * dy) || 1;
       // A gentle sideways bow keeps neighbouring links from overlapping.
@@ -3062,9 +3135,11 @@
     var linked = {};
     linked[id] = true;
     EDGES.forEach(function(e, i) {
-      var hit = e[0] === id || e[1] === id;
-      if (hit) { linked[e[0]] = true; linked[e[1]] = true; }
-      if (paths[i]) paths[i].classList.toggle('on', hit);
+      if (!paths[i]) return;
+      var sa = shown(e[0]), sb = shown(e[1]);
+      var hit = (sa === id || sb === id) && !paths[i].classList.contains('is-hidden');
+      if (hit) { linked[sa] = true; linked[sb] = true; }
+      paths[i].classList.toggle('on', hit);
     });
     stage.classList.add('has-focus');
     Object.keys(nodes).forEach(function(k) {
@@ -3084,7 +3159,90 @@
     el.addEventListener('focusout', clearFocus);
   });
 
-  layout();
+  // Redraw the links every frame while nodes slide, and tell the field
+  // layer its sources moved.
+  var animEnd = 0, animating = false;
+  function animate() {
+    animEnd = performance.now() + 500;
+    if (animating) return;
+    animating = true;
+    (function step() {
+      var done = performance.now() >= animEnd;
+      // Links ride along with the sliding nodes, then settle exactly.
+      drawEdges(!done);
+      document.dispatchEvent(new Event('graph:moved'));
+      if (!done) requestAnimationFrame(step);
+      else animating = false;
+    })();
+  }
+  // In case frames were skipped (background tab), settle once the slide
+  // really ends.
+  stage.addEventListener('transitionend', function(e) {
+    if (e.propertyName !== 'transform' || !e.target.classList.contains('section-shell')) return;
+    drawEdges(false);
+    document.dispatchEvent(new Event('graph:moved'));
+  });
+
+  function setOpen(h, instant) {
+    openGroup = h;
+    Object.keys(headOf).forEach(function(m) {
+      var me = document.getElementById(m);
+      if (!me) return;
+      var t = isTucked(m);
+      me.classList.toggle('is-tucked', t);
+      me.inert = t;
+    });
+    Object.keys(GROUPS).forEach(function(g) {
+      var he = document.getElementById(g);
+      if (!he) return;
+      he.classList.toggle('is-open', g === h);
+      var card = he.querySelector('.section-card');
+      if (card) card.setAttribute('aria-expanded', g === h ? 'true' : 'false');
+    });
+    layout();
+    if (!instant) animate();
+  }
+
+  // Clicking a closed head opens its group instead of its page. This
+  // listener is added before modalController()'s on the same card, so it
+  // can stop that one; once the group is open, clicks open the page.
+  Object.keys(GROUPS).forEach(function(h) {
+    var he = document.getElementById(h);
+    var card = he && he.querySelector('.section-card');
+    if (!card) return;
+    var count = document.createElement('span');
+    count.className = 'group-count';
+    count.setAttribute('aria-hidden', 'true');
+    count.textContent = '+' + GROUPS[h].length;
+    var text = card.querySelector('.card-text');
+    if (text) text.appendChild(count);
+    function expand(e) {
+      if (openGroup === h) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setOpen(h);
+      // Touch: opening the group doubles as the preview tap, so the next
+      // tap opens the page.
+      if (e.pointerType === 'touch') {
+        card.classList.add('is-preview');
+        card.focus({ preventScroll: true });
+      }
+    }
+    card.addEventListener('click', expand);
+    card.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') expand(e);
+    });
+  });
+  // Clicking the graph's empty space folds the open group back up.
+  stage.addEventListener('click', function(e) {
+    if (openGroup && !e.target.closest('.section-card')) setOpen(null);
+  });
+
+  // Start closed, already tucked: no slide on page load.
+  stage.classList.add('no-anim');
+  setOpen(null, true);
+  void stage.offsetWidth;
+  stage.classList.remove('no-anim');
   window.addEventListener('resize', layout);
 })();
 </script>
