@@ -1495,16 +1495,6 @@
   .node-shape { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 2; transition: stroke 250ms, stroke-width 250ms; }
   .node-shape polygon.rim { fill: none; }
-  .node-shape text.pole {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 7px;
-    font-weight: 500;
-    fill: var(--ink-faint);
-    opacity: 0.7;
-    text-anchor: middle;
-    dominant-baseline: central;
-    pointer-events: none;
-  }
   .node-shape image { filter: grayscale(0.4) brightness(0.8); opacity: 0.55; transition: opacity 300ms, filter 300ms; }
   /* .is-preview is the touch version of hover: the first tap on a node
      (see modalController()). */
@@ -2919,11 +2909,9 @@
   var allEls = Array.prototype.slice.call(wrap.querySelectorAll('.section-shell'));
   // Each node is a hexapole: its six edges are alternately N and S
   // poles. Which edge starts as N is picked at random once per page load
-  // (flip 0 or 1); workGraph() reads data-pole-flip to letter the edges.
-  var flips = allEls.map(function(el) {
-    var f = Math.random() < 0.5 ? 0 : 1;
-    el.setAttribute('data-pole-flip', f);
-    return f;
+  // (flip 0 or 1).
+  var flips = allEls.map(function() {
+    return Math.random() < 0.5 ? 0 : 1;
   });
 
   var ticking = false;
@@ -3034,19 +3022,6 @@
     rim.setAttribute('points', pts);
     rim.setAttribute('class', 'rim');
     svg.appendChild(rim);
-    // Pole letters just inside each edge, alternating N/S (edge k's
-    // midpoint sits at -60 + 60k degrees for a vertex-up hexagon; see
-    // the field layer, which puts its pole charges at the same spots).
-    var flip = +shell.getAttribute('data-pole-flip') || 0;
-    for (var k = 0; k < 6; k++) {
-      var ea = (-60 + 60 * k) * Math.PI / 180, er = 48 * 0.866 - 7;
-      var tx = document.createElementNS(NS, 'text');
-      tx.setAttribute('class', 'pole');
-      tx.setAttribute('x', (er * Math.cos(ea)).toFixed(2));
-      tx.setAttribute('y', (er * Math.sin(ea)).toFixed(2));
-      tx.textContent = (k + flip) % 2 ? 'S' : 'N';
-      svg.appendChild(tx);
-    }
     card.insertBefore(svg, card.firstChild);
   });
 
