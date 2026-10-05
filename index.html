@@ -1495,6 +1495,16 @@
   .node-shape { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 2; transition: stroke 250ms, stroke-width 250ms; }
   .node-shape polygon.rim { fill: none; }
+  .node-shape text.pole {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7px;
+    font-weight: 500;
+    fill: var(--ink-faint);
+    opacity: 0.7;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+  }
   .node-shape image { filter: grayscale(0.4) brightness(0.8); opacity: 0.55; transition: opacity 300ms, filter 300ms; }
   /* .is-preview is the touch version of hover: the first tap on a node
      (see modalController()). */
@@ -2907,10 +2917,13 @@
   var wrap = document.getElementById('workStreams');
   if (!wrap) return;
   var allEls = Array.prototype.slice.call(wrap.querySelectorAll('.section-shell'));
-  // Each node's magnet points one of three ways (0, 120 or 240 degrees
-  // from the default), picked at random once per page load.
-  var rots = allEls.map(function() {
-    return [0, 120, 240][Math.floor(Math.random() * 3)] * Math.PI / 180;
+  // Each node is a hexapole: its six edges are alternately N and S
+  // poles. Which edge starts as N is picked at random once per page load
+  // (flip 0 or 1); workGraph() reads data-pole-flip to letter the edges.
+  var flips = allEls.map(function(el) {
+    var f = Math.random() < 0.5 ? 0 : 1;
+    el.setAttribute('data-pole-flip', f);
+    return f;
   });
 
   var ticking = false;
@@ -2921,7 +2934,7 @@
       var r = allEls[i].getBoundingClientRect();
       if (r.bottom > 0 && r.top < window.innerHeight) {
         sources.push({ x: r.left + r.width / 2, y: r.top + r.height / 2,
-                       w: r.width, h: r.height, rot: rots[i] });
+                       w: r.width, h: r.height, flip: flips[i] });
       }
     }
     window.__fieldCardSources = sources;
@@ -3021,6 +3034,19 @@
     rim.setAttribute('points', pts);
     rim.setAttribute('class', 'rim');
     svg.appendChild(rim);
+    // Pole letters just inside each edge, alternating N/S (edge k's
+    // midpoint sits at -60 + 60k degrees for a vertex-up hexagon; see
+    // the field layer, which puts its pole charges at the same spots).
+    var flip = +shell.getAttribute('data-pole-flip') || 0;
+    for (var k = 0; k < 6; k++) {
+      var ea = (-60 + 60 * k) * Math.PI / 180, er = 48 * 0.866 - 7;
+      var tx = document.createElementNS(NS, 'text');
+      tx.setAttribute('class', 'pole');
+      tx.setAttribute('x', (er * Math.cos(ea)).toFixed(2));
+      tx.setAttribute('y', (er * Math.sin(ea)).toFixed(2));
+      tx.textContent = (k + flip) % 2 ? 'S' : 'N';
+      svg.appendChild(tx);
+    }
     card.insertBefore(svg, card.firstChild);
   });
 
@@ -5398,18 +5424,20 @@ class Knob {
 
      - Sources: the WORKS/HOME button (window.__fieldMagnet: first letter
        N pole, last letter S pole) and every visible card
-       (window.__fieldCardSources, small horizontal dipoles). The pointer
+       (window.__fieldCardSources, hexapoles: six point poles, N and S
+       alternating round the hexagon's edges). The pointer
        is deliberately NOT a source. One-way: the field reacts to them,
        nothing flows back.
-     - Every source is a uniformly magnetized box (a bar magnet): the
-       WORKS/HOME bar spans its pole letters, each card is a flat slab its
-       own size. The dashes lie in the boxes' mid-plane, where the field
+     - The WORKS/HOME source is a uniformly magnetized box (a bar
+       magnet) spanning its pole letters. The dashes lie in the boxes' mid-plane, where the field
        has a closed form: outside, H is the pull of the two charged pole
        faces (per face corner one atan and a shared log; physical
        constants dropped); inside, B = H + M, so the lines run on through
        the magnet S -> N and close on themselves instead of stopping at
-       two points like an electric dipole's. Far away each box falls off
-       as the old 1/r^3 point dipole of the same moment.
+       two points like an electric dipole's. Far away the box falls off
+       as the old 1/r^3 point dipole of the same moment. The card poles
+       are plain softened point charges; six alternating ones cancel
+       fast, so a card's field stays close to its hexagon.
      - Every source contributes to every dash; the vectors are summed and
        the dash points along the total. Summing all of them — instead of
        letting the nearest one win — is what keeps the field continuous:
@@ -5459,6 +5487,12 @@ class Knob {
   // magnetization is its moment spread over its box volume.
   var M_MAGNET = 1e6;
   var M_CARD = 3.5e5;
+  // Each card is a hexapole: six point poles, alternately N (+) and S (-),
+  // at its edge midpoints. Pole strength is M_CARD over the apothem, so
+  // right at a pole it bites about as hard as the old card dipole did.
+  var MAXP = 96;
+  var PX = new Float32Array(MAXP), PY = new Float32Array(MAXP);
+  var PQ = new Float32Array(MAXP), PE = new Float32Array(MAXP);
   var FOUR_PI = 4 * Math.PI; // the one constant kept: B = H + M inside a magnet
   // User-tunable from the settings panel (window.__fieldSettings):
   //   glowRadius  — the field falls off as 1/r^3, so scaling the opacity
@@ -5599,12 +5633,20 @@ class Knob {
                 ax / al, ay / al, al * 0.5 + mag.w * 0.5, mb, mb, M_MAGNET);
     }
     var cards = window.__fieldCardSources || [];
-    for (var ci = 0; ci < cards.length && n < MAXS; ci++) {
-      // Flat slabs the card's size, magnetized pointing left like the
-      // resting magnet, then turned by the card's random rotation.
-      var cw = cards[ci].w * 0.5, ch = cards[ci].h * 0.5, th = cards[ci].rot || 0;
-      addSource(n++, cards[ci].x, cards[ci].y, -Math.cos(th), -Math.sin(th),
-                cw, ch, Math.min(cw, ch) * 0.5, M_CARD);
+    var np = 0;
+    for (var ci = 0; ci < cards.length && np + 6 <= MAXP; ci++) {
+      // The node's hexagon: circumradius 48/100 of the card (see
+      // workGraph()'s polygonPoints), so the apothem is that x cos 30.
+      var ap = cards[ci].w * 0.48 * 0.866;
+      var pq = M_CARD / ap, pe = (ap * 0.25) * (ap * 0.25);
+      for (var pk = 0; pk < 6; pk++) {
+        var pAng = (-60 + 60 * pk) * PI / 180;
+        PX[np] = cards[ci].x + ap * Math.cos(pAng);
+        PY[np] = cards[ci].y + ap * Math.sin(pAng);
+        PQ[np] = (pk + (cards[ci].flip || 0)) % 2 ? -pq : pq;
+        PE[np] = pe;
+        np++;
+      }
     }
 
     var paths = new Array(NB);
@@ -5632,6 +5674,14 @@ class Knob {
           var m = SM[q];
           bx += m * (hx * ux - hy * uy);
           by += m * (hx * uy + hy * ux);
+        }
+        // Hexapole poles: each pushes (N) or pulls (S) like a point
+        // charge, softened so dashes right at a pole don't blow up.
+        for (var pi = 0; pi < np; pi++) {
+          var px = gx - PX[pi], py = gy - PY[pi];
+          var pd = px * px + py * py + PE[pi];
+          var pf = PQ[pi] / (pd * Math.sqrt(pd));
+          bx += pf * px; by += pf * py;
         }
         var fm = Math.sqrt(bx * bx + by * by);
         var ang = angles[idx];
