@@ -1569,17 +1569,18 @@
     #workStreams .section-card:hover .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.8; }
     #workStreams .section-card:hover .card-title { color: var(--lit); }
   }
-  /* One caption for the whole graph, fixed at the bottom between DRONE
-     and the gear, so a description never covers a node. It shows the
-     hovered/focused/previewed node's title and description, and moves
-     to the top when that node sits where it would be. */
+  /* One caption for the whole graph, fixed at the top just under the
+     docked HOME (48px tall) and over every fixed control, so a
+     description never hangs among the nodes. It shows the last
+     hovered/focused/previewed node's title and description (see
+     graphCaption in workGraph()). */
   .graph-caption {
     position: fixed;
     left: 50%;
-    bottom: 24px;
-    width: min(440px, calc(100vw - 280px));
-    transform: translate(-50%, 8px);
-    z-index: 7000;
+    top: 84px;
+    width: min(440px, calc(100vw - 32px));
+    transform: translate(-50%, -8px);
+    z-index: 8600;
     padding: 10px 14px;
     background: rgba(10,10,12,0.94);
     border: 1px solid rgba(196,98,71,0.35);
@@ -1596,8 +1597,6 @@
     transform: translate(-50%, 0);
     transition: opacity 200ms, transform 200ms, visibility 0s;
   }
-  /* At the top it sits just under the docked HOME (48px tall). */
-  .graph-caption.at-top { bottom: auto; top: 84px; }
   body.modal-open .graph-caption { display: none; }
   .graph-caption-title {
     margin: 0;
@@ -1624,11 +1623,8 @@
     color: var(--accent-2);
   }
   @media (hover: none) { .graph-caption-hint { display: block; } }
-  /* Phones: full width, lifted above the DRONE / gear row. */
-  @media (max-width: 640px) {
-    .graph-caption { bottom: 72px; width: calc(100vw - 32px); }
-  }
-  @media (max-width: 420px) { .graph-caption.at-top { top: 120px; } }
+  /* HOME docks lower on small phones (top: 60px). */
+  @media (max-width: 420px) { .graph-caption { top: 120px; } }
   @media (prefers-reduced-motion: reduce) { .graph-caption { transition: none; } }
 
   /* Phones: a compact version of the same graph. */
@@ -3175,10 +3171,12 @@
     });
   }
 
-  // The shared caption: the active node's title and description. It sits
-  // at the bottom of the screen or the top, whichever covers fewer of
-  // the visible nodes (and never the active one); bottom on a tie.
+  // The shared caption: the last active node's title and description.
+  // It stays up while scrolling and hides when the pointer leaves the
+  // graph, a click/tap lands off the nodes, focus moves elsewhere, or
+  // that node scrolls out of view.
   var caption = document.getElementById('graphCaption');
+  var captionFor = null;
   function showCaption(id) {
     if (!caption) return;
     var el = nodes[id];
@@ -3186,23 +3184,25 @@
     caption.querySelector('.graph-caption-title').textContent = title ? title.textContent : '';
     caption.querySelector('.graph-caption-desc').textContent = desc ? desc.textContent : '';
     caption.classList.add('is-shown');
-    function covers(top) {
-      caption.classList.toggle('at-top', top);
-      var c = caption.getBoundingClientRect(), n = 0;
-      for (var k in nodes) {
-        if (nodes[k].classList.contains('is-tucked')) continue;
-        var r = nodes[k].getBoundingClientRect();
-        if (r.right > c.left && r.left < c.right && r.bottom > c.top - 8 && r.top < c.bottom + 8) {
-          n += k === id ? 100 : 1;
-        }
-      }
-      return n;
-    }
-    covers(covers(false) > covers(true));
+    captionFor = id;
   }
   function hideCaption() {
     if (caption) caption.classList.remove('is-shown');
+    captionFor = null;
   }
+  stage.addEventListener('pointerleave', function(e) { if (e.pointerType === 'mouse') hideCaption(); });
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#workStreams .section-card')) hideCaption();
+  });
+  document.addEventListener('focusin', function(e) {
+    if (!e.target.closest('#workStreams .section-card')) hideCaption();
+  });
+  document.addEventListener('modal:closed', hideCaption);
+  window.addEventListener('scroll', function() {
+    if (!captionFor) return;
+    var r = nodes[captionFor].getBoundingClientRect();
+    if (r.bottom < 0 || r.top > window.innerHeight) hideCaption();
+  }, { passive: true });
 
   function focusNode(id) {
     showCaption(id);
@@ -3221,7 +3221,6 @@
     });
   }
   function clearFocus() {
-    hideCaption();
     stage.classList.remove('has-focus');
     paths.forEach(function(p) { if (p) p.classList.remove('on'); });
     Object.keys(nodes).forEach(function(k) { nodes[k].classList.remove('is-linked'); });
