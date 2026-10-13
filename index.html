@@ -1466,36 +1466,6 @@
     text-shadow: 0 0 3px #0a0a0b, 0 0 6px #0a0a0b;
   }
   #workStreams .section-shell.is-open .group-count { display: none; }
-  /* An open head's title and description hang below it, right where its
-     members fan out: lift the members over the head so its text never
-     covers them, and any other hovered/focused node over both. */
-  #workStreams .section-shell.is-member { z-index: 21; }
-  /* ...and hang the open head's text on whichever side its members
-     leave free (picked by workGraph()), so they never meet. */
-  #workStreams .section-shell.text-up .card-text {
-    top: auto; bottom: 100%;
-    padding: 0 0 10px;
-    display: flex; flex-direction: column-reverse;
-  }
-  #workStreams .section-shell.text-up .card-desc { margin: 0 auto 6px; }
-  #workStreams .section-shell.text-left .card-text,
-  #workStreams .section-shell.text-right .card-text {
-    top: 50%; margin-top: -0.8em; padding: 0;
-  }
-  #workStreams .section-shell.text-left .card-text {
-    left: auto; right: 100%; margin-left: 0; padding-right: 14px; text-align: right;
-  }
-  #workStreams .section-shell.text-right .card-text {
-    left: 100%; margin-left: 0; padding-left: 14px; text-align: left;
-  }
-  #workStreams .section-shell.text-left .card-title,
-  #workStreams .section-shell.text-left .card-desc { margin-left: auto; margin-right: 0; }
-  #workStreams .section-shell.text-right .card-title,
-  #workStreams .section-shell.text-right .card-desc { margin-left: 0; margin-right: auto; }
-  #workStreams .section-shell:not(.is-open):focus-within { z-index: 22; }
-  @media (hover: hover) {
-    #workStreams .section-shell:not(.is-open):hover { z-index: 22; }
-  }
   #workStreams.no-anim .section-shell { transition: none; }
   @media (prefers-reduced-motion: reduce) {
     .section-shell, #workStreams .section-shell.is-tucked { transition: none; }
@@ -1586,21 +1556,10 @@
     text-shadow: 0 0 3px #0a0a0b, 0 0 6px #0a0a0b, 0 0 10px #0a0a0b;
   }
   #three-d .card-title { font-size: 1.15rem; }
-  #workStreams .section-card .card-desc {
-    display: none;
-    margin: 6px auto 0;
-    padding: 8px 10px;
-    font-size: 0.78rem;
-    line-height: 1.45;
-    opacity: 1;
-    color: rgba(235,230,225,0.85);  /* --lit at 85% */
-    background: #0a0a0c;
-    border: 1px solid rgba(196,98,71,0.3);
-  }
+  /* Descriptions never show on the node: the graph caption below
+     (graphCaption()) shows the active node's instead. */
+  #workStreams .section-card .card-desc { display: none; }
   .section-shell:focus-within { z-index: 20; }
-  #workStreams .section-card:focus-visible .card-desc,
-  #workStreams .section-card.is-preview .card-desc { display: block; }
-  #workStreams .section-card.is-preview .card-text { pointer-events: auto; }
   /* Mouse hover = the same look as keyboard focus and the touch preview.
      Only on devices that really hover: phones keep :hover stuck after a
      tap. */
@@ -1609,18 +1568,68 @@
     #workStreams .section-card:hover .node-shape image { opacity: 1; filter: none; }
     #workStreams .section-card:hover .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.8; }
     #workStreams .section-card:hover .card-title { color: var(--lit); }
-    #workStreams .section-card:hover .card-desc { display: block; }
   }
-  #workStreams .section-card.is-preview .card-desc::after {
-    content: 'Tap again to open ↗';
-    display: block;
-    margin-top: 6px;
+  /* One caption for the whole graph, fixed at the bottom between DRONE
+     and the gear, so a description never covers a node. It shows the
+     hovered/focused/previewed node's title and description, and moves
+     to the top when that node sits where it would be. */
+  .graph-caption {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    width: min(440px, calc(100vw - 280px));
+    transform: translate(-50%, 8px);
+    z-index: 7000;
+    padding: 10px 14px;
+    background: rgba(10,10,12,0.94);
+    border: 1px solid rgba(196,98,71,0.35);
+    border-radius: 3px;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 200ms, transform 200ms, visibility 0s 200ms;
+  }
+  .graph-caption.is-shown {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+    transition: opacity 200ms, transform 200ms, visibility 0s;
+  }
+  /* At the top it sits just under the docked HOME (48px tall). */
+  .graph-caption.at-top { bottom: auto; top: 84px; }
+  body.modal-open .graph-caption { display: none; }
+  .graph-caption-title {
+    margin: 0;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--lit);
+  }
+  .graph-caption-desc {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: rgba(235,230,225,0.85);  /* --lit at 85% */
+  }
+  .graph-caption-hint {
+    display: none;
+    margin: 6px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--accent-2);
   }
+  @media (hover: none) { .graph-caption-hint { display: block; } }
+  /* Phones: full width, lifted above the DRONE / gear row. */
+  @media (max-width: 640px) {
+    .graph-caption { bottom: 72px; width: calc(100vw - 32px); }
+  }
+  @media (max-width: 420px) { .graph-caption.at-top { top: 120px; } }
+  @media (prefers-reduced-motion: reduce) { .graph-caption { transition: none; } }
 
   /* Phones: a compact version of the same graph. */
   @media (max-width: 900px) {
@@ -2446,6 +2455,11 @@
 </section>
 
 </div><!-- /.card-streams -->
+<div class="graph-caption" id="graphCaption" aria-hidden="true">
+  <p class="graph-caption-title"></p>
+  <p class="graph-caption-desc"></p>
+  <p class="graph-caption-hint">Tap again to open ↗</p>
+</div>
 
 <!-- CONTACT -->
 <section class="contact reveal" id="contact">
@@ -3042,10 +3056,6 @@
     GROUPS[h].forEach(function(m) { headOf[m] = h; });
   });
   var openGroup = null;
-  Object.keys(headOf).forEach(function(m) {
-    var me = document.getElementById(m);
-    if (me) me.classList.add('is-member');
-  });
   // sides and rotation in degrees; all hexagons, unrotated (vertex up)
   var SHAPES = {
     'three-d': [6, 0], 'procedural': [6, 0], 'synths': [6, 0], 'stray-voltage': [6, 0],
@@ -3131,48 +3141,7 @@
     return [r.left + r.width / 2 - sr.left, r.top + r.height / 2 - sr.top];
   }
 
-  // The open head's text goes on the side facing furthest from its
-  // members (and with room for it inside the stage); closed, it sits below.
-  var TEXT_SIDES = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
-  function placeText(h) {
-    var he = document.getElementById(h);
-    if (!he) return;
-    var best = 'down';
-    var text = he.querySelector('.card-text');
-    if (text) text.style.width = '';
-    var hx = he.offsetLeft, hy = he.offsetTop, r = he.offsetWidth / 2;
-    var tw = text ? text.offsetWidth : 260;
-    // Free width beside the node; on phones a side box narrows to fit.
-    var free = { left: hx - r - 6, right: stage.clientWidth - hx - r - 6 };
-    if (openGroup === h) {
-      var room = {
-        down: true,
-        up: hy - r > 140,
-        left: free.left >= 110,
-        right: free.right >= 110
-      };
-      var bestScore = Infinity;
-      Object.keys(TEXT_SIDES).forEach(function(side) {
-        if (!room[side]) return;
-        var d = TEXT_SIDES[side], score = -Infinity;
-        GROUPS[h].forEach(function(m) {
-          var me = document.getElementById(m);
-          if (!me) return;
-          var vx = me.offsetLeft - hx, vy = me.offsetTop - hy;
-          var len = Math.sqrt(vx * vx + vy * vy) || 1;
-          score = Math.max(score, (vx * d[0] + vy * d[1]) / len);
-        });
-        if (score < bestScore - 0.05) { bestScore = score; best = side; }
-      });
-    }
-    Object.keys(TEXT_SIDES).forEach(function(side) {
-      he.classList.toggle('text-' + side, side === best && side !== 'down');
-    });
-    if (text && free[best] < tw) text.style.width = free[best] + 'px';
-  }
-
   function layout() {
-    Object.keys(GROUPS).forEach(placeText);
     // Point every tucked member back at its head (nodes are centred on
     // their left/top, so those are the centres).
     Object.keys(headOf).forEach(function(m) {
@@ -3206,7 +3175,37 @@
     });
   }
 
+  // The shared caption: the active node's title and description. It sits
+  // at the bottom of the screen or the top, whichever covers fewer of
+  // the visible nodes (and never the active one); bottom on a tie.
+  var caption = document.getElementById('graphCaption');
+  function showCaption(id) {
+    if (!caption) return;
+    var el = nodes[id];
+    var title = el.querySelector('.card-title'), desc = el.querySelector('.card-desc');
+    caption.querySelector('.graph-caption-title').textContent = title ? title.textContent : '';
+    caption.querySelector('.graph-caption-desc').textContent = desc ? desc.textContent : '';
+    caption.classList.add('is-shown');
+    function covers(top) {
+      caption.classList.toggle('at-top', top);
+      var c = caption.getBoundingClientRect(), n = 0;
+      for (var k in nodes) {
+        if (nodes[k].classList.contains('is-tucked')) continue;
+        var r = nodes[k].getBoundingClientRect();
+        if (r.right > c.left && r.left < c.right && r.bottom > c.top - 8 && r.top < c.bottom + 8) {
+          n += k === id ? 100 : 1;
+        }
+      }
+      return n;
+    }
+    covers(covers(false) > covers(true));
+  }
+  function hideCaption() {
+    if (caption) caption.classList.remove('is-shown');
+  }
+
   function focusNode(id) {
+    showCaption(id);
     var linked = {};
     linked[id] = true;
     EDGES.forEach(function(e, i) {
@@ -3222,6 +3221,7 @@
     });
   }
   function clearFocus() {
+    hideCaption();
     stage.classList.remove('has-focus');
     paths.forEach(function(p) { if (p) p.classList.remove('on'); });
     Object.keys(nodes).forEach(function(k) { nodes[k].classList.remove('is-linked'); });
