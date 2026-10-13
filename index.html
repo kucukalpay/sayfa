@@ -1470,6 +1470,28 @@
      members fan out: lift the members over the head so its text never
      covers them, and any other hovered/focused node over both. */
   #workStreams .section-shell.is-member { z-index: 21; }
+  /* ...and hang the open head's text on whichever side its members
+     leave free (picked by workGraph()), so they never meet. */
+  #workStreams .section-shell.text-up .card-text {
+    top: auto; bottom: 100%;
+    padding: 0 0 10px;
+    display: flex; flex-direction: column-reverse;
+  }
+  #workStreams .section-shell.text-up .card-desc { margin: 0 auto 6px; }
+  #workStreams .section-shell.text-left .card-text,
+  #workStreams .section-shell.text-right .card-text {
+    top: 50%; margin-top: -0.8em; padding: 0;
+  }
+  #workStreams .section-shell.text-left .card-text {
+    left: auto; right: 100%; margin-left: 0; padding-right: 14px; text-align: right;
+  }
+  #workStreams .section-shell.text-right .card-text {
+    left: 100%; margin-left: 0; padding-left: 14px; text-align: left;
+  }
+  #workStreams .section-shell.text-left .card-title,
+  #workStreams .section-shell.text-left .card-desc { margin-left: auto; margin-right: 0; }
+  #workStreams .section-shell.text-right .card-title,
+  #workStreams .section-shell.text-right .card-desc { margin-left: 0; margin-right: auto; }
   #workStreams .section-shell:not(.is-open):focus-within { z-index: 22; }
   @media (hover: hover) {
     #workStreams .section-shell:not(.is-open):hover { z-index: 22; }
@@ -3109,7 +3131,44 @@
     return [r.left + r.width / 2 - sr.left, r.top + r.height / 2 - sr.top];
   }
 
+  // The open head's text goes on the side facing furthest from its
+  // members (and with room for it inside the stage); closed, it sits below.
+  var TEXT_SIDES = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
+  function placeText(h) {
+    var he = document.getElementById(h);
+    if (!he) return;
+    var best = 'down';
+    if (openGroup === h) {
+      var hx = he.offsetLeft, hy = he.offsetTop, r = he.offsetWidth / 2;
+      var text = he.querySelector('.card-text');
+      var tw = text ? text.offsetWidth : 260;
+      var room = {
+        down: true,
+        up: hy - r > 140,
+        left: hx - r > tw,
+        right: stage.clientWidth - hx - r > tw
+      };
+      var bestScore = Infinity;
+      Object.keys(TEXT_SIDES).forEach(function(side) {
+        if (!room[side]) return;
+        var d = TEXT_SIDES[side], score = -Infinity;
+        GROUPS[h].forEach(function(m) {
+          var me = document.getElementById(m);
+          if (!me) return;
+          var vx = me.offsetLeft - hx, vy = me.offsetTop - hy;
+          var len = Math.sqrt(vx * vx + vy * vy) || 1;
+          score = Math.max(score, (vx * d[0] + vy * d[1]) / len);
+        });
+        if (score < bestScore - 0.05) { bestScore = score; best = side; }
+      });
+    }
+    Object.keys(TEXT_SIDES).forEach(function(side) {
+      he.classList.toggle('text-' + side, side === best && side !== 'down');
+    });
+  }
+
   function layout() {
+    Object.keys(GROUPS).forEach(placeText);
     // Point every tucked member back at its head (nodes are centred on
     // their left/top, so those are the centres).
     Object.keys(headOf).forEach(function(m) {
