@@ -3138,15 +3138,18 @@
     var he = document.getElementById(h);
     if (!he) return;
     var best = 'down';
+    var text = he.querySelector('.card-text');
+    if (text) text.style.width = '';
+    var hx = he.offsetLeft, hy = he.offsetTop, r = he.offsetWidth / 2;
+    var tw = text ? text.offsetWidth : 260;
+    // Free width beside the node; on phones a side box narrows to fit.
+    var free = { left: hx - r - 6, right: stage.clientWidth - hx - r - 6 };
     if (openGroup === h) {
-      var hx = he.offsetLeft, hy = he.offsetTop, r = he.offsetWidth / 2;
-      var text = he.querySelector('.card-text');
-      var tw = text ? text.offsetWidth : 260;
       var room = {
         down: true,
         up: hy - r > 140,
-        left: hx - r > tw,
-        right: stage.clientWidth - hx - r > tw
+        left: free.left >= 110,
+        right: free.right >= 110
       };
       var bestScore = Infinity;
       Object.keys(TEXT_SIDES).forEach(function(side) {
@@ -3165,6 +3168,7 @@
     Object.keys(TEXT_SIDES).forEach(function(side) {
       he.classList.toggle('text-' + side, side === best && side !== 'down');
     });
+    if (text && free[best] < tw) text.style.width = free[best] + 'px';
   }
 
   function layout() {
