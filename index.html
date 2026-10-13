@@ -1466,6 +1466,14 @@
     text-shadow: 0 0 3px #0a0a0b, 0 0 6px #0a0a0b;
   }
   #workStreams .section-shell.is-open .group-count { display: none; }
+  /* An open head's title and description hang below it, right where its
+     members fan out: lift the members over the head so its text never
+     covers them, and any other hovered/focused node over both. */
+  #workStreams .section-shell.is-member { z-index: 21; }
+  #workStreams .section-shell:not(.is-open):focus-within { z-index: 22; }
+  @media (hover: hover) {
+    #workStreams .section-shell:not(.is-open):hover { z-index: 22; }
+  }
   #workStreams.no-anim .section-shell { transition: none; }
   @media (prefers-reduced-motion: reduce) {
     .section-shell, #workStreams .section-shell.is-tucked { transition: none; }
@@ -3012,6 +3020,10 @@
     GROUPS[h].forEach(function(m) { headOf[m] = h; });
   });
   var openGroup = null;
+  Object.keys(headOf).forEach(function(m) {
+    var me = document.getElementById(m);
+    if (me) me.classList.add('is-member');
+  });
   // sides and rotation in degrees; all hexagons, unrotated (vertex up)
   var SHAPES = {
     'three-d': [6, 0], 'procedural': [6, 0], 'synths': [6, 0], 'stray-voltage': [6, 0],
