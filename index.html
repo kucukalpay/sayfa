@@ -3219,10 +3219,17 @@
     showCaption(id);
     var linked = {};
     linked[id] = true;
+    // An open head lights its whole group, members it only reaches
+    // through another member included (Samples -> Loops -> Tracks).
+    var group = {};
+    if (openGroup === id) {
+      group[id] = true;
+      GROUPS[id].forEach(function(m) { group[m] = true; linked[m] = true; });
+    }
     EDGES.forEach(function(e, i) {
       if (!paths[i]) return;
       var sa = shown(e[0]), sb = shown(e[1]);
-      var hit = (sa === id || sb === id) && !paths[i].classList.contains('is-hidden');
+      var hit = (sa === id || sb === id || (group[sa] && group[sb])) && !paths[i].classList.contains('is-hidden');
       if (hit) { linked[sa] = true; linked[sb] = true; }
       paths[i].classList.toggle('on', hit);
     });
