@@ -1466,9 +1466,18 @@
     text-shadow: 0 0 3px #0a0a0b, 0 0 6px #0a0a0b;
   }
   #workStreams .section-shell.is-open .group-count { display: none; }
+  /* Members just let out of their head flash lit for a moment, so the
+     eye catches where they landed. */
+  #workStreams .section-shell.is-arriving .node-shape polygon.rim { animation: nodeArriveRim 1.6s ease-out; }
+  #workStreams .section-shell.is-arriving .node-shape image { animation: nodeArriveImg 1.6s ease-out; }
+  #workStreams .section-shell.is-arriving .card-title { animation: nodeArriveTitle 1.6s ease-out; }
+  @keyframes nodeArriveRim { 0%, 35% { stroke: #c46247; stroke-width: 2.8; } }
+  @keyframes nodeArriveImg { 0%, 35% { opacity: 1; filter: none; } }
+  @keyframes nodeArriveTitle { 0%, 35% { color: var(--lit); } }
   #workStreams.no-anim .section-shell { transition: none; }
   @media (prefers-reduced-motion: reduce) {
     .section-shell, #workStreams .section-shell.is-tucked { transition: none; }
+    #workStreams .section-shell.is-arriving * { animation: none !important; }
   }
   #three-d       { --x: 50; --y: 15.9; --s: 300px; }
   #procedural    { --x: 72; --y: 30; --s: 140px; }
@@ -3204,7 +3213,9 @@
     if (r.bottom < 0 || r.top > window.innerHeight) hideCaption();
   }, { passive: true });
 
+  var focusedId = null;
   function focusNode(id) {
+    focusedId = id;
     showCaption(id);
     var linked = {};
     linked[id] = true;
@@ -3221,6 +3232,7 @@
     });
   }
   function clearFocus() {
+    focusedId = null;
     stage.classList.remove('has-focus');
     paths.forEach(function(p) { if (p) p.classList.remove('on'); });
     Object.keys(nodes).forEach(function(k) { nodes[k].classList.remove('is-linked'); });
@@ -3274,6 +3286,19 @@
       if (card) card.setAttribute('aria-expanded', g === h ? 'true' : 'false');
     });
     layout();
+    // The focus was worked out before the group opened (the tap or hover
+    // came first), when its members were still tucked and so dimmed with
+    // the unlinked nodes: redo it now they're out.
+    if (focusedId) focusNode(focusedId);
+    if (!instant && h) {
+      GROUPS[h].forEach(function(m) {
+        var me = document.getElementById(m);
+        if (!me) return;
+        me.classList.remove('is-arriving');
+        void me.offsetWidth;
+        me.classList.add('is-arriving');
+      });
+    }
     if (!instant) animate();
   }
 
