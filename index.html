@@ -3229,7 +3229,7 @@
     EDGES.forEach(function(e, i) {
       if (!paths[i]) return;
       var sa = shown(e[0]), sb = shown(e[1]);
-      var hit = (sa === id || sb === id || (group[sa] && group[sb])) && !paths[i].classList.contains('is-hidden');
+      var hit = (sa === id || sb === id || !!(group[sa] && group[sb])) && !paths[i].classList.contains('is-hidden');
       if (hit) { linked[sa] = true; linked[sb] = true; }
       paths[i].classList.toggle('on', hit);
     });
@@ -3339,9 +3339,13 @@
       if (e.key === 'Enter' || e.key === ' ') expand(e);
     });
   });
-  // Clicking the graph's empty space folds the open group back up.
+  // Clicking the graph's empty space, or a node outside the open group,
+  // folds the group back up.
   stage.addEventListener('click', function(e) {
-    if (openGroup && !e.target.closest('.section-card')) setOpen(null);
+    if (!openGroup) return;
+    var shell = e.target.closest('.section-card') && e.target.closest('.section-shell');
+    if (shell && (shell.id === openGroup || headOf[shell.id] === openGroup)) return;
+    setOpen(null);
   });
 
   // Start closed, already tucked: no slide on page load.
