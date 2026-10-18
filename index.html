@@ -1481,10 +1481,10 @@
   }
   #three-d       { --x: 50; --y: 15.9; --s: 300px; }
   #procedural    { --x: 72; --y: 30; --s: 140px; }
-  #synths        { --x: 60; --y: 72.5; --s: 170px; }
-  #pedals        { --x: 42; --y: 70;   --s: 120px; }
-  #ane           { --x: 24; --y: 58;   --s: 120px; }
-  #stray-voltage { --x: 46; --y: 50; --s: 110px; }
+  #synths        { --x: 20; --y: 62;   --s: 170px; }
+  #pedals        { --x: 36; --y: 76;   --s: 120px; }
+  #ane           { --x: 36; --y: 52;   --s: 120px; }
+  #stray-voltage { --x: 46; --y: 63;   --s: 110px; }
   #music         { --x: 84; --y: 57.5; --s: 130px; }
   #loops         { --x: 88; --y: 72.5; --s: 115px; }
   #tracks        { --x: 72; --y: 84.6; --s: 150px; }
@@ -1642,14 +1642,14 @@
     #workStreams .section-shell { --k: 1; }
     #workStreams #three-d       { --x: 50.0; --y: 15.7; --s: 160px; }
     #workStreams #procedural    { --x: 39.4; --y: 38.8; --s: 84px; }
-    #workStreams #synths        { --x: 42.7; --y: 59.4; --s: 96px; }
-    #workStreams #stray-voltage { --x: 21.5; --y: 77.4; --s: 74px; }
-    #workStreams #pedals        { --x: 14.6; --y: 59.1; --s: 82px; }
-    #workStreams #ane           { --x: 13.0; --y: 40.0; --s: 74px; }
-    #workStreams #music         { --x: 78.4; --y: 33.7; --s: 84px; }
-    #workStreams #loops         { --x: 76.8; --y: 70.5; --s: 78px; }
-    #workStreams #tracks        { --x: 67.2; --y: 52.5; --s: 94px; }
-    #workStreams #photography   { --x: 55.0; --y: 88.0; --s: 88px; }
+    #workStreams #synths        { --x: 18.0; --y: 58.0; --s: 96px; }
+    #workStreams #stray-voltage { --x: 22.0; --y: 86.0; --s: 74px; }
+    #workStreams #pedals        { --x: 42.0; --y: 64.0; --s: 82px; }
+    #workStreams #ane           { --x: 42.0; --y: 40.0; --s: 74px; }
+    #workStreams #music         { --x: 74.0; --y: 33.0; --s: 84px; }
+    #workStreams #loops         { --x: 78.0; --y: 70.0; --s: 78px; }
+    #workStreams #tracks        { --x: 80.0; --y: 51.0; --s: 94px; }
+    #workStreams #photography   { --x: 60.0; --y: 88.0; --s: 88px; }
     #workStreams .card-text { width: 200px; margin-left: -100px; }
   }
   @media (max-width: 410px) { #workStreams .section-shell { --k: 0.86; } }
@@ -2375,7 +2375,7 @@
   <div class="section-card" data-modal-target="modal-synths">
     <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
     <div class="card-text">
-      <h2 class="card-title">Synths</h2>
+      <h2 class="card-title" data-open-title="Synths">Devices</h2>
       <p class="card-desc">Hand-built noise instruments, starting with the Annoying Noise Generator.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
@@ -2441,7 +2441,7 @@
   <div class="section-card" data-modal-target="modal-tracks">
     <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — ambient hardware jam tracks" loading="lazy">
     <div class="card-text">
-      <h2 class="card-title">Tracks</h2>
+      <h2 class="card-title" data-open-title="Tracks">Music</h2>
       <p class="card-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
@@ -3289,6 +3289,13 @@
       var he = document.getElementById(g);
       if (!he) return;
       he.classList.toggle('is-open', g === h);
+      // A head can go by a broader name while closed (Devices, Music)
+      // and its own once open (Synths, Tracks).
+      var title = he.querySelector('.card-title');
+      if (title && title.dataset.openTitle) {
+        if (!title.dataset.closedTitle) title.dataset.closedTitle = title.textContent;
+        title.textContent = g === h ? title.dataset.openTitle : title.dataset.closedTitle;
+      }
       var card = he.querySelector('.section-card');
       if (card) card.setAttribute('aria-expanded', g === h ? 'true' : 'false');
     });
