@@ -1646,10 +1646,10 @@
     #workStreams #stray-voltage { --x: 21.5; --y: 77.4; --s: 74px; }
     #workStreams #pedals        { --x: 14.6; --y: 59.1; --s: 82px; }
     #workStreams #ane           { --x: 13.0; --y: 40.0; --s: 74px; }
-    #workStreams #music         { --x: 54.0; --y: 82.0; --s: 84px; }
+    #workStreams #music         { --x: 78.4; --y: 33.7; --s: 84px; }
     #workStreams #loops         { --x: 76.8; --y: 70.5; --s: 78px; }
     #workStreams #tracks        { --x: 67.2; --y: 52.5; --s: 94px; }
-    #workStreams #photography   { --x: 78.4; --y: 33.7; --s: 88px; }
+    #workStreams #photography   { --x: 55.0; --y: 88.0; --s: 88px; }
     #workStreams .card-text { width: 200px; margin-left: -100px; }
   }
   @media (max-width: 410px) { #workStreams .section-shell { --k: 0.86; } }
@@ -2279,7 +2279,7 @@
   <nav class="hero-nav" id="heroNav" aria-label="Sections">
     <a href="#three-d" data-target="three-d">3D SHOWREEL</a>
     <a href="#synths" data-target="synths">Synths</a>
-    <a href="#music" data-target="music">Music</a>
+    <a href="#tracks" data-target="tracks">Music</a>
     <a href="#photography" data-target="photography">Photography</a>
     <a href="#contact" data-target="contact">Contact</a>
   </nav>
@@ -2338,7 +2338,7 @@
   <div class="nav-links">
     <a href="#three-d"><span class="num">01</span>3D</a>
     <a href="#synths"><span class="num">02</span>Synths</a>
-    <a href="#music"><span class="num">03</span>Music</a>
+    <a href="#tracks"><span class="num">03</span>Music</a>
     <a href="#photography"><span class="num">04</span>Photo</a>
     <a href="#contact">Find me</a>
   </div>
@@ -3054,7 +3054,7 @@
   var GROUPS = {
     'three-d': ['procedural'],
     'synths':  ['pedals', 'ane', 'stray-voltage'],
-    'music':   ['loops', 'tracks']
+    'tracks':  ['music', 'loops']
   };
   var headOf = {};
   Object.keys(GROUPS).forEach(function(h) {
@@ -3220,7 +3220,7 @@
     var linked = {};
     linked[id] = true;
     // An open head lights its whole group, members it only reaches
-    // through another member included (Samples -> Loops -> Tracks).
+    // through another member included (Tracks -> Loops -> Samples).
     var group = {};
     if (openGroup === id) {
       group[id] = true;
