@@ -1624,7 +1624,12 @@
   }
   .graph-caption-hint {
     display: none;
-    margin: 6px 0 0;
+    margin: 6px auto 0;
+    padding: 4px 8px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    pointer-events: auto;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.62rem;
     letter-spacing: 0.12em;
@@ -1651,6 +1656,25 @@
     #workStreams #tracks        { --x: 80.0; --y: 51.0; --s: 94px; }
     #workStreams #photography   { --x: 60.0; --y: 88.0; --s: 88px; }
     #workStreams .card-text { width: 200px; margin-left: -100px; }
+  }
+  /* Phones on their side: too short for the tall phone graph, so the
+     same nodes spread across the width instead. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .card-streams { height: 600px; }
+    #workStreams .section-shell { --k: 1; }
+    #workStreams #three-d       { --x: 50; --y: 22; --s: 150px; }
+    #workStreams #procedural    { --x: 70; --y: 30; --s: 80px; }
+    #workStreams #synths        { --x: 16; --y: 55; --s: 100px; }
+    #workStreams #ane           { --x: 32; --y: 40; --s: 76px; }
+    #workStreams #stray-voltage { --x: 38; --y: 60; --s: 70px; }
+    #workStreams #pedals        { --x: 30; --y: 80; --s: 78px; }
+    #workStreams #tracks        { --x: 84; --y: 55; --s: 100px; }
+    #workStreams #music         { --x: 62; --y: 50; --s: 84px; }
+    #workStreams #loops         { --x: 66; --y: 76; --s: 78px; }
+    #workStreams #photography   { --x: 50; --y: 86; --s: 90px; }
+    #workStreams .card-text { width: 200px; margin-left: -100px; }
+    /* and the caption goes to the bottom, off the graph's middle */
+    .graph-caption { top: auto; bottom: 12px; width: min(440px, 56vw); }
   }
   @media (max-width: 410px) { #workStreams .section-shell { --k: 0.86; } }
   @media (max-width: 370px) { #workStreams .section-shell { --k: 0.74; } }
@@ -2463,7 +2487,7 @@
 <div class="graph-caption" id="graphCaption" aria-hidden="true">
   <p class="graph-caption-title"></p>
   <p class="graph-caption-desc"></p>
-  <p class="graph-caption-hint">Tap again to open ↗</p>
+  <button type="button" class="graph-caption-hint" tabindex="-1">Tap again to open ↗</button>
 </div>
 
 <!-- CONTACT -->
@@ -3201,10 +3225,18 @@
   }
   stage.addEventListener('pointerleave', function(e) { if (e.pointerType === 'mouse') hideCaption(); });
   document.addEventListener('click', function(e) {
-    if (!e.target.closest('#workStreams .section-card')) hideCaption();
+    if (!e.target.closest('#workStreams .section-card, #graphCaption')) hideCaption();
   });
   document.addEventListener('focusin', function(e) {
-    if (!e.target.closest('#workStreams .section-card')) hideCaption();
+    if (!e.target.closest('#workStreams .section-card, #graphCaption')) hideCaption();
+  });
+  // The "tap again to open" hint opens the node itself, as the second
+  // tap would (the keyboard path, so it skips the preview step).
+  var hint = caption && caption.querySelector('.graph-caption-hint');
+  if (hint) hint.addEventListener('click', function() {
+    var card = captionFor && nodes[captionFor].querySelector('.section-card');
+    hideCaption();
+    if (card) card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   });
   document.addEventListener('modal:closed', hideCaption);
   window.addEventListener('scroll', function() {
