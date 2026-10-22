@@ -1759,8 +1759,10 @@
      down, straight sides. Its tips meet the sides at a regular hexagon's
      120 degrees, so each is half the panel's width x tan 30; the panel's
      width is min(1200px, the modal's content box), read through container
-     units. The content is padded clear of the tips, and the steel rim is
-     the box itself showing round an inset fill. */
+     units. The title sits inside the top tip, starting 0.6 of the way down
+     where the tip is already 2 x 0.6 x tip / tan 30 wide (about 70% of
+     the panel), and the rest of the content is padded clear of the tips.
+     The steel rim is the box itself showing round an inset fill. */
   .modal { container-type: inline-size; }
   .modal-content {
     --hex-tip: calc(min(1200px, 100cqw) * 0.288675);
@@ -1773,8 +1775,21 @@
     background: var(--idle);
     clip-path: var(--hex);
     padding: 32px;
-    padding-block: calc(var(--hex-tip) + 24px);
+    padding-top: calc(var(--hex-tip) * 0.6);
+    padding-bottom: calc(var(--hex-tip) + 24px);
   }
+  /* The heading fills the rest of the tip, centred under its vertex, so
+     the content below it starts past the shoulders. */
+  .modal .section-head {
+    min-height: calc(var(--hex-tip) * 0.4 + 24px);
+    justify-content: center;
+    align-content: center;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .modal .section-head h2 { order: 0; flex: 1 1 100%; }
+  .modal .section-head .num { order: 1; }
+  .modal .section-head .tag { order: 2; margin-left: 0; }
   .modal-content::before {
     content: '';
     position: absolute;
@@ -1902,7 +1917,11 @@
 
   @media (max-width: 768px) {
     .modal { padding: 50px 12px 20px; }
-    .modal-content { padding: 20px; padding-block: calc(var(--hex-tip) + 16px); }
+    .modal-content {
+      padding: 20px;
+      padding-top: calc(var(--hex-tip) * 0.6);
+      padding-bottom: calc(var(--hex-tip) + 16px);
+    }
   }
 
   /* ----- WORKS / HOME magnet button -------------------------------------
@@ -2545,7 +2564,7 @@
 <div class="modal" id="modal-3d" role="dialog" aria-modal="true" aria-hidden="true" aria-label="3D">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
-    <h2 style="margin-top: 0;">3D</h2>
+    <div class="section-head"><h2>3D</h2></div>
     <p style="opacity: 0.75;">Current showreel, with earlier reels tucked underneath.</p>
 
     <div class="subcard">
@@ -2573,7 +2592,7 @@
 <div class="modal" id="modal-procedural" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Procedural">
   <button class="modal-close" aria-label="Close">×</button>
   <div class="modal-content">
-    <h2 style="margin-top: 0;">Procedural</h2>
+    <div class="section-head"><h2>Procedural</h2></div>
     <p style="opacity: 0.75;">Generative scenes, FX rigs, and asset systems.</p>
 
     <div class="subcard">
