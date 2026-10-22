@@ -1761,7 +1761,8 @@
      width is min(1200px, the modal's content box), read through container
      units. The title sits inside the top tip, starting 0.6 of the way down
      where the tip is already 2 x 0.6 x tip / tan 30 wide (about 70% of
-     the panel), and the rest of the content is padded clear of the tips.
+     the panel), and the links to the card's graph neighbours fill the
+     bottom tip from its shoulders down.
      The steel rim is the box itself showing round an inset fill. */
   .modal { container-type: inline-size; }
   .modal-content {
@@ -1776,7 +1777,7 @@
     clip-path: var(--hex);
     padding: 32px;
     padding-top: calc(var(--hex-tip) * 0.6);
-    padding-bottom: calc(var(--hex-tip) + 24px);
+    padding-bottom: 24px;
   }
   /* The heading fills the rest of the tip, centred under its vertex, so
      the content below it starts past the shoulders. */
@@ -1788,8 +1789,44 @@
     margin-bottom: 2rem;
   }
   .modal .section-head h2 { order: 0; flex: 1 1 100%; }
-  .modal .section-head .num { order: 1; }
-  .modal .section-head .tag { order: 2; margin-left: 0; }
+  .modal .section-head .tag { order: 1; margin-left: 0; }
+  /* Built by the modal controller from the graph's edges. */
+  .modal-links {
+    min-height: var(--hex-tip);
+    margin-top: 2rem;
+    padding-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: flex-start;
+    gap: 8px;
+  }
+  .modal-links-label {
+    flex: 1 1 100%;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  /* Each link is a small sideways hexagon, a node in miniature. */
+  .modal-link {
+    border: 0;
+    padding: 9px 20px;
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%,
+                       calc(100% - 10px) 100%, 10px 100%, 0 50%);
+    background: rgba(38, 67, 100, 0.45);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 200ms, color 200ms;
+  }
+  .modal-link:hover,
+  .modal-link:focus-visible { background: #c46247; color: var(--lit); outline: none; }
   .modal-content::before {
     content: '';
     position: absolute;
@@ -1920,7 +1957,7 @@
     .modal-content {
       padding: 20px;
       padding-top: calc(var(--hex-tip) * 0.6);
-      padding-bottom: calc(var(--hex-tip) + 16px);
+      padding-bottom: 16px;
     }
   }
 
@@ -2620,7 +2657,6 @@
   <div class="synth-section">
   <div class="synth-inner">
     <div class="section-head">
-      <span class="num">02 /</span>
       <h2>ANE</h2>
       <span class="tag">Web synth</span>
     </div>
@@ -2757,7 +2793,6 @@
   <div class="synth-section">
   <div class="synth-inner">
     <div class="section-head">
-      <span class="num">02 /</span>
       <h2>Synths</h2>
       <span class="tag">Amateur</span>
     </div>
@@ -2859,7 +2894,6 @@
   <div class="modal-content">
   <div class="block">
   <div class="section-head">
-    <span class="num">03 /</span>
     <h2>Samples</h2>
     <span class="tag">DIY instruments</span>
   </div>
@@ -2898,7 +2932,6 @@
   <div class="modal-content">
   <div class="block">
   <div class="section-head">
-    <span class="num">03 /</span>
     <h2>Loops &amp; Beats</h2>
     <span class="tag">Built from the samples</span>
   </div>
@@ -2949,7 +2982,6 @@
   <div class="modal-content">
   <div class="block">
   <div class="section-head">
-    <span class="num">03 /</span>
     <h2>Tracks</h2>
     <span class="tag">Ambient · hardware jams</span>
   </div>
@@ -3013,7 +3045,6 @@
   <div class="modal-content">
   <div class="block">
   <div class="section-head">
-    <span class="num">04 /</span>
     <h2>Photo</h2>
     <span class="tag">Older</span>
   </div>
@@ -3099,7 +3130,9 @@
   'use strict';
   var stage = document.getElementById('workStreams');
   if (!stage) return;
-  var EDGES = [
+  // Shared with the modal controller, which links each open card to its
+  // neighbours here.
+  var EDGES = window.__workEdges = [
     ['three-d',       'procedural'],
     ['three-d',       'photography'],
     ['three-d',       'tracks'],
@@ -5246,6 +5279,60 @@ class Knob {
         if (m) open(m, card.getAttribute('data-modal-scroll'));
       }
     });
+  });
+
+  // The bottom tip of each card links to the cards its node is joined to
+  // in the graph. A modal can stand for several nodes (Synths and Stray
+  // Voltage share one), so it gathers all their neighbours, skipping any
+  // that open this same modal.
+  var cardFor = {};
+  openTriggers.forEach(function(card) {
+    var shell = card.closest('.section-shell');
+    if (shell) cardFor[shell.id] = card;
+  });
+  function cardName(card) {
+    var t = card.querySelector('.card-title');
+    return t ? (t.getAttribute('data-open-title') || t.textContent.trim()) : '';
+  }
+  modals.forEach(function(modal) {
+    var content = modal.querySelector('.modal-content');
+    if (!content) return;
+    var own = Object.keys(cardFor).filter(function(id) {
+      return cardFor[id].getAttribute('data-modal-target') === modal.id;
+    });
+    var seen = {}, links = [];
+    (window.__workEdges || []).forEach(function(e) {
+      var i = own.indexOf(e[0]) >= 0 ? 1 : own.indexOf(e[1]) >= 0 ? 0 : -1;
+      if (i < 0) return;
+      var card = cardFor[e[i]];
+      if (!card || seen[e[i]] || card.getAttribute('data-modal-target') === modal.id) return;
+      seen[e[i]] = true;
+      links.push(card);
+    });
+    if (!links.length) return;
+    // A div, not a <nav>: the site's top bar styles every nav element.
+    var nav = document.createElement('div');
+    nav.setAttribute('role', 'navigation');
+    nav.className = 'modal-links';
+    nav.setAttribute('aria-label', 'Linked cards');
+    var label = document.createElement('span');
+    label.className = 'modal-links-label';
+    label.textContent = 'Linked';
+    nav.appendChild(label);
+    links.forEach(function(card) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'modal-link';
+      b.textContent = cardName(card);
+      b.addEventListener('click', function() {
+        var m = document.getElementById(card.getAttribute('data-modal-target'));
+        if (!m) return;
+        m.scrollTop = 0;
+        open(m, card.getAttribute('data-modal-scroll'));
+      });
+      nav.appendChild(b);
+    });
+    content.appendChild(nav);
   });
 
   modals.forEach(function(modal) {
