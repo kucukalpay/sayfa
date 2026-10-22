@@ -1756,11 +1756,14 @@
     .modal .synth-subcard { padding: 1rem 0.75rem; }
   }
   /* The open card is a hexagon like the node it came from: vertex up and
-     down, straight sides. The tips are a fixed depth rather than a regular
-     hexagon's, so a tall panel keeps its width; the content is padded clear
-     of them. The steel rim is the box itself showing round an inset fill. */
+     down, straight sides. Its tips meet the sides at a regular hexagon's
+     120 degrees, so each is half the panel's width x tan 30; the panel's
+     width is min(1200px, the modal's content box), read through container
+     units. The content is padded clear of the tips, and the steel rim is
+     the box itself showing round an inset fill. */
+  .modal { container-type: inline-size; }
   .modal-content {
-    --hex-tip: clamp(36px, 7vw, 96px);
+    --hex-tip: calc(min(1200px, 100cqw) * 0.288675);
     --hex: polygon(50% 0, 100% var(--hex-tip), 100% calc(100% - var(--hex-tip)),
                    50% 100%, 0 calc(100% - var(--hex-tip)), 0 var(--hex-tip));
     position: relative;
