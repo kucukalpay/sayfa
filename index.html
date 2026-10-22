@@ -1755,12 +1755,30 @@
     .modal-content { padding: 20px 14px; }
     .modal .synth-subcard { padding: 1rem 0.75rem; }
   }
+  /* The open card is a hexagon like the node it came from: vertex up and
+     down, straight sides. The tips are a fixed depth rather than a regular
+     hexagon's, so a tall panel keeps its width; the content is padded clear
+     of them. The steel rim is the box itself showing round an inset fill. */
   .modal-content {
+    --hex-tip: clamp(36px, 7vw, 96px);
+    --hex: polygon(50% 0, 100% var(--hex-tip), 100% calc(100% - var(--hex-tip)),
+                   50% 100%, 0 calc(100% - var(--hex-tip)), 0 var(--hex-tip));
+    position: relative;
+    isolation: isolate;
     max-width: 1200px;
     margin: 0 auto;
-    background: rgba(17, 17, 20, 0.92);
-    border-radius: 2px;
+    background: var(--idle);
+    clip-path: var(--hex);
     padding: 32px;
+    padding-block: calc(var(--hex-tip) + 24px);
+  }
+  .modal-content::before {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    z-index: -1;
+    background: rgb(17, 17, 20);
+    clip-path: var(--hex);
   }
   .modal-close {
     position: fixed;
@@ -1881,7 +1899,7 @@
 
   @media (max-width: 768px) {
     .modal { padding: 50px 12px 20px; }
-    .modal-content { padding: 20px; }
+    .modal-content { padding: 20px; padding-block: calc(var(--hex-tip) + 16px); }
   }
 
   /* ----- WORKS / HOME magnet button -------------------------------------
