@@ -3036,16 +3036,6 @@
         <span class="track-dur" data-dur>—</span>
         <a class="track-dl" href="assets/Tracks/tambirbiyans.mp3" download>MP3 ↓</a>
       </li>
-      <li class="track-row" data-track="2" data-src="assets/Tracks/angsplit_cbs.mp3">
-        <span class="track-num">03</span>
-        <div class="track-meta">
-          <button class="track-name" type="button">Angsplit CBS</button>
-          <span class="track-sub">hardware jam · ambient</span>
-        </div>
-        <span class="track-tag">Ambient</span>
-        <span class="track-dur" data-dur>—</span>
-        <a class="track-dl" href="assets/Tracks/angsplit_cbs.mp3" download>MP3 ↓</a>
-      </li>
     </ul>
   </div>
   </div><!-- /.subcard -->
@@ -4735,8 +4725,10 @@ class Knob {
     }
   });
 
-  // Click anywhere on a track row to load+play it (except the download anchor).
-  trackRows.forEach((row, i) => {
+  // Click anywhere on a track row to load+play it (except the download anchor),
+  // and probe its duration once metadata loads (a separate Audio object so
+  // the player's currentSrc is left alone).
+  function setupTrackRow(row, i) {
     row.style.cursor = 'pointer';
     row.addEventListener('click', async (e) => {
       if (e.target.closest('a')) return;
@@ -4750,11 +4742,6 @@ class Knob {
       loadTrack(i);
       try { await trackAudio.play(); } catch (err) { console.warn('play failed', err); }
     });
-  });
-
-  // Probe each track for its duration once metadata loads (separate Audio
-  // objects so we don't disturb the player's currentSrc).
-  trackRows.forEach(row => {
     const probe = new Audio();
     probe.preload = 'metadata';
     probe.src = row.dataset.src;
@@ -4762,7 +4749,49 @@ class Knob {
       const slot = row.querySelector('[data-dur]');
       if (slot) slot.textContent = fmtDur(probe.duration);
     });
-  });
+  }
+  trackRows.forEach(setupTrackRow);
+
+  // Audio pushed into assets/Tracks appears without editing this page.
+  // GitHub Pages can't list a folder, so the GitHub API is asked for its
+  // files, and each one the list above doesn't already have gets a row
+  // named from its file name ("my_new-track.mp3" -> "My New Track"). The
+  // rows written above keep their own names and tags. If the request
+  // fails (offline, rate limit) the list simply stays as written.
+  const TRACKS_API = 'https://api.github.com/repos/kucukalpay/sayfa/contents/assets/Tracks';
+  const trackList = document.querySelector('#modal-tracks .track-list');
+  if (trackList && window.fetch) {
+    fetch(TRACKS_API)
+      .then(r => r.ok ? r.json() : [])
+      .then(files => {
+        const have = new Set(trackRows.map(r => decodeURI(r.dataset.src)));
+        files
+          .filter(f => f.type === 'file' && /\.(mp3|wav|ogg|m4a|flac)$/i.test(f.name) && !have.has(f.path))
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .forEach(f => {
+            const src = encodeURI(f.path);
+            const name = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
+              .split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            const row = document.createElement('li');
+            row.className = 'track-row';
+            row.dataset.track = trackRows.length;
+            row.dataset.src = src;
+            row.innerHTML =
+              '<span class="track-num"></span>' +
+              '<div class="track-meta"><button class="track-name" type="button"></button></div>' +
+              '<span class="track-tag"></span>' +
+              '<span class="track-dur" data-dur>—</span>' +
+              '<a class="track-dl" download>' + f.name.split('.').pop().toUpperCase() + ' ↓</a>';
+            row.querySelector('.track-num').textContent = String(trackRows.length + 1).padStart(2, '0');
+            row.querySelector('.track-name').textContent = name;
+            row.querySelector('.track-dl').href = src;
+            trackList.appendChild(row);
+            trackRows.push(row);
+            setupTrackRow(row, trackRows.length - 1);
+          });
+      })
+      .catch(() => {});
+  }
 
   // ============== Sample / loop previewer ==============
   // Samples and Loops & Beats are separate modals now, but the previewer
