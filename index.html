@@ -4752,45 +4752,50 @@ class Knob {
   }
   trackRows.forEach(setupTrackRow);
 
-  // Audio pushed into assets/Tracks appears without editing this page.
-  // GitHub Pages can't list a folder, so the GitHub API is asked for its
-  // files, and each one the list above doesn't already have gets a row
-  // named from its file name ("my_new-track.mp3" -> "My New Track"). The
-  // rows written above keep their own names and tags. If the request
-  // fails (offline, rate limit) the list simply stays as written.
-  const TRACKS_API = 'https://api.github.com/repos/kucukalpay/sayfa/contents/assets/Tracks';
-  const trackList = document.querySelector('#modal-tracks .track-list');
-  if (trackList && window.fetch) {
-    fetch(TRACKS_API)
+  // Audio pushed into the repo appears without editing this page. GitHub
+  // Pages can't list a folder, so the GitHub API is asked for its files,
+  // and each audio file a list doesn't already have gets a row named from
+  // its file name ("my_new-track.mp3" -> "My New Track"). Rows written in
+  // the page keep their own names and tags. If the request fails (offline,
+  // rate limit) the lists simply stay as written.
+  const REPO_API = 'https://api.github.com/repos/kucukalpay/sayfa/contents/';
+  const AUDIO_FILE = /\.(mp3|wav|ogg|m4a|flac)$/i;
+  function listAudio(folder, have) {
+    if (!window.fetch) return Promise.resolve([]);
+    return fetch(REPO_API + folder)
       .then(r => r.ok ? r.json() : [])
-      .then(files => {
-        const have = new Set(trackRows.map(r => decodeURI(r.dataset.src)));
-        files
-          .filter(f => f.type === 'file' && /\.(mp3|wav|ogg|m4a|flac)$/i.test(f.name) && !have.has(f.path))
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .forEach(f => {
-            const src = encodeURI(f.path);
-            const name = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
-              .split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-            const row = document.createElement('li');
-            row.className = 'track-row';
-            row.dataset.track = trackRows.length;
-            row.dataset.src = src;
-            row.innerHTML =
-              '<span class="track-num"></span>' +
-              '<div class="track-meta"><button class="track-name" type="button"></button></div>' +
-              '<span class="track-tag"></span>' +
-              '<span class="track-dur" data-dur>—</span>' +
-              '<a class="track-dl" download>' + f.name.split('.').pop().toUpperCase() + ' ↓</a>';
-            row.querySelector('.track-num').textContent = String(trackRows.length + 1).padStart(2, '0');
-            row.querySelector('.track-name').textContent = name;
-            row.querySelector('.track-dl').href = src;
-            trackList.appendChild(row);
-            trackRows.push(row);
-            setupTrackRow(row, trackRows.length - 1);
-          });
-      })
-      .catch(() => {});
+      .then(files => files
+        .filter(f => f.type === 'file' && AUDIO_FILE.test(f.name) && !have.has(f.path))
+        .sort((a, b) => a.name.localeCompare(b.name)))
+      .catch(() => []);
+  }
+  function nameFromFile(file) {
+    return file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
+      .split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+  const listedSrcs = rows => new Set(rows.map(r => decodeURI(r.dataset.src)));
+
+  const trackList = document.querySelector('#modal-tracks .track-list');
+  if (trackList) {
+    listAudio('assets/Tracks', listedSrcs(trackRows)).then(files => files.forEach(f => {
+      const src = encodeURI(f.path);
+      const row = document.createElement('li');
+      row.className = 'track-row';
+      row.dataset.track = trackRows.length;
+      row.dataset.src = src;
+      row.innerHTML =
+        '<span class="track-num"></span>' +
+        '<div class="track-meta"><button class="track-name" type="button"></button></div>' +
+        '<span class="track-tag"></span>' +
+        '<span class="track-dur" data-dur>—</span>' +
+        '<a class="track-dl" download>' + f.name.split('.').pop().toUpperCase() + ' ↓</a>';
+      row.querySelector('.track-num').textContent = String(trackRows.length + 1).padStart(2, '0');
+      row.querySelector('.track-name').textContent = nameFromFile(f.name);
+      row.querySelector('.track-dl').href = src;
+      trackList.appendChild(row);
+      trackRows.push(row);
+      setupTrackRow(row, trackRows.length - 1);
+    }));
   }
 
   // ============== Sample / loop previewer ==============
@@ -4807,10 +4812,10 @@ class Knob {
     }
   }
 
-  sampleRows.forEach(row => {
+  // Preview on the play button, and probe the duration once metadata loads.
+  function setupSampleRow(row) {
     const playBtn = row.querySelector('.audio-play');
-    if (!playBtn) return;
-    playBtn.addEventListener('click', async (e) => {
+    if (playBtn) playBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       ensureAudio();
       if (ac.state === 'suspended') { try { await ac.resume(); } catch (_) {} }
@@ -4824,7 +4829,40 @@ class Knob {
       sampleAudio.src = row.dataset.src;
       try { await sampleAudio.play(); } catch (err) { console.warn('preview failed', err); }
     });
-  });
+    const probe = new Audio();
+    probe.preload = 'metadata';
+    probe.src = row.dataset.src;
+    probe.addEventListener('loadedmetadata', () => {
+      const slot = row.querySelector('.audio-time');
+      if (slot) slot.textContent = fmtDur(probe.duration);
+    });
+  }
+  sampleRows.forEach(setupSampleRow);
+
+  // Samples and loops share assets/Audio; a "sample-" or "loop-" prefix on
+  // the file name says which list a new file joins (and is left out of its
+  // name). Files with neither prefix aren't listed.
+  const sampleList = document.querySelector('#modal-samples .audio-list');
+  const loopList = document.querySelector('#modal-loops .audio-list');
+  listAudio('assets/Audio', listedSrcs(sampleRows)).then(files => files.forEach(f => {
+    const kind = /^(sample|loop)-/i.exec(f.name);
+    const list = kind && (kind[1].toLowerCase() === 'sample' ? sampleList : loopList);
+    if (!list) return;
+    const src = encodeURI(f.path);
+    const row = document.createElement('div');
+    row.className = 'audio-row';
+    row.dataset.src = src;
+    row.innerHTML =
+      '<button class="audio-play" type="button" aria-label="Preview">▶</button>' +
+      '<span class="audio-name"></span>' +
+      '<span class="audio-time">—</span>' +
+      '<a class="audio-dl" download title="Download">↓</a>';
+    row.querySelector('.audio-name').textContent = nameFromFile(f.name.slice(kind[0].length));
+    row.querySelector('.audio-dl').href = src;
+    list.appendChild(row);
+    sampleRows.push(row);
+    setupSampleRow(row);
+  }));
 
   sampleAudio.addEventListener('play', () => {
     if (currentSampleRow) {
@@ -4842,16 +4880,6 @@ class Knob {
   sampleAudio.addEventListener('ended', () => {
     clearSampleRow();
     currentSampleRow = null;
-  });
-
-  sampleRows.forEach(row => {
-    const probe = new Audio();
-    probe.preload = 'metadata';
-    probe.src = row.dataset.src;
-    probe.addEventListener('loadedmetadata', () => {
-      const slot = row.querySelector('.audio-time');
-      if (slot) slot.textContent = fmtDur(probe.duration);
-    });
   });
 
   // ============== "Keep playing" + mini hovering player ==============
