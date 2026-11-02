@@ -1436,7 +1436,6 @@
     height: calc(var(--s) * var(--u));
     transform: translate(-50%, -50%);
     z-index: 2;
-    transition: opacity 300ms;
   }
   /* Lattice: columns 0.918u apart (a node's half-width plus a hair of
      gap), rows 1.59u apart. The big pair sits right over ANG and Tracks. */
@@ -1457,12 +1456,7 @@
     fill: rgba(10,10,12,0.9);
     stroke: var(--idle);
     stroke-width: 1.5;
-    transition: stroke 300ms, stroke-width 300ms;
   }
-  .graph-chain.on .graph-stone { stroke: rgba(196,98,71,0.95); stroke-width: 2; }
-  .card-streams.has-focus .section-shell { opacity: 0.3; }
-  .card-streams.has-focus .section-shell.is-linked { opacity: 1; }
-  .card-streams.has-focus .graph-chain:not(.on) .graph-stone { stroke: rgba(38,67,100,0.3); }
 
   /* The card itself becomes the node: no box, just the shape + a title.
      The hero <img> stays in the DOM (the script reads its src) but is
@@ -1485,13 +1479,12 @@
   #workStreams .section-card .card-hero,
   #workStreams .section-card .card-cta { display: none; }
   .node-shape { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 2; vector-effect: non-scaling-stroke; transition: stroke 250ms, stroke-width 250ms; }
+  .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 2; vector-effect: non-scaling-stroke; }
   .node-shape polygon.rim { fill: none; }
-  .node-shape image { filter: grayscale(0.4) brightness(0.8); opacity: 0.55; transition: opacity 300ms, filter 300ms; }
-  #workStreams .section-card:focus-visible .node-shape image { opacity: 1; filter: none; }
-  #workStreams .section-card:focus-visible .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.8; }
-  #workStreams .section-card:focus-visible { outline: none; }
-  #workStreams .section-card:focus-visible .card-title { color: var(--lit); }
+  .node-shape image { filter: brightness(0.85); }
+  /* A static map: nothing lights up on hover or focus. Keyboard users
+     still get the browser's own focus ring. */
+  #workStreams .section-card:focus-visible { outline: 1px dashed var(--accent-2); outline-offset: -8px; }
   /* The title sits inside its hexagon, centred, as in a honeycomb. */
   #workStreams .card-text {
     position: absolute;
@@ -1519,72 +1512,6 @@
   #three-d .card-title,
   #procedural .card-title { font-size: clamp(0.8rem, calc(var(--u) * 0.19), 1.15rem); }
   @media (max-width: 600px) { #workStreams .section-card .card-title { letter-spacing: 0.06em; } }
-  /* Descriptions never show on the node: the graph caption below
-     (graphCaption()) shows the active node's instead. */
-  #workStreams .section-card .card-desc { display: none; }
-  .section-shell:focus-within { z-index: 20; }
-  /* Mouse hover = the same look as keyboard focus.
-     Only on devices that really hover: phones keep :hover stuck after a
-     tap. */
-  @media (hover: hover) {
-    .section-shell:hover { z-index: 20; }
-    #workStreams .section-card:hover .node-shape image { opacity: 1; filter: none; }
-    #workStreams .section-card:hover .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.8; }
-    #workStreams .section-card:hover .card-title { color: var(--lit); }
-  }
-  /* One caption for the whole graph, fixed at the top just under the
-     docked HOME (48px tall) and over every fixed control, so a
-     description never hangs among the nodes. It shows the last
-     hovered/focused/previewed node's title and description (see
-     graphCaption in workGraph()). */
-  .graph-caption {
-    position: fixed;
-    left: 50%;
-    top: 84px;
-    width: min(440px, calc(100vw - 32px));
-    transform: translate(-50%, -8px);
-    z-index: 8600;
-    padding: 10px 14px;
-    background: rgba(10,10,12,0.94);
-    border: 1px solid rgba(196,98,71,0.35);
-    border-radius: 3px;
-    text-align: center;
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 200ms, transform 200ms, visibility 0s 200ms;
-  }
-  .graph-caption.is-shown {
-    opacity: 1;
-    visibility: visible;
-    transform: translate(-50%, 0);
-    transition: opacity 200ms, transform 200ms, visibility 0s;
-  }
-  body.modal-open .graph-caption { display: none; }
-  .graph-caption-title {
-    margin: 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--lit);
-  }
-  .graph-caption-desc {
-    margin: 4px 0 0;
-    font-size: 0.78rem;
-    line-height: 1.45;
-    color: rgba(235,230,225,0.85);  /* --lit at 85% */
-  }
-  /* HOME docks lower on small phones (top: 60px). */
-  @media (max-width: 420px) { .graph-caption { top: 120px; } }
-  @media (prefers-reduced-motion: reduce) { .graph-caption { transition: none; } }
-
-  /* Phones on their side: the caption goes to the bottom, off the
-     graph's middle. */
-  @media (orientation: landscape) and (max-height: 500px) {
-    .graph-caption { top: auto; bottom: 12px; width: min(440px, 56vw); }
-  }
   .section-card {
     margin: 0;
     position: relative;
@@ -2376,7 +2303,6 @@
     <img class="card-hero" src="assets/images/durex.webp" alt="DUR3 — stylized still" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">3D</h2>
-      <p class="card-desc">Showreel, scenes, FX rigs — current reel with earlier ones tucked underneath.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2387,7 +2313,6 @@
     <img class="card-hero" src="assets/images/car-bridge.webp" alt="Procedural car simulation — stylized still" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Procedural</h2>
-      <p class="card-desc">Generative scenes, FX rigs, and asset systems.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2398,7 +2323,6 @@
     <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">ANG</h2>
-      <p class="card-desc">Hand-built noise instruments, starting with the Annoying Noise Generator.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2409,7 +2333,6 @@
     <img class="card-hero" src="assets/images/mkv-pcb.webp" alt="PCB of the Annoying Noise Generator the emulator is modelled on" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">ANE</h2>
-      <p class="card-desc">Annoying Noise Emulator — a web synth modelled on my ANG, with patch cables, sensors and pedals. Tap to play.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2420,7 +2343,6 @@
     <img class="card-hero" src="assets/images/mkv-pcbhrz.webp" alt="Hand-built pedal PCB layout" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Pedals</h2>
-      <p class="card-desc">Effect pedals living on the same patchable rig — overdrive, reverb, more to come.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2431,7 +2353,6 @@
     <img class="card-hero" src="assets/images/miksciwire.webp" alt="Wireframe render of a DIY hardware device with knobs and jacks" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Personal Projects</h2>
-      <p class="card-desc">Other hardware — DIY builds and hacked-together devices. VCOs, fuzz, delay, whatever else got made along the way.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2442,7 +2363,6 @@
     <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — DIY instrument samples" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Sample Library</h2>
-      <p class="card-desc">Single-shot samples recorded out of my DIY instruments. Tap to preview, arrow to download.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2453,7 +2373,6 @@
     <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — loops built from DIY instrument samples" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Loops &amp; Beats</h2>
-      <p class="card-desc">Looped phrases built from those samples. Tap to preview, arrow to download.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2464,7 +2383,6 @@
     <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — ambient hardware jam tracks" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Tracks</h2>
-      <p class="card-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
@@ -2475,18 +2393,12 @@
     <img class="card-hero" src="assets/images/isyan_hatirasi.webp" alt="Photograph: isyan hatirasi" loading="lazy">
     <div class="card-text">
       <h2 class="card-title">Photo</h2>
-      <p class="card-desc">Older work — film, walks, things noticed. Tap for the gallery.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
   </div>
 </section>
 
 </div><!-- /.card-streams -->
-<div class="graph-caption" id="graphCaption" aria-hidden="true">
-  <p class="graph-caption-title"></p>
-  <p class="graph-caption-desc"></p>
-</div>
-
 <!-- CONTACT -->
 <section class="contact reveal" id="contact">
   <a class="contact-email" href="mailto:kucukalpay@gmail.com">kucukalpay@gmail.com</a>
@@ -3040,8 +2952,7 @@
    between related nodes from their real positions: nodes side by side on
    the lattice need nothing between them, and a far link becomes a chain
    of small stepping-stone hexagons across the gap. It runs on load/resize
-   only. Hovering or focusing a node lights its links and the nodes it
-   connects to.
+   only. A plain map: nothing lights up, one click opens a card.
    ============================================================ */
 (function workGraph() {
   'use strict';
@@ -3174,67 +3085,6 @@
       }
     });
   }
-
-  // The shared caption: the last active node's title and description.
-  // It stays up while scrolling and hides when the pointer leaves the
-  // graph, a click lands off the nodes, focus moves elsewhere, or that
-  // node scrolls out of view.
-  var caption = document.getElementById('graphCaption');
-  var captionFor = null;
-  function showCaption(id) {
-    if (!caption) return;
-    var el = nodes[id];
-    var title = el.querySelector('.card-title'), desc = el.querySelector('.card-desc');
-    caption.querySelector('.graph-caption-title').textContent = title ? title.textContent : '';
-    caption.querySelector('.graph-caption-desc').textContent = desc ? desc.textContent : '';
-    caption.classList.add('is-shown');
-    captionFor = id;
-  }
-  function hideCaption() {
-    if (caption) caption.classList.remove('is-shown');
-    captionFor = null;
-  }
-  stage.addEventListener('pointerleave', function(e) { if (e.pointerType === 'mouse') hideCaption(); });
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('#workStreams .section-card, #graphCaption')) hideCaption();
-  });
-  document.addEventListener('focusin', function(e) {
-    if (!e.target.closest('#workStreams .section-card, #graphCaption')) hideCaption();
-  });
-  document.addEventListener('modal:closed', hideCaption);
-  window.addEventListener('scroll', function() {
-    if (!captionFor) return;
-    var r = nodes[captionFor].getBoundingClientRect();
-    if (r.bottom < 0 || r.top > window.innerHeight) hideCaption();
-  }, { passive: true });
-
-  function focusNode(id) {
-    showCaption(id);
-    var linked = {};
-    linked[id] = true;
-    EDGES.forEach(function(e, i) {
-      if (!chains[i]) return;
-      var hit = e[0] === id || e[1] === id;
-      if (hit) { linked[e[0]] = true; linked[e[1]] = true; }
-      chains[i].classList.toggle('on', hit);
-    });
-    stage.classList.add('has-focus');
-    Object.keys(nodes).forEach(function(k) {
-      nodes[k].classList.toggle('is-linked', !!linked[k]);
-    });
-  }
-  function clearFocus() {
-    stage.classList.remove('has-focus');
-    chains.forEach(function(g) { if (g) g.classList.remove('on'); });
-    Object.keys(nodes).forEach(function(k) { nodes[k].classList.remove('is-linked'); });
-  }
-  Object.keys(nodes).forEach(function(id) {
-    var el = nodes[id];
-    el.addEventListener('pointerenter', function(e) { if (e.pointerType === 'mouse') focusNode(id); });
-    el.addEventListener('pointerleave', function(e) { if (e.pointerType === 'mouse') clearFocus(); });
-    el.addEventListener('focusin', function() { focusNode(id); });
-    el.addEventListener('focusout', clearFocus);
-  });
 
   drawChains();
   window.addEventListener('resize', drawChains);
