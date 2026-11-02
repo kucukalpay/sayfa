@@ -1412,91 +1412,57 @@
      Each major section is a card on the page; clicking opens a fullscreen
      modal containing the full functional UI. */
 
-  /* Work as a node graph. Each work is a small hexagon node (its
-     image clipped inside) placed by how related the works are
-     (--x/--y = centre in % of the stage, --s = size). 3D is the hub and by
-     far the largest. Relationships are unlabelled dashed edges, drawn by
-     the workGraph script from real node positions on load/resize only. */
+  /* Work as a honeycomb. Each work is a vertex-up hexagon node (its
+     image clipped inside) on a hex lattice: neighbours on the lattice sit
+     side by side, and the two far links (Procedural -> ANG, 3D -> Tracks)
+     are chains of small stepping-stone hexagons drawn by workGraph().
+     Everything is measured in --u, the circumradius of a small node, so the
+     comb keeps its shape at every width: --x is the centre's offset from
+     the stage's middle, --y its depth from the top, --s the box size. */
   .card-streams {
+    --u: min(100px, calc((100vw - 24px) / 7.6));
     position: relative;
     z-index: 1;
-    height: 1200px;
+    height: calc(var(--u) * 12);
     margin: 0 auto;
     max-width: 1400px;
   }
   .section-shell {
-    --x: 50; --y: 50; --s: 130px;
+    --x: 0; --y: 6; --s: 2.0833;
     position: absolute;
-    left: calc(var(--x) * 1%);
-    top: calc(var(--y) * 1%);
-    --k: 1;
-    width: calc(var(--s) * var(--k));
-    height: calc(var(--s) * var(--k));
-    --dx: 0px; --dy: 0px; --t: 1;
-    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(var(--t));
+    left: calc(50% + var(--x) * var(--u));
+    top: calc(var(--y) * var(--u));
+    width: calc(var(--s) * var(--u));
+    height: calc(var(--s) * var(--u));
+    transform: translate(-50%, -50%);
     z-index: 2;
-    transition: opacity 300ms, transform 450ms cubic-bezier(.2,.7,.2,1), visibility 0s;
+    transition: opacity 300ms;
   }
-  /* Grouped nodes: a group's members sit tucked inside its head node
-     (--dx/--dy point back at the head, set by workGraph()) until the
-     head is clicked, then fan out to their own spots. */
-  #workStreams .section-shell.is-tucked {
-    --t: 0.25;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 300ms, transform 450ms cubic-bezier(.2,.7,.2,1), visibility 0s 450ms;
-  }
-  #workStreams .group-count {
-    display: block;
-    margin-top: 2px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.12em;
-    color: var(--ink-faint);
-    text-shadow: 0 0 3px #0a0a0b, 0 0 6px #0a0a0b;
-  }
-  #workStreams .section-shell.is-open .group-count { display: none; }
-  /* Members just let out of their head flash lit for a moment, so the
-     eye catches where they landed. */
-  #workStreams .section-shell.is-arriving .node-shape polygon.rim { animation: nodeArriveRim 1.6s ease-out; }
-  #workStreams .section-shell.is-arriving .node-shape image { animation: nodeArriveImg 1.6s ease-out; }
-  #workStreams .section-shell.is-arriving .card-title { animation: nodeArriveTitle 1.6s ease-out; }
-  @keyframes nodeArriveRim { 0%, 35% { stroke: #c46247; stroke-width: 2.8; } }
-  @keyframes nodeArriveImg { 0%, 35% { opacity: 1; filter: none; } }
-  @keyframes nodeArriveTitle { 0%, 35% { color: var(--lit); } }
-  #workStreams.no-anim .section-shell { transition: none; }
-  @media (prefers-reduced-motion: reduce) {
-    .section-shell, #workStreams .section-shell.is-tucked { transition: none; }
-    #workStreams .section-shell.is-arriving * { animation: none !important; }
-  }
-  #three-d       { --x: 50; --y: 15.9; --s: 300px; }
-  #procedural    { --x: 72; --y: 30; --s: 140px; }
-  #synths        { --x: 20; --y: 62;   --s: 170px; }
-  #pedals        { --x: 36; --y: 76;   --s: 120px; }
-  #ane           { --x: 36; --y: 52;   --s: 120px; }
-  #stray-voltage { --x: 46; --y: 63;   --s: 110px; }
-  #music         { --x: 54; --y: 56;   --s: 130px; }
-  #loops         { --x: 58; --y: 74;   --s: 115px; }
-  #tracks        { --x: 72; --y: 84.6; --s: 150px; }
-  #photography   { --x: 24; --y: 89.9; --s: 140px; }
-  @media (max-width: 1200px) { .section-shell { --k: 0.8; } }
-  @media (max-width: 1000px) { .section-shell { --k: 0.68; } }
+  /* Lattice: columns 0.918u apart (a node's half-width plus a hair of
+     gap), rows 1.59u apart. The big pair sits right over ANG and Tracks. */
+  #procedural    { --x: -1.836; --y: 2.1;  --s: 4.1667; }
+  #three-d       { --x: 1.836;  --y: 2.1;  --s: 4.1667; }
+  #synths        { --x: -1.836; --y: 7.5; }
+  #tracks        { --x: 1.836;  --y: 7.5; }
+  #stray-voltage { --x: -2.754; --y: 9.09; }
+  #ane           { --x: -0.918; --y: 9.09; }
+  #loops         { --x: 0.918;  --y: 9.09; }
+  #music         { --x: 2.754;  --y: 9.09; }
+  #pedals        { --x: -1.836; --y: 10.68; }
+  #photography   { --x: 0;      --y: 10.68; }
 
   .graph-layer { position: absolute; inset: 0; pointer-events: none; }
   .graph-layer svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .graph-edge {
-    fill: none;
+  .graph-stone {
+    fill: rgba(10,10,12,0.9);
     stroke: var(--idle);
     stroke-width: 1.5;
-    stroke-dasharray: 3 4;
-    transition: stroke 300ms, stroke-width 300ms, opacity 300ms;
+    transition: stroke 300ms, stroke-width 300ms;
   }
-  .graph-edge.on { stroke: rgba(196,98,71,0.95); stroke-width: 1.6; stroke-dasharray: none; }
-  .graph-edge.is-hidden { opacity: 0; }
+  .graph-chain.on .graph-stone { stroke: rgba(196,98,71,0.95); stroke-width: 2; }
   .card-streams.has-focus .section-shell { opacity: 0.3; }
   .card-streams.has-focus .section-shell.is-linked { opacity: 1; }
-  .card-streams.has-focus .graph-edge:not(.on) { stroke: rgba(38,67,100,0.3); }
+  .card-streams.has-focus .graph-chain:not(.on) .graph-stone { stroke: rgba(38,67,100,0.3); }
 
   /* The card itself becomes the node: no box, just the shape + a title.
      The hero <img> stays in the DOM (the script reads its src) but is
@@ -1519,34 +1485,29 @@
   #workStreams .section-card .card-hero,
   #workStreams .section-card .card-cta { display: none; }
   .node-shape { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 2; transition: stroke 250ms, stroke-width 250ms; }
+  .node-shape polygon { fill: rgba(10,10,12,0.9); stroke: var(--idle); stroke-width: 2; vector-effect: non-scaling-stroke; transition: stroke 250ms, stroke-width 250ms; }
   .node-shape polygon.rim { fill: none; }
   .node-shape image { filter: grayscale(0.4) brightness(0.8); opacity: 0.55; transition: opacity 300ms, filter 300ms; }
-  /* .is-preview is the touch version of hover: the first tap on a node
-     (see modalController()). */
-  #workStreams .section-card:focus-visible .node-shape image,
-  #workStreams .section-card.is-preview .node-shape image { opacity: 1; filter: none; }
-  #workStreams .section-card:focus-visible .node-shape polygon.rim,
-  #workStreams .section-card.is-preview .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.8; }
-  #workStreams .section-card:focus-visible,
-  #workStreams .section-card.is-preview { outline: none; }
-  #workStreams .section-card:focus-visible .card-title,
-  #workStreams .section-card.is-preview .card-title { color: var(--lit); }
+  #workStreams .section-card:focus-visible .node-shape image { opacity: 1; filter: none; }
+  #workStreams .section-card:focus-visible .node-shape polygon.rim { stroke: #c46247; stroke-width: 2.8; }
+  #workStreams .section-card:focus-visible { outline: none; }
+  #workStreams .section-card:focus-visible .card-title { color: var(--lit); }
+  /* The title sits inside its hexagon, centred, as in a honeycomb. */
   #workStreams .card-text {
     position: absolute;
-    top: 100%;
-    left: 50%;
-    width: 260px;
-    margin-left: -130px;
-    padding-top: 10px;
+    top: 50%;
+    left: 12%;
+    width: 76%;
+    transform: translateY(-50%);
     text-align: center;
     pointer-events: none;
   }
   #workStreams .section-card .card-title {
-    width: fit-content;
     margin: 0 auto;
+    text-wrap: balance;
+    overflow-wrap: break-word;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
+    font-size: clamp(0.56rem, calc(var(--u) * 0.13), 0.8rem);
     font-weight: 500;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -1555,12 +1516,14 @@
        don't cut through its letters */
     text-shadow: 0 0 3px #0a0a0b, 0 0 6px #0a0a0b, 0 0 10px #0a0a0b;
   }
-  #three-d .card-title { font-size: 1.15rem; }
+  #three-d .card-title,
+  #procedural .card-title { font-size: clamp(0.8rem, calc(var(--u) * 0.19), 1.15rem); }
+  @media (max-width: 600px) { #workStreams .section-card .card-title { letter-spacing: 0.06em; } }
   /* Descriptions never show on the node: the graph caption below
      (graphCaption()) shows the active node's instead. */
   #workStreams .section-card .card-desc { display: none; }
   .section-shell:focus-within { z-index: 20; }
-  /* Mouse hover = the same look as keyboard focus and the touch preview.
+  /* Mouse hover = the same look as keyboard focus.
      Only on devices that really hover: phones keep :hover stuck after a
      tap. */
   @media (hover: hover) {
@@ -1613,62 +1576,15 @@
     line-height: 1.45;
     color: rgba(235,230,225,0.85);  /* --lit at 85% */
   }
-  .graph-caption-hint {
-    display: none;
-    margin: 6px auto 0;
-    padding: 4px 8px;
-    border: 0;
-    background: none;
-    cursor: pointer;
-    pointer-events: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent-2);
-  }
-  @media (hover: none) { .graph-caption-hint { display: block; } }
   /* HOME docks lower on small phones (top: 60px). */
   @media (max-width: 420px) { .graph-caption { top: 120px; } }
   @media (prefers-reduced-motion: reduce) { .graph-caption { transition: none; } }
 
-  /* Phones: a compact version of the same graph. */
-  @media (max-width: 900px) {
-    .card-streams { height: 700px; }
-    #workStreams .section-shell { --k: 1; }
-    #workStreams #three-d       { --x: 50.0; --y: 15.7; --s: 160px; }
-    #workStreams #procedural    { --x: 39.4; --y: 38.8; --s: 84px; }
-    #workStreams #synths        { --x: 18.0; --y: 58.0; --s: 96px; }
-    #workStreams #stray-voltage { --x: 22.0; --y: 86.0; --s: 74px; }
-    #workStreams #pedals        { --x: 42.0; --y: 64.0; --s: 82px; }
-    #workStreams #ane           { --x: 42.0; --y: 40.0; --s: 74px; }
-    #workStreams #music         { --x: 52.0; --y: 41.0; --s: 84px; }
-    #workStreams #loops         { --x: 54.0; --y: 67.0; --s: 78px; }
-    #workStreams #tracks        { --x: 80.0; --y: 51.0; --s: 94px; }
-    #workStreams #photography   { --x: 60.0; --y: 88.0; --s: 88px; }
-    #workStreams .card-text { width: 200px; margin-left: -100px; }
-  }
-  /* Phones on their side: too short for the tall phone graph, so the
-     same nodes spread across the width instead. */
+  /* Phones on their side: the caption goes to the bottom, off the
+     graph's middle. */
   @media (orientation: landscape) and (max-height: 500px) {
-    .card-streams { height: 600px; }
-    #workStreams .section-shell { --k: 1; }
-    #workStreams #three-d       { --x: 50; --y: 22; --s: 150px; }
-    #workStreams #procedural    { --x: 70; --y: 30; --s: 80px; }
-    #workStreams #synths        { --x: 16; --y: 55; --s: 100px; }
-    #workStreams #ane           { --x: 32; --y: 40; --s: 76px; }
-    #workStreams #stray-voltage { --x: 38; --y: 60; --s: 70px; }
-    #workStreams #pedals        { --x: 30; --y: 80; --s: 78px; }
-    #workStreams #tracks        { --x: 84; --y: 55; --s: 100px; }
-    #workStreams #music         { --x: 62; --y: 50; --s: 84px; }
-    #workStreams #loops         { --x: 66; --y: 76; --s: 78px; }
-    #workStreams #photography   { --x: 50; --y: 86; --s: 90px; }
-    #workStreams .card-text { width: 200px; margin-left: -100px; }
-    /* and the caption goes to the bottom, off the graph's middle */
     .graph-caption { top: auto; bottom: 12px; width: min(440px, 56vw); }
   }
-  @media (max-width: 410px) { #workStreams .section-shell { --k: 0.86; } }
-  @media (max-width: 370px) { #workStreams .section-shell { --k: 0.74; } }
   .section-card {
     margin: 0;
     position: relative;
@@ -2481,7 +2397,7 @@
   <div class="section-card" data-modal-target="modal-synths">
     <img class="card-hero" src="assets/images/mkv-pcb_desat.webp" alt="Hand-built modular synth PCB" loading="lazy">
     <div class="card-text">
-      <h2 class="card-title" data-open-title="Synths">Devices</h2>
+      <h2 class="card-title">ANG</h2>
       <p class="card-desc">Hand-built noise instruments, starting with the Annoying Noise Generator.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
@@ -2514,7 +2430,7 @@
   <div class="section-card" data-modal-target="modal-synths" data-modal-scroll="angDetails">
     <img class="card-hero" src="assets/images/miksciwire.webp" alt="Wireframe render of a DIY hardware device with knobs and jacks" loading="lazy">
     <div class="card-text">
-      <h2 class="card-title">Stray Voltage</h2>
+      <h2 class="card-title">Personal Projects</h2>
       <p class="card-desc">Other hardware — DIY builds and hacked-together devices. VCOs, fuzz, delay, whatever else got made along the way.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
@@ -2525,7 +2441,7 @@
   <div class="section-card" data-modal-target="modal-samples">
     <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — DIY instrument samples" loading="lazy">
     <div class="card-text">
-      <h2 class="card-title">Samples</h2>
+      <h2 class="card-title">Sample Library</h2>
       <p class="card-desc">Single-shot samples recorded out of my DIY instruments. Tap to preview, arrow to download.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
@@ -2547,7 +2463,7 @@
   <div class="section-card" data-modal-target="modal-tracks">
     <img class="card-hero" src="assets/images/musiccardbg.webp" alt="Music — ambient hardware jam tracks" loading="lazy">
     <div class="card-text">
-      <h2 class="card-title" data-open-title="Tracks">Music</h2>
+      <h2 class="card-title">Tracks</h2>
       <p class="card-desc">Long-form ambient + hardware jam tracks. Pick one from the playlist or hit play to start the first track.</p>
     </div>
     <span class="card-cta" aria-hidden="true">Open ↗</span>
@@ -2569,7 +2485,6 @@
 <div class="graph-caption" id="graphCaption" aria-hidden="true">
   <p class="graph-caption-title"></p>
   <p class="graph-caption-desc"></p>
-  <button type="button" class="graph-caption-hint" tabindex="-1">Tap again to open ↗</button>
 </div>
 
 <!-- CONTACT -->
@@ -3080,11 +2995,11 @@
   var wrap = document.getElementById('workStreams');
   if (!wrap) return;
   var allEls = Array.prototype.slice.call(wrap.querySelectorAll('.section-shell'));
-  // Each node is a hexapole: its six edges are alternately N and S
-  // poles. Which edge starts as N is picked at random once per page load
-  // (flip 0 or 1).
-  var flips = allEls.map(function() {
-    return Math.random() < 0.5 ? 0 : 1;
+  // Each node is one bar magnet lying through two opposite vertices of
+  // its hexagon, pointing (S -> N) at one of the six, picked at random
+  // once per page load.
+  var axes = allEls.map(function() {
+    return (Math.floor(Math.random() * 6) * 60 - 90) * Math.PI / 180;
   });
 
   var ticking = false;
@@ -3092,11 +3007,10 @@
   function publishFieldSources() {
     var sources = [];
     for (var i = 0; i < allEls.length; i++) {
-      if (allEls[i].classList.contains('is-tucked')) continue;
       var r = allEls[i].getBoundingClientRect();
       if (r.bottom > 0 && r.top < window.innerHeight) {
         sources.push({ x: r.left + r.width / 2, y: r.top + r.height / 2,
-                       w: r.width, h: r.height, flip: flips[i] });
+                       w: r.width, h: r.height, angle: axes[i] });
       }
     }
     window.__fieldCardSources = sources;
@@ -3116,18 +3030,18 @@
 
   window.addEventListener('scroll', onScrollOrResize, { passive: true });
   window.addEventListener('resize', onScrollOrResize);
-  document.addEventListener('graph:moved', onScrollOrResize); // groups opening/closing
   publishFieldSources();
 })();
 
 /* ============================================================
    WORK GRAPH
-   The work cards are nodes of one network. This gives each a polygon
-   hexagon shape (its hero image clipped inside) and draws the
-   unlabelled edges between related nodes as SVG curves from their real
-   positions, so one code path serves the desktop and phone layouts. It
-   runs on load/resize only. Hovering or focusing a node lights its edges
-   and the nodes it connects to.
+   The work cards are nodes of one honeycomb. This gives each a polygon
+   hexagon shape (its hero image clipped inside) and draws the links
+   between related nodes from their real positions: nodes side by side on
+   the lattice need nothing between them, and a far link becomes a chain
+   of small stepping-stone hexagons across the gap. It runs on load/resize
+   only. Hovering or focusing a node lights its links and the nodes it
+   connects to.
    ============================================================ */
 (function workGraph() {
   'use strict';
@@ -3137,57 +3051,45 @@
   // neighbours here.
   var EDGES = window.__workEdges = [
     ['three-d',       'procedural'],
-    ['three-d',       'photography'],
-    ['three-d',       'tracks'],
     ['procedural',    'synths'],
-    ['synths',        'pedals'],
-    ['synths',        'ane'],
-    ['ane',           'pedals'],
+    ['three-d',       'tracks'],
     ['synths',        'stray-voltage'],
-    ['pedals',        'stray-voltage'],
-    ['synths',        'music'],
-    ['music',         'loops'],
-    ['loops',         'tracks'],
-    ['tracks',        'photography']
+    ['synths',        'ane'],
+    ['stray-voltage', 'ane'],
+    ['stray-voltage', 'pedals'],
+    ['ane',           'pedals'],
+    ['ane',           'loops'],
+    ['tracks',        'loops'],
+    ['tracks',        'music'],
+    ['loops',         'music'],
+    ['loops',         'photography'],
+    ['pedals',        'photography']
   ];
-  // Each head node holds its members tucked inside it until clicked.
-  var GROUPS = {
-    'three-d': ['procedural'],
-    'synths':  ['pedals', 'ane', 'stray-voltage'],
-    'tracks':  ['music', 'loops']
-  };
-  var headOf = {};
-  Object.keys(GROUPS).forEach(function(h) {
-    GROUPS[h].forEach(function(m) { headOf[m] = h; });
-  });
-  var openGroup = null;
-  // sides and rotation in degrees; all hexagons, unrotated (vertex up)
-  var SHAPES = {
-    'three-d': [6, 0], 'procedural': [6, 0], 'synths': [6, 0], 'stray-voltage': [6, 0],
-    'pedals': [6, 0], 'ane': [6, 0], 'music': [6, 0], 'loops': [6, 0], 'tracks': [6, 0], 'photography': [6, 0]
-  };
   var NS = 'http://www.w3.org/2000/svg';
+  var R_NODE = 48; // circumradius, of a node's 100-unit box
 
-  function polygonPoints(n, rot, r) {
+  // A vertex-up hexagon's corners around (cx, cy).
+  function hexPoints(cx, cy, r) {
     var pts = [];
-    for (var i = 0; i < n; i++) {
-      var a = (rot + i * 360 / n - 90) * Math.PI / 180;
-      pts.push((r * Math.cos(a)).toFixed(2) + ',' + (r * Math.sin(a)).toFixed(2));
+    for (var i = 0; i < 6; i++) {
+      var a = (i * 60 - 90) * Math.PI / 180;
+      pts.push((cx + r * Math.cos(a)).toFixed(2) + ',' + (cy + r * Math.sin(a)).toFixed(2));
     }
     return pts.join(' ');
   }
 
-  Object.keys(SHAPES).forEach(function(id) {
-    var shell = document.getElementById(id);
-    var card = shell && shell.querySelector('.section-card');
+  var nodes = {};
+  stage.querySelectorAll('.section-shell').forEach(function(shell) {
+    var card = shell.querySelector('.section-card');
     if (!card) return;
+    nodes[shell.id] = shell;
     var img = card.querySelector('.card-hero');
-    var pts = polygonPoints(SHAPES[id][0], SHAPES[id][1], 48);
+    var pts = hexPoints(0, 0, R_NODE);
     var svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('class', 'node-shape');
     svg.setAttribute('viewBox', '-50 -50 100 100');
     svg.setAttribute('aria-hidden', 'true');
-    var clipId = 'clip-' + id;
+    var clipId = 'clip-' + shell.id;
     var defs = document.createElementNS(NS, 'defs');
     var clip = document.createElementNS(NS, 'clipPath');
     clip.setAttribute('id', clipId);
@@ -3220,70 +3122,63 @@
   layer.appendChild(svgE);
   stage.insertBefore(layer, stage.firstChild);
 
-  var nodes = {}, paths = [];
-  EDGES.forEach(function(e) {
-    var a = document.getElementById(e[0]), b = document.getElementById(e[1]);
-    if (!a || !b) { paths.push(null); return; }
-    nodes[e[0]] = a; nodes[e[1]] = b;
-    var p = document.createElementNS(NS, 'path');
-    p.setAttribute('class', 'graph-edge');
-    svgE.appendChild(p);
-    paths.push(p);
+  // One <g> of stepping stones per link (empty for lattice neighbours).
+  var chains = EDGES.map(function(e) {
+    if (!nodes[e[0]] || !nodes[e[1]]) return null;
+    var g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'graph-chain');
+    svgE.appendChild(g);
+    return g;
   });
 
-  function isTucked(id) { return !!headOf[id] && openGroup !== headOf[id]; }
-  // A tucked member stands in for its head: its links are drawn from the
-  // head, and links inside a closed group aren't drawn at all.
-  function shown(id) { return isTucked(id) ? headOf[id] : id; }
-
-  // A node's centre relative to the stage: where it is drawn right now
-  // (live, mid-slide included), or where it comes to rest (nodes are
-  // centred on their left/top; a tucked one rests on its head).
-  function centre(id, live) {
-    var el = document.getElementById(isTucked(id) && !live ? headOf[id] : id);
-    if (!live) return [el.offsetLeft, el.offsetTop];
-    var r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect();
-    return [r.left + r.width / 2 - sr.left, r.top + r.height / 2 - sr.top];
+  // Distance from a vertex-up hexagon's centre to its rim, heading at
+  // angle th: the apothem over the cosine of the angle off the nearest
+  // side's normal (the normals point every 60 degrees from 0).
+  function rimDist(r, th) {
+    var t = ((th * 180 / Math.PI) % 60 + 60) % 60;
+    var off = (t > 30 ? 60 - t : t) * Math.PI / 180;
+    return r * 0.866 / Math.cos(off);
   }
 
-  function layout() {
-    // Point every tucked member back at its head (nodes are centred on
-    // their left/top, so those are the centres).
-    Object.keys(headOf).forEach(function(m) {
-      var me = document.getElementById(m), he = document.getElementById(headOf[m]);
-      if (!me || !he) return;
-      var t = isTucked(m);
-      me.style.setProperty('--dx', t ? (he.offsetLeft - me.offsetLeft) + 'px' : '0px');
-      me.style.setProperty('--dy', t ? (he.offsetTop - me.offsetTop) + 'px' : '0px');
+  function drawChains() {
+    // Stones are a third of the smallest node's size.
+    var minR = Infinity;
+    Object.keys(nodes).forEach(function(id) {
+      minR = Math.min(minR, nodes[id].offsetWidth * R_NODE / 100);
     });
-    drawEdges();
-  }
-  function drawEdges(live) {
-    var drawn = {};
+    var rs = minR * 0.3, air = rs * 0.45;
     EDGES.forEach(function(e, i) {
-      if (!paths[i]) return;
-      var sa = shown(e[0]), sb = shown(e[1]);
-      // Hidden: inside a closed group, or a rerouted copy of a link
-      // an earlier edge already draws.
-      var key = sa < sb ? sa + '|' + sb : sb + '|' + sa;
-      var hide = sa === sb || drawn[key];
-      drawn[key] = true;
-      paths[i].classList.toggle('is-hidden', !!hide);
-      var ca = centre(e[0], live), cb = centre(e[1], live);
-      var ax = ca[0], ay = ca[1], bx = cb[0], by = cb[1];
-      var dx = bx - ax, dy = by - ay;
-      var len = Math.sqrt(dx * dx + dy * dy) || 1;
-      // A gentle sideways bow keeps neighbouring links from overlapping.
-      var bow = (i % 2 ? 1 : -1) * Math.min(stage.offsetWidth < 600 ? 8 : 60, len * 0.08);
-      var cx = (ax + bx) / 2 - dy / len * bow, cy = (ay + by) / 2 + dx / len * bow;
-      paths[i].setAttribute('d', 'M' + ax + ' ' + ay + ' Q' + cx + ' ' + cy + ' ' + bx + ' ' + by);
+      var g = chains[i];
+      if (!g) return;
+      while (g.firstChild) g.removeChild(g.firstChild);
+      var a = nodes[e[0]], b = nodes[e[1]];
+      // Nodes are centred on their left/top.
+      var ax = a.offsetLeft, ay = a.offsetTop, bx = b.offsetLeft, by = b.offsetTop;
+      var dx = bx - ax, dy = by - ay, len = Math.sqrt(dx * dx + dy * dy) || 1;
+      var th = Math.atan2(dy, dx);
+      var ra = rimDist(a.offsetWidth * R_NODE / 100, th);
+      var rb = rimDist(b.offsetWidth * R_NODE / 100, th + Math.PI);
+      var gap = len - ra - rb;
+      // As many stones as fit with a little air around each.
+      var n = Math.floor((gap - air) / (2 * rs + air));
+      for (var k = 0; k < n; k++) {
+        var along = ra + gap * (k + 0.5) / n;
+        // A slight zig-zag, like stepping stones.
+        var side = (k % 2 ? 1 : -1) * rs * 0.55;
+        var cx = ax + dx / len * along - dy / len * side;
+        var cy = ay + dy / len * along + dx / len * side;
+        var st = document.createElementNS(NS, 'polygon');
+        st.setAttribute('class', 'graph-stone');
+        st.setAttribute('points', hexPoints(cx, cy, rs));
+        g.appendChild(st);
+      }
     });
   }
 
   // The shared caption: the last active node's title and description.
   // It stays up while scrolling and hides when the pointer leaves the
-  // graph, a click/tap lands off the nodes, focus moves elsewhere, or
-  // that node scrolls out of view.
+  // graph, a click lands off the nodes, focus moves elsewhere, or that
+  // node scrolls out of view.
   var caption = document.getElementById('graphCaption');
   var captionFor = null;
   function showCaption(id) {
@@ -3306,14 +3201,6 @@
   document.addEventListener('focusin', function(e) {
     if (!e.target.closest('#workStreams .section-card, #graphCaption')) hideCaption();
   });
-  // The "tap again to open" hint opens the node itself, as the second
-  // tap would (the keyboard path, so it skips the preview step).
-  var hint = caption && caption.querySelector('.graph-caption-hint');
-  if (hint) hint.addEventListener('click', function() {
-    var card = captionFor && nodes[captionFor].querySelector('.section-card');
-    hideCaption();
-    if (card) card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-  });
   document.addEventListener('modal:closed', hideCaption);
   window.addEventListener('scroll', function() {
     if (!captionFor) return;
@@ -3321,25 +3208,15 @@
     if (r.bottom < 0 || r.top > window.innerHeight) hideCaption();
   }, { passive: true });
 
-  var focusedId = null;
   function focusNode(id) {
-    focusedId = id;
     showCaption(id);
     var linked = {};
     linked[id] = true;
-    // An open head lights its whole group, members it only reaches
-    // through another member included (Tracks -> Loops -> Samples).
-    var group = {};
-    if (openGroup === id) {
-      group[id] = true;
-      GROUPS[id].forEach(function(m) { group[m] = true; linked[m] = true; });
-    }
     EDGES.forEach(function(e, i) {
-      if (!paths[i]) return;
-      var sa = shown(e[0]), sb = shown(e[1]);
-      var hit = (sa === id || sb === id || !!(group[sa] && group[sb])) && !paths[i].classList.contains('is-hidden');
-      if (hit) { linked[sa] = true; linked[sb] = true; }
-      paths[i].classList.toggle('on', hit);
+      if (!chains[i]) return;
+      var hit = e[0] === id || e[1] === id;
+      if (hit) { linked[e[0]] = true; linked[e[1]] = true; }
+      chains[i].classList.toggle('on', hit);
     });
     stage.classList.add('has-focus');
     Object.keys(nodes).forEach(function(k) {
@@ -3347,9 +3224,8 @@
     });
   }
   function clearFocus() {
-    focusedId = null;
     stage.classList.remove('has-focus');
-    paths.forEach(function(p) { if (p) p.classList.remove('on'); });
+    chains.forEach(function(g) { if (g) g.classList.remove('on'); });
     Object.keys(nodes).forEach(function(k) { nodes[k].classList.remove('is-linked'); });
   }
   Object.keys(nodes).forEach(function(id) {
@@ -3360,115 +3236,8 @@
     el.addEventListener('focusout', clearFocus);
   });
 
-  // Redraw the links every frame while nodes slide, and tell the field
-  // layer its sources moved.
-  var animEnd = 0, animating = false;
-  function animate() {
-    animEnd = performance.now() + 500;
-    if (animating) return;
-    animating = true;
-    (function step() {
-      var done = performance.now() >= animEnd;
-      // Links ride along with the sliding nodes, then settle exactly.
-      drawEdges(!done);
-      document.dispatchEvent(new Event('graph:moved'));
-      if (!done) requestAnimationFrame(step);
-      else animating = false;
-    })();
-  }
-  // In case frames were skipped (background tab), settle once the slide
-  // really ends.
-  stage.addEventListener('transitionend', function(e) {
-    if (e.propertyName !== 'transform' || !e.target.classList.contains('section-shell')) return;
-    drawEdges(false);
-    document.dispatchEvent(new Event('graph:moved'));
-  });
-
-  function setOpen(h, instant) {
-    openGroup = h;
-    Object.keys(headOf).forEach(function(m) {
-      var me = document.getElementById(m);
-      if (!me) return;
-      var t = isTucked(m);
-      me.classList.toggle('is-tucked', t);
-      me.inert = t;
-    });
-    Object.keys(GROUPS).forEach(function(g) {
-      var he = document.getElementById(g);
-      if (!he) return;
-      he.classList.toggle('is-open', g === h);
-      // A head can go by a broader name while closed (Devices, Music)
-      // and its own once open (Synths, Tracks).
-      var title = he.querySelector('.card-title');
-      if (title && title.dataset.openTitle) {
-        if (!title.dataset.closedTitle) title.dataset.closedTitle = title.textContent;
-        title.textContent = g === h ? title.dataset.openTitle : title.dataset.closedTitle;
-      }
-      var card = he.querySelector('.section-card');
-      if (card) card.setAttribute('aria-expanded', g === h ? 'true' : 'false');
-    });
-    layout();
-    // The focus was worked out before the group opened (the tap or hover
-    // came first), when its members were still tucked and so dimmed with
-    // the unlinked nodes: redo it now they're out.
-    if (focusedId) focusNode(focusedId);
-    if (!instant && h) {
-      GROUPS[h].forEach(function(m) {
-        var me = document.getElementById(m);
-        if (!me) return;
-        me.classList.remove('is-arriving');
-        void me.offsetWidth;
-        me.classList.add('is-arriving');
-      });
-    }
-    if (!instant) animate();
-  }
-
-  // Clicking a closed head opens its group instead of its page. This
-  // listener is added before modalController()'s on the same card, so it
-  // can stop that one; once the group is open, clicks open the page.
-  Object.keys(GROUPS).forEach(function(h) {
-    var he = document.getElementById(h);
-    var card = he && he.querySelector('.section-card');
-    if (!card) return;
-    var count = document.createElement('span');
-    count.className = 'group-count';
-    count.setAttribute('aria-hidden', 'true');
-    count.textContent = '+' + GROUPS[h].length;
-    var text = card.querySelector('.card-text');
-    if (text) text.appendChild(count);
-    function expand(e) {
-      if (openGroup === h) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      setOpen(h);
-      // Touch: opening the group doubles as the preview tap, so the next
-      // tap opens the page.
-      if (e.pointerType === 'touch') {
-        card.classList.add('is-preview');
-        card.focus({ preventScroll: true });
-      }
-    }
-    card.addEventListener('click', expand);
-    card.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' || e.key === ' ') expand(e);
-    });
-  });
-  // Clicking the graph's empty space, or a node outside the open group,
-  // folds the group back up.
-  stage.addEventListener('click', function(e) {
-    if (!openGroup) return;
-    var shell = e.target.closest('.section-card') && e.target.closest('.section-shell');
-    if (shell && (shell.id === openGroup || headOf[shell.id] === openGroup)) return;
-    setOpen(null);
-  });
-
-  // Start closed, already tucked: no slide on page load.
-  stage.classList.add('no-anim');
-  setOpen(null, true);
-  void stage.offsetWidth;
-  stage.classList.remove('no-anim');
-  window.addEventListener('resize', layout);
+  drawChains();
+  window.addEventListener('resize', drawChains);
 })();
 </script>
 
@@ -5308,19 +5077,6 @@ class Knob {
     document.dispatchEvent(new CustomEvent('modal:closed', { detail: { id: id } }));
   }
 
-  // Touch has no hover, so on touch the first tap on a graph node only
-  // previews it (description shown, links lit — the hover look, via
-  // .is-preview and the graph's focusin) and a second tap opens it.
-  // Tapping anywhere else blurs the node and ends the preview.
-  var lastPointer = 'mouse';
-  document.addEventListener('pointerdown', function(e) {
-    lastPointer = e.pointerType;
-    var open = document.activeElement;
-    if (open && open.matches && open.matches('#workStreams .section-card') && !open.contains(e.target)) {
-      open.blur(); // focusout clears the preview and the lit links
-    }
-  }, true);
-
   openTriggers.forEach(function(card) {
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
@@ -5330,13 +5086,8 @@ class Knob {
       desc.id = desc.id || card.getAttribute('data-modal-target') + '-desc';
       card.setAttribute('aria-describedby', desc.id);
     }
-    card.addEventListener('focusout', function() { card.classList.remove('is-preview'); });
+    // One click or tap opens the card.
     card.addEventListener('click', function() {
-      if (lastPointer === 'touch' && card.closest('#workStreams') && !card.classList.contains('is-preview')) {
-        card.classList.add('is-preview');
-        card.focus({ preventScroll: true });
-        return;
-      }
       var id = card.getAttribute('data-modal-target');
       var m = document.getElementById(id);
       if (m) open(m, card.getAttribute('data-modal-scroll'));
@@ -5362,7 +5113,7 @@ class Knob {
   });
   function cardName(card) {
     var t = card.querySelector('.card-title');
-    return t ? (t.getAttribute('data-open-title') || t.textContent.trim()) : '';
+    return t ? t.textContent.trim() : '';
   }
   modals.forEach(function(modal) {
     var content = modal.querySelector('.modal-content');
@@ -5915,20 +5666,18 @@ class Knob {
 
      - Sources: the WORKS/HOME button (window.__fieldMagnet: first letter
        N pole, last letter S pole) and every visible card
-       (window.__fieldCardSources, hexapoles: six point poles, N and S
-       alternating round the hexagon's edges). The pointer
+       (window.__fieldCardSources, one bar magnet each, lying through
+       two opposite vertices of its hexagon). The pointer
        is deliberately NOT a source. One-way: the field reacts to them,
        nothing flows back.
-     - The WORKS/HOME source is a uniformly magnetized box (a bar
-       magnet) spanning its pole letters. The dashes lie in the boxes' mid-plane, where the field
+     - Every source is a uniformly magnetized box (a bar magnet): the
+       WORKS/HOME one spans its pole letters, a card's spans its hexagon. The dashes lie in the boxes' mid-plane, where the field
        has a closed form: outside, H is the pull of the two charged pole
        faces (per face corner one atan and a shared log; physical
        constants dropped); inside, B = H + M, so the lines run on through
        the magnet S -> N and close on themselves instead of stopping at
        two points like an electric dipole's. Far away the box falls off
-       as the old 1/r^3 point dipole of the same moment. The card poles
-       are plain softened point charges; six alternating ones cancel
-       fast, so a card's field stays close to its hexagon.
+       as the old 1/r^3 point dipole of the same moment.
      - Every source contributes to every dash; the vectors are summed and
        the dash points along the total. Summing all of them — instead of
        letting the nearest one win — is what keeps the field continuous:
@@ -5978,12 +5727,7 @@ class Knob {
   // magnetization is its moment spread over its box volume.
   var M_MAGNET = 1e6;
   var M_CARD = 3.5e5;
-  // Each card is a hexapole: six point poles, alternately N (+) and S (-),
-  // at its edge midpoints. Pole strength is M_CARD over the apothem, so
-  // right at a pole it bites about as hard as the old card dipole did.
-  var MAXP = 96;
-  var PX = new Float32Array(MAXP), PY = new Float32Array(MAXP);
-  var PQ = new Float32Array(MAXP), PE = new Float32Array(MAXP);
+  // Each card is one bar magnet (see cardFieldSources()).
   var FOUR_PI = 4 * Math.PI; // the one constant kept: B = H + M inside a magnet
   // User-tunable from the settings panel (window.__fieldSettings):
   //   glowRadius  — the field falls off as 1/r^3, so scaling the opacity
@@ -6124,20 +5868,12 @@ class Knob {
                 ax / al, ay / al, al * 0.5 + mag.w * 0.5, mb, mb, M_MAGNET);
     }
     var cards = window.__fieldCardSources || [];
-    var np = 0;
-    for (var ci = 0; ci < cards.length && np + 6 <= MAXP; ci++) {
-      // The node's hexagon: circumradius 48/100 of the card (see
-      // workGraph()'s polygonPoints), so the apothem is that x cos 30.
-      var ap = cards[ci].w * 0.48 * 0.866;
-      var pq = M_CARD / ap, pe = (ap * 0.25) * (ap * 0.25);
-      for (var pk = 0; pk < 6; pk++) {
-        var pAng = (-60 + 60 * pk) * PI / 180;
-        PX[np] = cards[ci].x + ap * Math.cos(pAng);
-        PY[np] = cards[ci].y + ap * Math.sin(pAng);
-        PQ[np] = (pk + (cards[ci].flip || 0)) % 2 ? -pq : pq;
-        PE[np] = pe;
-        np++;
-      }
+    for (var ci = 0; ci < cards.length && n < MAXS; ci++) {
+      // A bar across the node's hexagon (circumradius 48/100 of the card,
+      // see workGraph()), vertex to vertex, a fifth as thick as it is long.
+      var cr = cards[ci].w * 0.48, ca = cards[ci].angle || 0;
+      addSource(n++, cards[ci].x, cards[ci].y, Math.cos(ca), Math.sin(ca),
+                cr * 0.6, cr * 0.2, cr * 0.2, M_CARD);
     }
 
     var paths = new Array(NB);
@@ -6165,14 +5901,6 @@ class Knob {
           var m = SM[q];
           bx += m * (hx * ux - hy * uy);
           by += m * (hx * uy + hy * ux);
-        }
-        // Hexapole poles: each pushes (N) or pulls (S) like a point
-        // charge, softened so dashes right at a pole don't blow up.
-        for (var pi = 0; pi < np; pi++) {
-          var px = gx - PX[pi], py = gy - PY[pi];
-          var pd = px * px + py * py + PE[pi];
-          var pf = PQ[pi] / (pd * Math.sqrt(pd));
-          bx += pf * px; by += pf * py;
         }
         var fm = Math.sqrt(bx * bx + by * by);
         var ang = angles[idx];
