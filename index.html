@@ -2041,44 +2041,46 @@
      .hero-nav, and the old one is redundant on the cards section too. */
   nav:not(.hero-nav) { display: none; }
 
+  /* The section list: down the left edge, vertically centred so it clears
+     the name above and the Entropy readout (top: 132px). */
   .hero-nav {
     position: absolute;
-    top: 64px;
+    top: 50%;
     left: 24px;
-    display: none;
+    right: auto;
+    display: flex;
     flex-direction: column;
-    gap: 8px;
+    justify-content: flex-start;
+    align-items: flex-start;
     padding: 0;
     background: transparent;
     border: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transform: translateY(-50%);
     font-size: clamp(0.7rem, 1.2vw, 0.9rem);
     letter-spacing: 0.3em;
     text-transform: uppercase;
-    opacity: 0;
-    transform: translateY(-6px);
-    pointer-events: none;
-    transition: opacity 200ms, transform 200ms;
     z-index: 3;
-  }
-  .hero-nav.open {
-    opacity: 0.5;
-    transform: translateY(0);
-    pointer-events: auto;
   }
   .hero-nav a {
     color: rgba(255,255,255,0.95);
     text-decoration: none;
-    padding: 2px 0;
+    padding: 7px 0;
+    opacity: 0.75;
     transition: opacity 200ms;
-    opacity: 1;
   }
-  .hero-nav a:hover,
-  .hero-nav a:focus-visible {
-    opacity: 1;
-    color: #fff;
-    outline: none;
+  .hero-nav a:focus-visible { opacity: 1; outline: 1px dashed var(--accent-2); outline-offset: 2px; }
+  @media (hover: hover) { .hero-nav a:hover { opacity: 1; } }
+  /* Comfortable tap rows on touch screens. */
+  @media (pointer: coarse) { .hero-nav a { padding: 13px 0; } }
+  /* Phones on their side: too short for the list between Entropy and DRONE,
+     so Entropy moves up beside the name and the list starts right under it. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .hero-nav { top: 48px; transform: none; }
+    .hero-nav a { padding: 3px 0; }
+    .entropy-hud { top: 24px; left: 132px; }
   }
-  .hero-nav.open:hover { opacity: 1; }
 
   /* Who this is, tucked into the top-left corner and kept faint on purpose:
      there to be found by someone looking, not announced. */
@@ -2195,7 +2197,7 @@
 
 
   @media (max-width: 640px) {
-    .hero-nav { top: 56px; left: 16px; gap: 10px; font-size: 0.7rem; }
+    .hero-nav { left: 16px; font-size: 0.7rem; }
     .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
     .hero-controls-right { right: 16px; }
@@ -5058,7 +5060,8 @@ class Knob {
       e.preventDefault();
       var href = a.getAttribute('href');
       var target = href ? document.querySelector(href) : null;
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Centred, so the docked HOME button doesn't cover the node.
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   });
 })();
