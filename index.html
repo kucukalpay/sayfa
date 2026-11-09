@@ -2041,23 +2041,24 @@
      .hero-nav, and the old one is redundant on the cards section too. */
   nav:not(.hero-nav) { display: none; }
 
-  /* The section list: down the left edge, vertically centred so it clears
-     the name above and the Entropy readout (top: 132px). */
+  /* The map as a list: down the left edge, centred in the space between the
+     Entropy readout above and DRONE below. Each link opens its node's card
+     (see heroLanding()). */
   .hero-nav {
     position: absolute;
-    top: 50%;
+    top: 168px;
+    bottom: 64px;
     left: 24px;
     right: auto;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: safe center;
     align-items: flex-start;
     padding: 0;
     background: transparent;
     border: 0;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    transform: translateY(-50%);
     font-size: clamp(0.7rem, 1.2vw, 0.9rem);
     letter-spacing: 0.3em;
     text-transform: uppercase;
@@ -2072,15 +2073,8 @@
   }
   .hero-nav a:focus-visible { opacity: 1; outline: 1px dashed var(--accent-2); outline-offset: 2px; }
   @media (hover: hover) { .hero-nav a:hover { opacity: 1; } }
-  /* Comfortable tap rows on touch screens. */
-  @media (pointer: coarse) { .hero-nav a { padding: 13px 0; } }
-  /* Phones on their side: too short for the list between Entropy and DRONE,
-     so Entropy moves up beside the name and the list starts right under it. */
-  @media (orientation: landscape) and (max-height: 500px) {
-    .hero-nav { top: 48px; transform: none; }
-    .hero-nav a { padding: 3px 0; }
-    .entropy-hud { top: 24px; left: 132px; }
-  }
+  /* Eleven rows need tighter spacing on short screens. */
+  @media (max-height: 650px) { .hero-nav a { padding: 3px 0; } }
 
   /* Who this is, tucked into the top-left corner and kept faint on purpose:
      there to be found by someone looking, not announced. */
@@ -2197,11 +2191,31 @@
 
 
   @media (max-width: 640px) {
-    .hero-nav { left: 16px; font-size: 0.7rem; }
+    .hero-nav { top: 140px; bottom: 52px; left: 16px; font-size: 0.7rem; }
     .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
     .hero-controls-right { right: 16px; }
     .hero-center { top: 16px; left: 16px; max-width: none; }
+  }
+  /* On phones the list is wide enough to reach WORKS, so WORKS rests lower,
+     below it. */
+  @media (max-width: 640px), (orientation: landscape) and (max-height: 500px) {
+    .mag-dock { margin: -120px 0 72px; }
+  }
+  /* Phones on their side: too short for one column, so the list splits in
+     two, with Entropy moved up beside the name to make room. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .hero-nav {
+      top: 48px;
+      bottom: auto;
+      display: grid;
+      grid-auto-flow: column;
+      grid-template-rows: repeat(6, auto);
+      column-gap: 20px;
+      justify-content: start;
+      letter-spacing: 0.12em;
+    }
+    .entropy-hud { top: 24px; left: 132px; }
   }
 </style>
 </head>
@@ -2228,11 +2242,17 @@
 <main id="main">
 <section class="hero" id="hero" aria-label="Welcome">
   <nav class="hero-nav" id="heroNav" aria-label="Sections">
-    <a href="#three-d" data-target="three-d">3D SHOWREEL</a>
-    <a href="#synths" data-target="synths">Synths</a>
-    <a href="#tracks" data-target="tracks">Music</a>
-    <a href="#photography" data-target="photography">Photography</a>
-    <a href="#contact" data-target="contact">Contact</a>
+    <a href="#procedural">Procedural</a>
+    <a href="#three-d">3D</a>
+    <a href="#synths">ANG</a>
+    <a href="#tracks">Tracks</a>
+    <a href="#stray-voltage">Personal Projects</a>
+    <a href="#ane">ANE</a>
+    <a href="#loops">Loops &amp; Beats</a>
+    <a href="#music">Sample Library</a>
+    <a href="#pedals">Pedals</a>
+    <a href="#photography">Photo</a>
+    <a href="#contact">Contact</a>
   </nav>
   <div class="hero-center">
     <h1 class="hero-name">Alpay Küçük</h1>
@@ -5060,8 +5080,12 @@ class Knob {
       e.preventDefault();
       var href = a.getAttribute('href');
       var target = href ? document.querySelector(href) : null;
-      // Centred, so the docked HOME button doesn't cover the node.
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (!target) return;
+      // A map node opens its card, the same as clicking it. Anything without
+      // a card (Contact) scrolls into view instead.
+      var card = target.querySelector('.section-card[data-modal-target]');
+      if (card) card.click();
+      else target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   });
 })();
