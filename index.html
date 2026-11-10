@@ -2153,6 +2153,18 @@
   body.modal-open .field-settings { display: none; }
   .field-settings .hero-btn[aria-expanded="true"] { opacity: 1; color: var(--accent-2); }
   #fieldToggle { display: inline-flex; line-height: 0; padding: 12px; margin: -12px; }
+  /* The drone toggle: a speaker with sound waves when on, crossed out when
+     off (aria-pressed is set by droneToggle's script). */
+  #droneToggle { display: inline-flex; line-height: 0; padding: 12px; margin: -12px; }
+  .drone-speaker {
+    width: 22px; height: 22px;
+    fill: none; stroke: currentColor; stroke-width: 1.5;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  #droneToggle .spk-waves { display: none; }
+  #droneToggle[aria-pressed="true"] .spk-waves { display: inline; }
+  #droneToggle[aria-pressed="true"] .spk-off { display: none; }
+  #droneToggle[aria-pressed="true"] { opacity: 1; color: var(--accent-2); }
   .field-gear {
     width: 20px; height: 20px;
     fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round;
@@ -2293,7 +2305,7 @@
     <p class="hero-intro">3D and procedural work, hand-built noise instruments, and the sound they make.</p>
   </div>
   <div class="hero-controls hero-controls-left">
-    <button class="hero-btn" id="droneToggle" type="button">DRONE · OFF</button>
+    <button class="hero-btn" id="droneToggle" type="button" aria-label="Drone sound" aria-pressed="false"><svg class="drone-speaker" viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M3.5 9.5h4l5-4v13l-5-4h-4z"/><g class="spk-waves"><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.5a7.8 7.8 0 0 1 0 11"/></g><g class="spk-off"><path d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></g></svg></button>
   </div>
   <!-- Background-field settings (see fieldSettingsPanel()). -->
   <div class="hero-controls hero-controls-right field-settings">
@@ -5423,7 +5435,6 @@ class Knob {
         chorusWet.gain.linearRampToValueAtTime(0, t + 0.5);
       }
     }
-    btn.textContent = 'DRONE · ' + (isOn ? 'ON' : 'OFF');
     btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
   }
 
