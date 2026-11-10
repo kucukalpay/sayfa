@@ -1920,7 +1920,7 @@
   .entropy-hud {
     position: fixed;
     top: 132px;
-    left: 24px;
+    right: 24px;
     z-index: 4000;
     display: flex;
     align-items: baseline;
@@ -1938,7 +1938,7 @@
     font-variant-numeric: tabular-nums;
   }
   @media (max-width: 640px) {
-    .entropy-hud { top: 110px; left: 16px; }
+    .entropy-hud { top: 110px; right: 16px; }
   }
 
   /* ----- Quick Showreel button + lightbox -------------------------------
@@ -2042,11 +2042,11 @@
   nav:not(.hero-nav) { display: none; }
 
   /* The map as a list: down the left edge, centred in the space between the
-     Entropy readout above and DRONE below. Each link opens its node's card
+     name and intro above and DRONE below. Each link opens its node's card
      (see heroLanding()). */
   .hero-nav {
     position: absolute;
-    top: 168px;
+    top: 220px;
     bottom: 64px;
     left: 24px;
     right: auto;
@@ -2100,11 +2100,11 @@
     .hero-nav a { padding: 3px 0; }
   }
 
-  /* Who this is and what the site holds, in the top-left corner: quiet,
-     but readable on a first visit. */
+  /* Who this is and what the site holds, on the left just above the list:
+     quiet, but readable on a first visit. Entropy sits opposite it. */
   .hero-center {
     position: absolute;
-    top: 24px;
+    top: 132px;
     left: 24px;
     text-align: left;
     pointer-events: none;
@@ -2234,13 +2234,16 @@
 
 
   @media (max-width: 640px) {
-    .hero-nav { top: 140px; bottom: 52px; left: 16px; font-size: 0.7rem; }
+    .hero-nav { top: 190px; bottom: 52px; left: 16px; font-size: 0.7rem; }
     .hero-controls { bottom: 16px; }
     .hero-controls-left { left: 16px; }
     .hero-controls-right { right: 16px; }
-    .hero-center { top: 16px; left: 16px; max-width: none; }
-    /* Wraps short of the Showreel button in the top-right corner. */
-    .hero-intro { max-width: calc(100vw - 170px); }
+    .hero-center { top: 110px; left: 16px; max-width: none; }
+  }
+  /* Very short phones: the intro gives its lines back to the list. */
+  @media (max-width: 640px) and (max-height: 520px) {
+    .hero-intro { display: none; }
+    .hero-nav { top: 150px; }
   }
   /* On phones the list is wide enough to reach WORKS, so WORKS rests lower,
      below it. */
@@ -2260,7 +2263,8 @@
       justify-content: start;
       letter-spacing: 0.12em;
     }
-    .entropy-hud { top: 24px; left: 132px; }
+    .hero-center { top: 24px; }
+    .entropy-hud { top: 24px; left: 132px; right: auto; }
     .hero-intro, .nav-hint { display: none; }
   }
 </style>
